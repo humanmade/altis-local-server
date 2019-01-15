@@ -13,6 +13,6 @@ class Command extends BaseCommand {
 
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Starting...' );
-		`NAME=$(basename "\$PWD") ; cd vendor/humanmade/local-server/base ; docker-compose -f proxy.yml up -d ; VOLUME=../../../../ COMPOSE_PROJECT_NAME=\$NAME docker-compose up`;
+		`NAME=$(basename "\$PWD") ; cd vendor/humanmade/local-server/docker ; docker-compose -f proxy.yml up -d ; VOLUME=../../../../ COMPOSE_PROJECT_NAME=\$NAME docker-compose up`;
 	}
 }
