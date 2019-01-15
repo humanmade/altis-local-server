@@ -1,0 +1,9 @@
+[submodule "base"]
+	path = base
+	url = git@github.com:humanmade/docker-wordpress-base.git
+[submodule "php"]
+	path = php
+	url = git@github.com:humanmade/docker-wordpress-php.git
+[submodule "nginx"]
+	path = nginx
+	url = git@github.com:humanmade/docker-wordpress-nginx.git
