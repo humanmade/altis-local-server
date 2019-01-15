@@ -2,7 +2,7 @@
 	"name": "humanmade/local-server",
 	"description": "Human Made Platform Local Server",
 	"type": "composer-plugin",
-	"license": "GPLv2",
+	"license": "GPL-2.0-or-later",
 	"version": "0.0.1",
 	"authors": [
 		{
