@@ -1,0 +1,20 @@
+version: '3.5'
+services:
+  proxy:
+    networks:
+      - proxy
+    image: traefik
+    volumes:
+      - "$PWD/conf/traefik.toml:/etc/traefik/traefik.toml"
+      - "$PWD/ssl.cert:/etc/traefik/ssl.cert"
+      - "$PWD/ssl.key:/etc/traefik/ssl.key"
+      - "$PWD/sni:/etc/traefik/sni"
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - '8080:8080'
+      - '80:80'
+      - '443:443'
+
+networks:
+  proxy:
+    name: proxy

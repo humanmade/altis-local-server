@@ -1,0 +1,71 @@
+version: '2.3'
+services:
+  db:
+    image: mysql:5.7
+    networks:
+      - proxy
+    volumes:
+      - "db-data:/var/lib/mysql"
+    ports:
+      - '3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+  redis:
+    image: redis:3.2-alpine
+    networks:
+      - proxy
+    ports:
+      - '6379'
+  php:
+    init: true
+    depends_on:
+      - db
+      - redis
+    image: humanmade/php
+    ports:
+      - '9000'
+    networks:
+      - proxy
+    links:
+      - "db:db-read-replica"
+    volumes:
+      - "${VOLUME}:/usr/src/app:delegated"
+    environment:
+      DB_HOST: db
+      DB_READ_REPLICA_HOST: db-read-replica
+      DB_PASSWORD: wordpress
+      DB_NAME: wordpress
+      DB_USER: wordpress
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WP_DEBUG: 1
+      WP_DEBUG_DISPLAY: 0
+      PAGER: more
+      HM_ENV_ARCHITECTURE: 'ecs'
+  nginx:
+    image: humanmade/nginx
+    networks:
+      - proxy
+    depends_on:
+      - php
+    volumes:
+      - "${VOLUME}:/usr/src/app:delegated"
+    ports:
+      - "8080"
+    labels:
+      - "traefik.port=8080"
+      - "traefik.protocol=https"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.hmdocker,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.hmdocker"
+
+networks:
+  proxy:
+    external:
+      name: proxy
+
+volumes:
+  db-data:
+  tmp:
