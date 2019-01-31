@@ -45,6 +45,7 @@ services:
       WP_DEBUG_DISPLAY: 0
       PAGER: more
       HM_ENV_ARCHITECTURE: 'ecs'
+      HM_ENV: "${COMPOSE_PROJECT_NAME}"
   nginx:
     image: humanmade/nginx
     networks:
