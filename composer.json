@@ -19,6 +19,9 @@
 	"autoload": {
 		"psr-4": {
 			"HM\\Platform\\LocalServer\\": "inc/"
-		}
+		},
+		"files": [
+			"wp-config.php"
+		]
 	}
 }
