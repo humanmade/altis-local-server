@@ -1,7 +1,7 @@
 <?php
 
 if ( empty( $_SERVER['HTTP_HOST'] ) ) {
-	$_SERVER['HTTP_HOST'] = get_env( 'COMPOSE_PROJECT_NAME' ) . '.hmdocker';
+	$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.hmdocker';
 }
 
 define( 'DB_HOST', getenv( 'DB_HOST' ) );
@@ -14,5 +14,3 @@ $redis_server = [
 	'host' => getenv( 'REDIS_HOST' ),
 	'port' => getenv( 'REDIS_PORT' ),
 ];
-
-$table_prefix = getenv( 'TABLE_PREFIX' ) ?: 'wp_';
