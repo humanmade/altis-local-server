@@ -9,6 +9,9 @@ define( 'DB_USER', getenv( 'DB_USER' ) );
 define( 'DB_PASSWORD', getenv( 'DB_PASSWORD' ) );
 define( 'DB_NAME', getenv( 'DB_NAME' ) );
 
+define( 'ELASTICSEARCH_HOST', getenv( 'ELASTICSEARCH_HOST' ) );
+define( 'ELASTICSEARCH_PORT', getenv( 'ELASTICSEARCH_PORT' ) );
+
 global $redis_server;
 $redis_server = [
 	'host' => getenv( 'REDIS_HOST' ),
