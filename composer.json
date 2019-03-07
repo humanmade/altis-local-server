@@ -3,7 +3,6 @@
 	"description": "Human Made Platform Local Server",
 	"type": "composer-plugin",
 	"license": "GPL-2.0-or-later",
-	"version": "0.0.1",
 	"authors": [
 		{
 			"name": "Human Made",
