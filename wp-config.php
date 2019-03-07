@@ -17,3 +17,5 @@ $redis_server = [
 	'host' => getenv( 'REDIS_HOST' ),
 	'port' => getenv( 'REDIS_PORT' ),
 ];
+
+ini_set( 'display_errors', 'on' );
