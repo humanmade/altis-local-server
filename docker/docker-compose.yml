@@ -1,4 +1,44 @@
 version: '2.3'
+
+x-php: &php
+  init: true
+  depends_on:
+    - db
+    - redis
+    - elasticsearch
+    - xray
+  image: humanmade/php
+  networks:
+    - proxy
+  links:
+    - "db:db-read-replica"
+    - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
+  volumes:
+    - "${VOLUME}:/usr/src/app:delegated"
+  environment:
+    DB_HOST: db
+    DB_READ_REPLICA_HOST: db-read-replica
+    DB_PASSWORD: wordpress
+    DB_NAME: wordpress
+    DB_USER: wordpress
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    WP_DEBUG: 1
+    WP_DEBUG_DISPLAY: 0
+    PAGER: more
+    HM_ENV_ARCHITECTURE: 'ecs'
+    HM_DEPLOYMENT_REVISION: 'dev'
+    ELASTICSEARCH_HOST: elasticsearch
+    ELASTICSEARCH_PORT: 9200
+    AWS_XRAY_DAEMON_HOST: xray
+    S3_UPLOADS_ENDPOINT: http://s3.localhost:8000/
+    S3_UPLOADS_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
+    S3_UPLOADS_BUCKET_URL: http://s3-${COMPOSE_PROJECT_NAME:-default}.hmdocker
+    S3_UPLOADS_KEY: not-needed
+    S3_UPLOADS_SECRET: not-needed
+    S3_UPLOADS_REGION: not-needed
+    TACHYON_URL: http://tachyon-${COMPOSE_PROJECT_NAME:-default}.hmdocker/uploads
+
 services:
   db:
     image: mysql:5.7
@@ -20,32 +60,9 @@ services:
     ports:
       - '6379'
   php:
-    init: true
-    depends_on:
-      - db
-      - redis
-    image: humanmade/php
+    <<: *php
     ports:
       - '9000'
-    networks:
-      - proxy
-    links:
-      - "db:db-read-replica"
-    volumes:
-      - "${VOLUME}:/usr/src/app:delegated"
-    environment:
-      DB_HOST: db
-      DB_READ_REPLICA_HOST: db-read-replica
-      DB_PASSWORD: wordpress
-      DB_NAME: wordpress
-      DB_USER: wordpress
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      WP_DEBUG: 1
-      WP_DEBUG_DISPLAY: 0
-      PAGER: more
-      HM_ENV_ARCHITECTURE: 'ecs'
-      HM_ENV: "${COMPOSE_PROJECT_NAME}"
   nginx:
     image: humanmade/nginx
     networks:
@@ -61,6 +78,67 @@ services:
       - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.hmdocker,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.hmdocker"
+  xray:
+    image: amazon/aws-xray-daemon
+    ports:
+      - 2000
+    environment:
+      AWS_ACCESS_KEY_ID: YOUR_KEY_HERE
+      AWS_SECRET_ACCESS_KEY: YOUR_SECRET_HERE
+      AWS_REGION: us-east-1
+    networks:
+      - proxy
+  cavalcade:
+    <<: *php
+    entrypoint:
+      - /usr/local/bin/cavalcade
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.4
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200"
+    networks:
+      - proxy
+    labels:
+      - "traefik.port=9200"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.hmdocker,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.hmdocker"
+  s3:
+    image: fingershock/fakes3
+    volumes:
+      - "s3:/fakes3_data:rw"
+    ports:
+      - "8000"
+    networks:
+      - proxy
+    labels:
+      - "traefik.port=8000"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.hmdocker"
+  tachyon:
+    image: humanmade/tachyon
+    ports:
+      - "8081:8080"
+    networks:
+      - proxy
+    labels:
+      - "traefik.port=8080"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:tachyon-${COMPOSE_PROJECT_NAME:-default}.hmdocker"
+    environment:
+      AWS_REGION: not-needed
+      AWS_S3_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
+      AWS_S3_ENDPOINT: http://s3.localhost:8000/
+    links:
+      - "s3:s3.localhost"
 
 networks:
   proxy:
@@ -69,4 +147,6 @@ networks:
 
 volumes:
   db-data:
+  es-data:
   tmp:
+  s3:
