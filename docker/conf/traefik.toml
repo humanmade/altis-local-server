@@ -39,8 +39,8 @@ insecureSkipVerify = true
     address = ":443"
     [entryPoints.https.tls]
       [[entryPoints.https.tls.certificates]]
-      certFile = "/etc/traefik/sni/cert/hm-stack.hmdocker.pem"
-      keyFile = "/etc/traefik/sni/key/hm-stack.hmdocker.pem"
+      certFile = "/etc/traefik/sni/cert/altis.pem"
+      keyFile = "/etc/traefik/sni/key/altis.pem"
 
 [web]
 address = ":8080"
@@ -153,7 +153,7 @@ address = ":8080"
 # Optional
 # Default: ""
 #
-domain = "hmdocker"
+domain = "altis.dev"
 
 # Expose containers by default in traefik
 #
