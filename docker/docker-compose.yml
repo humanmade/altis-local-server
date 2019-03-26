@@ -33,11 +33,11 @@ x-php: &php
     AWS_XRAY_DAEMON_HOST: xray
     S3_UPLOADS_ENDPOINT: http://s3.localhost:8000/
     S3_UPLOADS_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
-    S3_UPLOADS_BUCKET_URL: http://s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    S3_UPLOADS_BUCKET_URL: https://s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev
     S3_UPLOADS_KEY: not-needed
     S3_UPLOADS_SECRET: not-needed
     S3_UPLOADS_REGION: not-needed
-    TACHYON_URL: http://tachyon-${COMPOSE_PROJECT_NAME:-default}.altis.dev/uploads
+    TACHYON_URL: https://tachyon-${COMPOSE_PROJECT_NAME:-default}.altis.dev/uploads
 
 services:
   db:
