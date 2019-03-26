@@ -14,9 +14,6 @@ class Command extends BaseCommand {
 
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Starting...' );
-		if ( ! file_exists( '/etc/resolver/hmdocker' ) ) {
-			`sh vendor/humanmade/local-server/docker/bin/install.sh`;
-		}
 
 		$proxy = new Process( 'docker-compose -f proxy.yml up', 'vendor/humanmade/local-server/docker' );
 		$proxy->setTimeout( 0 );
@@ -33,7 +30,5 @@ class Command extends BaseCommand {
 		} );
 
 		$compose->wait();
-
-		//`NAME=$(basename "\$PWD") ; cd vendor/humanmade/local-server/docker && docker-compose -f proxy.yml up -d && VOLUME=../../../../ COMPOSE_PROJECT_NAME=\$NAME docker-compose up && echo "Started." && open "http://\$NAME.hmdocker"`;
 	}
 }

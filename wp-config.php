@@ -1,7 +1,7 @@
 <?php
 
 if ( empty( $_SERVER['HTTP_HOST'] ) ) {
-	$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.hmdocker';
+	$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.altis.dev';
 }
 
 define( 'DB_HOST', getenv( 'DB_HOST' ) );
@@ -20,6 +20,8 @@ define( 'S3_UPLOADS_ENDPOINT', getenv( 'S3_UPLOADS_ENDPOINT' ) );
 define( 'S3_UPLOADS_BUCKET_URL', getenv( 'S3_UPLOADS_BUCKET_URL' ) );
 
 define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
+
+define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
 
 global $redis_server;
 $redis_server = [
