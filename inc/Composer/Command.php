@@ -64,6 +64,7 @@ EOT
 		$compose = new Process( 'docker-compose up -d', 'vendor/humanmade/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+			'PATH' => getenv( 'PATH' ),
 		] );
 		$compose->setTimeout( 0 );
 		$compose->run( function ( $type, $buffer ) {

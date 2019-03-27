@@ -94,7 +94,8 @@ services:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.4
+    image: altis-elasticsearch:latest
+    build: ./elasticsearch
     ulimits:
       memlock:
         soft: -1
