@@ -8,6 +8,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Console\Input\ArrayInput;
 
 class Command extends BaseCommand {
 	protected function configure() {
@@ -71,6 +72,35 @@ EOT
 			echo $buffer;
 		} );
 
+		$cli = $this->getApplication()->find( 'local-server' );
+
+		// Check if WP is already installed.
+		$is_installed = $cli->run( new ArrayInput( [
+			'subcommand' => 'cli',
+			'options' => [
+				'core',
+				'is-installed',
+			],
+		] ), $output ) === 0;
+
+		if ( ! $is_installed ) {
+			$cli->run( new ArrayInput( [
+				'subcommand' => 'cli',
+				'options' => [
+					'core',
+					'multisite-install',
+					'--title=Altis',
+					'--admin_user=admin',
+					'--admin_password=admin',
+					'--admin_email=no-reply@altis.dev',
+					'--skip-email',
+					'--skip-config',
+				],
+
+			] ), $output ) === 0;
+			$output->writeln( 'Installed database.' );
+		}
+
 		$site_url = 'https://' . basename( getcwd() ) . '.altis.dev/';
 		$output->writeln( 'Startup completed.' );
 		$output->writeln( 'To access your site visit: ' . $site_url );
@@ -95,9 +125,23 @@ EOT
 
 	protected function cli( InputInterface $input, OutputInterface $output ) {
 		$site_url = 'https://' . basename( getcwd() ) . '.altis.dev/';
-
 		$options = $input->getArgument( 'options' );
 		$options[] = '--url=' . $site_url;
+
+		// Escape all options. Because the shell is going to strip the
+		// initial escaping like "My string" => My String, then we need
+		// to reapply escaping.
+		foreach ( $options as &$option ) {
+			if ( ! strpos( $option, '=' ) ) {
+				if ( strpos( $option, '--' ) == 0 ) {
+					continue;
+				}
+				$option = escapeshellarg( $option );
+			} else {
+				$arg = strtok( $option, '=' );
+				$option = $arg . '=' . escapeshellarg( substr( $option, strlen( $arg ) + 1 ) );
+			}
+		}
 
 		passthru( sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u nobody php wp %s',

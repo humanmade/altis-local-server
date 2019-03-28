@@ -20,7 +20,8 @@
 			"HM\\Platform\\LocalServer\\": "inc/"
 		},
 		"files": [
-			"wp-config.php"
+			"wp-config.php",
+			"load.php"
 		]
 	}
 }
