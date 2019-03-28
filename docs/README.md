@@ -1,10 +1,10 @@
 # Local Server
 
-The Local Server module providers a local development environment for HM Platform projects. It is build on a containerized architecture using Docker images and Docker Compose to provide drop-in replacements for most components of the Cloud infrastructure.
+The Local Server module providers a local development environment for HM Platform projects. It is built on a containerized architecture using Docker images and Docker Compose to provide drop-in replacements for most components of the Cloud infrastructure.
 
 ## Installing
 
-Local Server uses Docker for containerization, therefor you must install the Docker runtime on your computer as a prerequisite. Download and install Docker for your OS at [https://www.docker.com/get-started](https://www.docker.com/get-started).
+Local Server uses Docker for containerization, therefore you must install the Docker runtime on your computer as a prerequisite. Download and install Docker for your OS at [https://www.docker.com/get-started](https://www.docker.com/get-started).
 
 Once Docker is installed and running, you are ready to start the Local Server. Local Server uses the command line via the `composer` command.
 
