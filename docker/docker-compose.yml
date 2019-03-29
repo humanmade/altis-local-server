@@ -26,7 +26,7 @@ x-php: &php
     WP_DEBUG: 1
     WP_DEBUG_DISPLAY: 0
     PAGER: more
-    HM_ENV_ARCHITECTURE: 'ecs'
+    HM_ENV_ARCHITECTURE: 'local-server'
     HM_DEPLOYMENT_REVISION: 'dev'
     ELASTICSEARCH_HOST: elasticsearch
     ELASTICSEARCH_PORT: 9200

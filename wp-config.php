@@ -1,39 +1,12 @@
 <?php
 
-if ( empty( $_SERVER['HTTP_HOST'] ) ) {
-	$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.altis.dev';
+// This file will always be included if local-server is installed.
+// We only want to do anything if we are actually running in the
+// local-server context. Therefore, we only define HM_ENV_ARCHITECTURE
+// if we are in that context.
+//
+// This module will only then enable it's self if the architecture is local-server.
+if ( getenv( 'HM_ENV_ARCHITECTURE' ) === 'local-server' ) {
+	define( 'HM_ENV_ARCHITECTURE', getenv( 'HM_ENV_ARCHITECTURE' ) );
 }
 
-define( 'DB_HOST', getenv( 'DB_HOST' ) );
-define( 'DB_USER', getenv( 'DB_USER' ) );
-define( 'DB_PASSWORD', getenv( 'DB_PASSWORD' ) );
-define( 'DB_NAME', getenv( 'DB_NAME' ) );
-
-define( 'ELASTICSEARCH_HOST', getenv( 'ELASTICSEARCH_HOST' ) );
-define( 'ELASTICSEARCH_PORT', getenv( 'ELASTICSEARCH_PORT' ) );
-
-define( 'S3_UPLOADS_BUCKET', getenv( 'S3_UPLOADS_BUCKET' ) );
-define( 'S3_UPLOADS_REGION', getenv( 'S3_UPLOADS_REGION' ) );
-define( 'S3_UPLOADS_KEY', getenv( 'S3_UPLOADS_KEY' ) );
-define( 'S3_UPLOADS_SECRET', getenv( 'S3_UPLOADS_SECRET' ) );
-define( 'S3_UPLOADS_ENDPOINT', getenv( 'S3_UPLOADS_ENDPOINT' ) );
-define( 'S3_UPLOADS_BUCKET_URL', getenv( 'S3_UPLOADS_BUCKET_URL' ) );
-
-define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
-
-define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
-
-global $redis_server;
-$redis_server = [
-	'host' => getenv( 'REDIS_HOST' ),
-	'port' => getenv( 'REDIS_PORT' ),
-];
-
-ini_set( 'display_errors', 'on' );
-
-add_filter( 's3_uploads_s3_client_params', function ( $params ) {
-	if ( defined( 'S3_UPLOADS_ENDPOINT' ) ) {
-		$params['endpoint'] = S3_UPLOADS_ENDPOINT;
-	}
-	return $params;
-}, 5, 1 );
