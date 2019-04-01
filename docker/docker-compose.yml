@@ -10,7 +10,6 @@ x-php: &php
   image: humanmade/php
   links:
     - "db:db-read-replica"
-    - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
   environment:
