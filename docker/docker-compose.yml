@@ -103,7 +103,7 @@ services:
       - "traefik.port=9200"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3:
     image: fingershock/fakes3
     volumes:
