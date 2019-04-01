@@ -26,7 +26,7 @@ x-php: &php
     PAGER: more
     HM_ENV_ARCHITECTURE: 'local-server'
     HM_DEPLOYMENT_REVISION: 'dev'
-    ELASTICSEARCH_HOST: elasticsearch
+    ELASTICSEARCH_HOST: elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev
     ELASTICSEARCH_PORT: 9200
     AWS_XRAY_DAEMON_HOST: xray
     S3_UPLOADS_ENDPOINT: http://s3.localhost:8000/
