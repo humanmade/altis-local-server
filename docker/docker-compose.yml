@@ -8,8 +8,6 @@ x-php: &php
     - elasticsearch
     - xray
   image: humanmade/php
-  networks:
-    - proxy
   links:
     - "db:db-read-replica"
     - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
@@ -42,8 +40,6 @@ x-php: &php
 services:
   db:
     image: mysql:5.7
-    networks:
-      - proxy
     volumes:
       - "db-data:/var/lib/mysql"
     ports:
@@ -55,8 +51,6 @@ services:
       MYSQL_PASSWORD: wordpress
   redis:
     image: redis:3.2-alpine
-    networks:
-      - proxy
     ports:
       - '6379'
   php:
@@ -67,6 +61,7 @@ services:
     image: humanmade/nginx
     networks:
       - proxy
+      - default
     depends_on:
       - php
     volumes:
@@ -86,8 +81,6 @@ services:
       AWS_ACCESS_KEY_ID: YOUR_KEY_HERE
       AWS_SECRET_ACCESS_KEY: YOUR_SECRET_HERE
       AWS_REGION: us-east-1
-    networks:
-      - proxy
   cavalcade:
     <<: *php
     entrypoint:
@@ -143,6 +136,7 @@ services:
       - "s3:s3.localhost"
 
 networks:
+  default:
   proxy:
     external:
       name: proxy
