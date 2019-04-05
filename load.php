@@ -56,6 +56,19 @@ add_action( 'hm-platform.modules.init', function () {
 
 		if ( $config['tachyon'] ) {
 			define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
+
+			/**
+			 * In local-server, the tachyon hostname resolves to what is deemed a local url.
+			 * This makes requests to tachyon from WordPress disallowed. We want to
+			 * specifically allow that host.
+			 */
+			add_filter( 'http_request_host_is_external', function ( bool $is_external, string $host ) : bool {
+				if ( $is_external ) {
+					return $is_external;
+				}
+
+				return parse_url( TACHYON_URL, PHP_URL_HOST ) === $host;
+			}, 10, 2 );
 		}
 	} );
 } );
