@@ -11,6 +11,7 @@ add_action( 'hm-platform.modules.init', function () {
 		'enabled' => get_environment_architecture() === 'local-server',
 		's3'      => true,
 		'tachyon' => true,
+		'email'   => true,
 	];
 	register_module( 'local-server', __DIR__, 'Local Server', $default_settings, function () {
 		$config = get_config()['modules']['local-server'];
@@ -69,6 +70,15 @@ add_action( 'hm-platform.modules.init', function () {
 
 				return parse_url( TACHYON_URL, PHP_URL_HOST ) === $host;
 			}, 10, 2 );
+		}
+
+		if ( $config['email'] ) {
+			add_action( 'plugins_loaded', function () {
+				global $phpmailer;
+				require_once ABSPATH . WPINC . '/class-phpmailer.php';
+				require_once __DIR__ . '/inc/class-log-phpmailer.php';
+				$phpmailer = new Log_PHPMailer( true );
+			} );
 		}
 	} );
 } );
