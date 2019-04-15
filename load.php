@@ -6,12 +6,18 @@ use function HM\Platform\get_config;
 use function HM\Platform\get_environment_architecture;
 use function HM\Platform\register_module;
 
+// Don't self-initialize if this is not a Platform execution.
+if ( ! function_exists( 'add_action' ) ) {
+	return;
+}
+
 add_action( 'hm-platform.modules.init', function () {
 	$default_settings = [
 		'enabled' => get_environment_architecture() === 'local-server',
 		's3'      => true,
 		'tachyon' => true,
 	];
+	define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
 	register_module( 'local-server', __DIR__, 'Local Server', $default_settings, function () {
 		$config = get_config()['modules']['local-server'];
 
@@ -43,9 +49,6 @@ add_action( 'hm-platform.modules.init', function () {
 
 		define( 'ELASTICSEARCH_HOST', getenv( 'ELASTICSEARCH_HOST' ) );
 		define( 'ELASTICSEARCH_PORT', getenv( 'ELASTICSEARCH_PORT' ) );
-
-		define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
-
 		global $redis_server;
 		$redis_server = [
 			'host' => getenv( 'REDIS_HOST' ),
