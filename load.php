@@ -6,12 +6,18 @@ use function HM\Platform\get_config;
 use function HM\Platform\get_environment_architecture;
 use function HM\Platform\register_module;
 
+// Don't self-initialize if this is not a Platform execution.
+if ( ! function_exists( 'add_action' ) ) {
+	return;
+}
+
 add_action( 'hm-platform.modules.init', function () {
 	$default_settings = [
 		'enabled' => get_environment_architecture() === 'local-server',
 		's3'      => true,
 		'tachyon' => true,
 	];
+
 	register_module( 'local-server', __DIR__, 'Local Server', $default_settings, function () {
 		$config = get_config()['modules']['local-server'];
 
