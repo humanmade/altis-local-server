@@ -47,12 +47,16 @@ EOT
 			return $this->start( $input, $output );
 		} elseif ( $subcommand === 'stop' ) {
 			return $this->stop( $input, $output );
+		} elseif ( $subcommand === 'restart' ) {
+			return $this->restart( $input, $output );
 		} elseif ( $subcommand === 'cli' ) {
 			return $this->cli( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
 			return $this->logs( $input, $output );
+		} elseif ( $subcommand === 'shell' ) {
+			return $this->shell( $input, $output );
 		}
 	}
 
@@ -68,9 +72,13 @@ EOT
 			'PATH' => getenv( 'PATH' ),
 		] );
 		$compose->setTimeout( 0 );
-		$compose->run( function ( $type, $buffer ) {
+		$failed = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
+
+		if ( $failed ) {
+			return;
+		}
 
 		$cli = $this->getApplication()->find( 'local-server' );
 
@@ -120,7 +128,12 @@ EOT
 			echo $buffer;
 		} );
 
-		$output->writeln( 'Stopped...' );
+		$output->writeln( 'Stopped.' );
+	}
+
+	protected function restart( InputInterface $input, OutputInterface $output ) {
+		$this->stop( $input, $output );
+		$this->start( $input, $output );
 	}
 
 	protected function cli( InputInterface $input, OutputInterface $output ) {
@@ -171,8 +184,20 @@ EOT
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
+		$compose->setTimeout( 0 );
 		$compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
+	}
+
+	protected function shell( InputInterface $input, OutputInterface $output ) {
+		passthru( sprintf(
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
+			'vendor/humanmade/local-server/docker',
+			getcwd(),
+			basename( getcwd() ),
+		), $return_val );
+
+		return $return_val;
 	}
 }
