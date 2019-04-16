@@ -17,7 +17,7 @@ add_action( 'hm-platform.modules.init', function () {
 		's3'      => true,
 		'tachyon' => true,
 	];
-	define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
+
 	register_module( 'local-server', __DIR__, 'Local Server', $default_settings, function () {
 		$config = get_config()['modules']['local-server'];
 
@@ -49,6 +49,9 @@ add_action( 'hm-platform.modules.init', function () {
 
 		define( 'ELASTICSEARCH_HOST', getenv( 'ELASTICSEARCH_HOST' ) );
 		define( 'ELASTICSEARCH_PORT', getenv( 'ELASTICSEARCH_PORT' ) );
+
+		define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
+
 		global $redis_server;
 		$redis_server = [
 			'host' => getenv( 'REDIS_HOST' ),
