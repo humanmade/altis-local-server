@@ -195,7 +195,7 @@ EOT
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
 			'vendor/humanmade/local-server/docker',
 			getcwd(),
-			basename( getcwd() ),
+			basename( getcwd() )
 		), $return_val );
 
 		return $return_val;
