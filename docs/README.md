@@ -1,5 +1,7 @@
 # Local Server
 
+**Note:** Local Server is an experimental Docker-based environment, currently in preview. Consult the [Local Chassis](docs://local-chassis) documentation if you are using Chassis for your local environment.
+
 The Local Server module providers a local development environment for HM Platform projects. It is built on a containerized architecture using Docker images and Docker Compose to provide drop-in replacements for most components of the Cloud infrastructure.
 
 ## Installing
