@@ -1,6 +1,6 @@
 <?php
 
-namespace HM\Platform\LocalServer\Composer;
+namespace Altis\LocalServer\Composer;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
