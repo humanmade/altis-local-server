@@ -13,8 +13,6 @@ x-php: &php
   links:
     - "db:db-read-replica"
     - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
-  external_links:
-    - "proxy:tachyon-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
   environment:
@@ -39,7 +37,7 @@ x-php: &php
     S3_UPLOADS_KEY: not-needed
     S3_UPLOADS_SECRET: not-needed
     S3_UPLOADS_REGION: not-needed
-    TACHYON_URL: https://tachyon-${COMPOSE_PROJECT_NAME:-default}.altis.dev/uploads
+    TACHYON_URL: https://${COMPOSE_PROJECT_NAME:-default}.altis.dev/tachyon
 
 services:
   db:
@@ -136,7 +134,7 @@ services:
       - "traefik.port=8080"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:tachyon-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1"
     environment:
       AWS_REGION: not-needed
       AWS_S3_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
