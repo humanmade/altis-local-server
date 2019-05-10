@@ -1,6 +1,6 @@
 <?php
 
-namespace HM\Platform\LocalServer\Composer;
+namespace Altis\LocalServer\Composer;
 
 use Composer\Command\BaseCommand;
 use Symfony\Component\Console\Input\InputOption;
