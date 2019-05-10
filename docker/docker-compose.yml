@@ -7,7 +7,7 @@ x-php: &php
     - redis
     - elasticsearch
     - xray
-  image: humanmade/php
+  image: humanmade/altis-local-server-php
   networks:
     - proxy
   links:
@@ -64,7 +64,7 @@ services:
     ports:
       - '9000'
   nginx:
-    image: humanmade/nginx
+    image: humanmade/altis-local-server-nginx
     networks:
       - proxy
     depends_on:
@@ -94,7 +94,7 @@ services:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
   elasticsearch:
-    image: altis-elasticsearch:latest
+    image: humanmade/altis-local-server-elasticsearch:latest
     build: ./elasticsearch
     ulimits:
       memlock:
