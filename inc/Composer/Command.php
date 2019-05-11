@@ -26,6 +26,8 @@ To start the local development server:
 	start
 Stop the local development server:
 	stop
+Destroy the local development server:
+	destroy
 View status of the local development server:
 	status
 Run WP CLI command:
@@ -49,6 +51,8 @@ EOT
 			return $this->stop( $input, $output );
 		} elseif ( $subcommand === 'restart' ) {
 			return $this->restart( $input, $output );
+		} elseif ( $subcommand === 'destroy' ) {
+			return $this->destroy( $input, $output );
 		} elseif ( $subcommand === 'cli' ) {
 			return $this->cli( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
@@ -117,10 +121,10 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Stopping...' );
 
-		$proxy = new Process( 'docker-compose down', 'vendor/humanmade/local-server/docker' );
+		$proxy = new Process( 'docker-compose stop', 'vendor/humanmade/local-server/docker' );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose down', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose stop', 'vendor/humanmade/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
@@ -129,6 +133,23 @@ EOT
 		} );
 
 		$output->writeln( 'Stopped.' );
+	}
+
+	protected function destroy( InputInterface $input, OutputInterface $output ) {
+		$output->writeln( 'Destroying...' );
+
+		$proxy = new Process( 'docker-compose down -v', 'vendor/humanmade/local-server/docker' );
+		$proxy->run();
+
+		$compose = new Process( 'docker-compose down -v', 'vendor/humanmade/local-server/docker', [
+			'VOLUME' => getcwd(),
+			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+		] );
+		$compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		$output->writeln( 'Destroyed.' );
 	}
 
 	protected function restart( InputInterface $input, OutputInterface $output ) {
