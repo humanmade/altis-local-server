@@ -1,5 +1,5 @@
 {
-	"name": "humanmade/local-server",
+	"name": "altis/local-server",
 	"description": "Local Server module for Altis",
 	"type": "composer-plugin",
 	"license": "GPL-2.0-or-later",
