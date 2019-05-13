@@ -67,10 +67,10 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Starting...' );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/humanmade/local-server/docker' );
+		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose up -d', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 			'PATH' => getenv( 'PATH' ),
@@ -121,10 +121,10 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Stopping...' );
 
-		$proxy = new Process( 'docker-compose stop', 'vendor/humanmade/local-server/docker' );
+		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker' );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose stop', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
@@ -138,10 +138,10 @@ EOT
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Destroying...' );
 
-		$proxy = new Process( 'docker-compose down -v', 'vendor/humanmade/local-server/docker' );
+		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker' );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose down -v', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
@@ -190,7 +190,7 @@ EOT
 
 		passthru( sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u nobody php wp %s',
-			'vendor/humanmade/local-server/docker',
+			'vendor/altis/local-server/docker',
 			getcwd(),
 			basename( getcwd() ),
 			! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
@@ -201,7 +201,7 @@ EOT
 	}
 
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
@@ -212,7 +212,7 @@ EOT
 
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs -f ' . $log , 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose logs -f ' . $log , 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
@@ -225,7 +225,7 @@ EOT
 	protected function shell( InputInterface $input, OutputInterface $output ) {
 		passthru( sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
-			'vendor/humanmade/local-server/docker',
+			'vendor/altis/local-server/docker',
 			getcwd(),
 			basename( getcwd() )
 		), $return_val );
