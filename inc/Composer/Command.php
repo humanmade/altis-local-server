@@ -160,7 +160,18 @@ EOT
 	protected function cli( InputInterface $input, OutputInterface $output ) {
 		$site_url = 'https://' . basename( getcwd() ) . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
-		$options[] = '--url=' . $site_url;
+
+		$passed_url = false;
+		foreach ( $options as $option ) {
+			if ( strpos( $option, '--url=' ) === 0 ) {
+				$passed_url = true;
+				break;
+			}
+		}
+
+		if ( ! $passed_url ) {
+			$options[] = '--url=' . $site_url;
+		}
 
 		// Escape all options. Because the shell is going to strip the
 		// initial escaping like "My string" => My String, then we need
