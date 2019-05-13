@@ -3,10 +3,14 @@ version: '2.3'
 x-php: &php
   init: true
   depends_on:
-    - db
-    - redis
-    - elasticsearch
-    - xray
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+    elasticsearch:
+      condition: service_started
+    xray:
+      condition: service_started
   image: humanmade/altis-local-server-php
   networks:
     - proxy
@@ -53,6 +57,10 @@ services:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "wordpress", "-pwordpress" ]
+      timeout: 20s
+      retries: 10
   redis:
     image: redis:3.2-alpine
     networks:
