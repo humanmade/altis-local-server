@@ -2,7 +2,7 @@
 
 <p align="center">Local development server for <strong><a href="https://altis-dxp.com/">Altis</a></strong>.</p>
 
-<p align="center"><img alt="Packagist Version" src="https://img.shields.io/packagist/v/altis/local-server.svg"></p>
+<p align="center"><a href="https://packagist.org/packages/altis/local-server"><img alt="Packagist Version" src="https://img.shields.io/packagist/v/altis/local-server.svg"></a></p>
 
 ## Local Server
 
