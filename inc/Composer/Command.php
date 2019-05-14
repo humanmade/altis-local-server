@@ -188,14 +188,17 @@ EOT
 			}
 		}
 
-		passthru( sprintf(
+		$has_stdin = ! posix_isatty( STDIN );
+		$command = sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u nobody php wp %s',
 			'vendor/altis/local-server/docker',
 			getcwd(),
 			basename( getcwd() ),
-			! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
+			$has_stdin || ! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
 			implode( ' ', $options )
-		), $return_val );
+		);
+
+		passthru( $command, $return_val );
 
 		return $return_val;
 	}
