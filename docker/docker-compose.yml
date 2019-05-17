@@ -103,7 +103,6 @@ services:
     user: "nobody:nobody"
   elasticsearch:
     image: humanmade/altis-local-server-elasticsearch:latest
-    build: ./elasticsearch
     ulimits:
       memlock:
         soft: -1
