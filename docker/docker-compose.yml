@@ -8,7 +8,7 @@ x-php: &php
     redis:
       condition: service_started
     elasticsearch:
-      condition: service_started
+      condition: service_healthy
     xray:
       condition: service_started
   image: humanmade/altis-local-server-php
@@ -59,7 +59,8 @@ services:
       MYSQL_PASSWORD: wordpress
     healthcheck:
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "wordpress", "-pwordpress" ]
-      timeout: 20s
+      timeout: 5s
+      interval: 5s
       retries: 10
   redis:
     image: redis:3.2-alpine
@@ -113,6 +114,11 @@ services:
       - "9200"
     networks:
       - proxy
+    healthcheck:
+        test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+        interval: 5s
+        timeout: 5s
+        retries: 10
     labels:
       - "traefik.port=9200"
       - "traefik.protocol=http"
