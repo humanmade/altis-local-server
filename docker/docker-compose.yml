@@ -17,6 +17,8 @@ x-php: &php
   links:
     - "db:db-read-replica"
     - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
+  external_links:
+    - "proxy:${COMPOSE_PROJECT_NAME}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
   environment:
