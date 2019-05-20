@@ -11,7 +11,7 @@ x-php: &php
       condition: service_healthy
     xray:
       condition: service_started
-  image: humanmade/altis-local-server-php
+  image: humanmade/altis-local-server-php:1.0.0-rc1
   networks:
     - proxy
   links:
@@ -75,7 +75,7 @@ services:
     ports:
       - '9000'
   nginx:
-    image: humanmade/altis-local-server-nginx
+    image: humanmade/altis-local-server-nginx:1.0.0-rc1
     networks:
       - proxy
     depends_on:
@@ -90,7 +90,7 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   xray:
-    image: amazon/aws-xray-daemon
+    image: amazon/aws-xray-daemon:3.0.1
     ports:
       - 2000
     environment:
@@ -105,7 +105,7 @@ services:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
   elasticsearch:
-    image: humanmade/altis-local-server-elasticsearch:latest
+    image: humanmade/altis-local-server-elasticsearch:1.0.0-rc1
     ulimits:
       memlock:
         soft: -1
@@ -127,7 +127,7 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3:
-    image: fingershock/fakes3
+    image: fingershock/fakes3:0.2.4
     volumes:
       - "s3:/fakes3_data:rw"
     ports:
@@ -140,7 +140,7 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   tachyon:
-    image: humanmade/tachyon
+    image: humanmade/tachyon:1.1.0
     ports:
       - "8081:8080"
     networks:
