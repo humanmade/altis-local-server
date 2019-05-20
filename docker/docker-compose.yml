@@ -132,7 +132,7 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   tachyon:
-    image: humanmade/tachyon:1.0.1
+    image: humanmade/tachyon:1.1.0
     ports:
       - "8081:8080"
     networks:
