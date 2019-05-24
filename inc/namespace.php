@@ -4,7 +4,10 @@ namespace Altis\Local_Server;
 
 use function Altis\get_config;
 
-function boostrap() {
+/**
+ * Configure environment for local server.
+ */
+function bootstrap() {
 	$config = get_config()['modules']['local-server'];
 
 	if ( $config['s3'] ) {
