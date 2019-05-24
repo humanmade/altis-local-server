@@ -1,12 +1,19 @@
 <?php
+/**
+ * Local Server Composer Plugin.
+ *
+ * @phpcs:disable WordPress.Files.FileName.NotHyphenatedLowercase
+ * @phpcs:disable WordPress.Files.FileName.InvalidClassFileName
+ * @phpcs:disable HM.Files.NamespaceDirectoryName.NameMismatch
+ * @phpcs:disable HM.Files.ClassFileName.MismatchedName
+ */
 
 namespace Altis\LocalServer\Composer;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
-use Composer\Plugin\PluginInterface;
-use Composer\Plugin\Capability\CommandProvider as CommandProviderCapability;
 use Composer\Plugin\Capable;
+use Composer\Plugin\PluginInterface;
 
 class Plugin implements PluginInterface, Capable {
 	public function activate( Composer $composer, IOInterface $io ) {
