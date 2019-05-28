@@ -1,14 +1,16 @@
 <?php
+/**
+ * Local Server Composer Command.
+ */
 
 namespace Altis\LocalServer\Composer;
 
 use Composer\Command\BaseCommand;
-use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
-use Symfony\Component\Console\Input\ArrayInput;
 
 class Command extends BaseCommand {
 	protected function configure() {
@@ -215,7 +217,7 @@ EOT
 
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs -f ' . $log , 'vendor/altis/local-server/docker', [
+		$compose = new Process( 'docker-compose logs -f ' . $log, 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );

@@ -17,9 +17,9 @@
 		"class": "Altis\\LocalServer\\Composer\\Plugin"
 	},
 	"autoload": {
-		"psr-4": {
-			"Altis\\LocalServer\\": "inc/"
-		},
+		"classmap": [
+			"inc/"
+		],
 		"files": [
 			"wp-config.php",
 			"load.php"
