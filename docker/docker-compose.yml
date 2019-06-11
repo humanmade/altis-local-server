@@ -21,6 +21,7 @@ x-php: &php
     - "proxy:${COMPOSE_PROJECT_NAME}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
+    - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
   environment:
     DB_HOST: db
     DB_READ_REPLICA_HOST: db-read-replica
@@ -44,6 +45,7 @@ x-php: &php
     S3_UPLOADS_SECRET: not-needed
     S3_UPLOADS_REGION: not-needed
     TACHYON_URL: https://${COMPOSE_PROJECT_NAME:-default}.altis.dev/tachyon
+    PHP_SENDMAIL_PATH: /usr/sbin/sendmail -t -i -S mailhog:1025
 
 services:
   db:
@@ -85,6 +87,7 @@ services:
     ports:
       - "8080"
     labels:
+      - "traefik.frontend.priority=10"
       - "traefik.port=8080"
       - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
@@ -122,10 +125,11 @@ services:
         timeout: 5s
         retries: 10
     labels:
+      - "traefik.frontend.priority=1000"
       - "traefik.port=9200"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3:
     image: fingershock/fakes3:0.2.4
     volumes:
@@ -135,6 +139,7 @@ services:
     networks:
       - proxy
     labels:
+      - "traefik.frontend.priority=1000"
       - "traefik.port=8000"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
@@ -146,6 +151,7 @@ services:
     networks:
       - proxy
     labels:
+      - "traefik.frontend.priority=1000"
       - "traefik.port=8080"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
@@ -156,6 +162,21 @@ services:
       AWS_S3_ENDPOINT: http://s3.localhost:8000/
     links:
       - "s3:s3.localhost"
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "8025"
+      - "1025"
+    networks:
+      - proxy
+    labels:
+      - "traefik.frontend.priority=1000"
+      - "traefik.port=8025"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/mailhog"
+    environment:
+      MH_UI_WEB_PATH: mailhog
 
 networks:
   proxy:
