@@ -87,7 +87,7 @@ services:
     ports:
       - "8080"
     labels:
-      - "traefik.frontend.priority=10"
+      - "traefik.frontend.priority=1"
       - "traefik.port=8080"
       - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
@@ -125,7 +125,6 @@ services:
         timeout: 5s
         retries: 10
     labels:
-      - "traefik.frontend.priority=1000"
       - "traefik.port=9200"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
@@ -139,7 +138,6 @@ services:
     networks:
       - proxy
     labels:
-      - "traefik.frontend.priority=1000"
       - "traefik.port=8000"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
@@ -151,7 +149,6 @@ services:
     networks:
       - proxy
     labels:
-      - "traefik.frontend.priority=1000"
       - "traefik.port=8080"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
@@ -170,7 +167,6 @@ services:
     networks:
       - proxy
     labels:
-      - "traefik.frontend.priority=1000"
       - "traefik.port=8025"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
