@@ -3,15 +3,22 @@ version: '2.3'
 x-php: &php
   init: true
   depends_on:
-    - db
-    - redis
-    - elasticsearch
-    - xray
-  image: humanmade/php
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+    elasticsearch:
+      condition: service_healthy
+    xray:
+      condition: service_started
+  image: humanmade/altis-local-server-php:1.0.0-rc1
   links:
     - "db:db-read-replica"
+  external_links:
+    - "proxy:${COMPOSE_PROJECT_NAME}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
+    - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
   environment:
     DB_HOST: db
     DB_READ_REPLICA_HOST: db-read-replica
@@ -34,7 +41,8 @@ x-php: &php
     S3_UPLOADS_KEY: not-needed
     S3_UPLOADS_SECRET: not-needed
     S3_UPLOADS_REGION: not-needed
-    TACHYON_URL: https://tachyon-${COMPOSE_PROJECT_NAME:-default}.altis.dev/uploads
+    TACHYON_URL: https://${COMPOSE_PROJECT_NAME:-default}.altis.dev/tachyon
+    PHP_SENDMAIL_PATH: /usr/sbin/sendmail -t -i -S mailhog:1025
 
 services:
   db:
@@ -48,6 +56,11 @@ services:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "wordpress", "-pwordpress" ]
+      timeout: 5s
+      interval: 5s
+      retries: 10
   redis:
     image: redis:3.2-alpine
     ports:
@@ -57,7 +70,7 @@ services:
     ports:
       - '9000'
   nginx:
-    image: humanmade/nginx
+    image: humanmade/altis-local-server-nginx:1.0.0-rc1
     networks:
       - proxy
       - default
@@ -68,12 +81,13 @@ services:
     ports:
       - "8080"
     labels:
+      - "traefik.frontend.priority=1"
       - "traefik.port=8080"
       - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   xray:
-    image: amazon/aws-xray-daemon
+    image: amazon/aws-xray-daemon:3.0.1
     ports:
       - 2000
     environment:
@@ -86,8 +100,7 @@ services:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
   elasticsearch:
-    image: altis-elasticsearch:latest
-    build: ./elasticsearch
+    image: humanmade/altis-local-server-elasticsearch:1.0.0-rc1
     ulimits:
       memlock:
         soft: -1
@@ -98,13 +111,18 @@ services:
       - "9200"
     networks:
       - proxy
+    healthcheck:
+        test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+        interval: 5s
+        timeout: 5s
+        retries: 10
     labels:
       - "traefik.port=9200"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3:
-    image: fingershock/fakes3
+    image: fingershock/fakes3:0.2.4
     volumes:
       - "s3:/fakes3_data:rw"
     ports:
@@ -117,7 +135,7 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   tachyon:
-    image: humanmade/tachyon
+    image: humanmade/tachyon:1.1.0
     ports:
       - "8081:8080"
     networks:
@@ -126,13 +144,27 @@ services:
       - "traefik.port=8080"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:tachyon-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1"
     environment:
       AWS_REGION: not-needed
       AWS_S3_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
       AWS_S3_ENDPOINT: http://s3.localhost:8000/
     links:
       - "s3:s3.localhost"
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "8025"
+      - "1025"
+    networks:
+      - proxy
+    labels:
+      - "traefik.port=8025"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/mailhog"
+    environment:
+      MH_UI_WEB_PATH: mailhog
 
 networks:
   default:
