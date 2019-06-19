@@ -16,6 +16,7 @@ x-php: &php
     - "db:db-read-replica"
   external_links:
     - "proxy:${COMPOSE_PROJECT_NAME}.altis.dev"
+    - "proxy:{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
@@ -32,7 +33,7 @@ x-php: &php
     PAGER: more
     HM_ENV_ARCHITECTURE: 'local-server'
     HM_DEPLOYMENT_REVISION: 'dev'
-    ELASTICSEARCH_HOST: elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    ELASTICSEARCH_HOST: elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev
     ELASTICSEARCH_PORT: 9200
     AWS_XRAY_DAEMON_HOST: xray
     S3_UPLOADS_ENDPOINT: http://s3.localhost:8000/
@@ -50,7 +51,7 @@ services:
     volumes:
       - "db-data:/var/lib/mysql"
     ports:
-      - '3306'
+      - "3306"
     environment:
       MYSQL_ROOT_PASSWORD: wordpress
       MYSQL_DATABASE: wordpress
@@ -89,7 +90,7 @@ services:
   xray:
     image: amazon/aws-xray-daemon:3.0.1
     ports:
-      - 2000
+      - "2000"
     environment:
       AWS_ACCESS_KEY_ID: YOUR_KEY_HERE
       AWS_SECRET_ACCESS_KEY: YOUR_SECRET_HERE
@@ -118,9 +119,9 @@ services:
         retries: 10
     labels:
       - "traefik.port=9200"
-      - "traefik.protocol=http"
+      - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3:
     image: fingershock/fakes3:0.2.4
     volumes:
@@ -135,13 +136,13 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   tachyon:
-    image: humanmade/tachyon:1.1.0
+    build: ./tachyon
     ports:
-      - "8081:8080"
+      - "8082"
     networks:
       - proxy
     labels:
-      - "traefik.port=8080"
+      - "traefik.port=8082"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1"
