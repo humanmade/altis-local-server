@@ -16,6 +16,7 @@ x-php: &php
   image: humanmade/altis-local-server-php:1.0.0-rc1
   links:
     - "db:db-read-replica"
+    - "s3:s3.localhost"
   external_links:
     - "proxy:${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   volumes:
@@ -136,6 +137,7 @@ services:
       - "8000"
     networks:
       - proxy
+      - default
     labels:
       - "traefik.port=8000"
       - "traefik.protocol=http"
