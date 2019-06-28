@@ -1,0 +1,13 @@
+elasticsearch.url: http://elasticsearch:9200
+
+server.name: kibana
+server.host: 0.0.0.0
+server.basePath: ""
+server.rewriteBasePath: true
+
+# xpack.security.enabled: false
+# xpack.monitoring.enabled: false
+# xpack.monitoring.ui.container.elasticsearch.enabled: false
+
+logging.quiet: true
+logging.verbose: false

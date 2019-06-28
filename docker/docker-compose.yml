@@ -46,6 +46,8 @@ x-php: &php
     S3_UPLOADS_REGION: not-needed
     TACHYON_URL: https://${COMPOSE_PROJECT_NAME:-default}.altis.dev/tachyon
     PHP_SENDMAIL_PATH: /usr/sbin/sendmail -t -i -S mailhog:1025
+    HM_ANALYTICS_PINPOINT_ENDPOINT: https://analytics-${COMPOSE_PROJECT_NAME:-default}.altis.dev/pinpoint
+    HM_ANALYTICS_COGNITO_ENDPOINT: https://analytics-${COMPOSE_PROJECT_NAME:-default}.altis.dev/cognito
 
 services:
   db:
@@ -128,7 +130,7 @@ services:
       - "traefik.port=9200"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:elasticsearch.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3:
     image: fingershock/fakes3:0.2.4
     volumes:
@@ -173,6 +175,38 @@ services:
       - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/mailhog"
     environment:
       MH_UI_WEB_PATH: mailhog
+  analytics:
+    image: humanmade/local-pinpoint
+    ports:
+      - "3000"
+    networks:
+      - proxy
+      - default
+    labels:
+      - "traefik.port=3000"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:analytics-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+    restart: on-failure
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.3.2
+    networks:
+      - proxy
+      - default
+    ports:
+      - "5601"
+    labels:
+      - "traefik.port=5601"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    # environment:
+    #   SERVER_NAME: ${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    volumes:
+      - ${PWD}/kibana.yml:/usr/share/kibana/config/kibana.yml
 
 networks:
   proxy:
