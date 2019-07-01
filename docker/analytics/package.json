@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "micro"
+    "start": "micro",
+    "lint": "eslint --fix ."
   },
   "author": "Human Made Limited <hello@humanmade.com>",
   "license": "GPL-2.0-or-later",
@@ -15,5 +16,12 @@
     "micro-fork": "^2.0.0",
     "request": "^2.88.0",
     "request-promise": "^4.2.4"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.0.2",
+    "eslint": "^5.16.0",
+    "eslint-config-humanmade": "^0.7.0",
+    "eslint-plugin-flowtype": "^3.11.1",
+    "eslint-plugin-import": "^2.18.0"
   }
 }
