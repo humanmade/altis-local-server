@@ -189,7 +189,7 @@ services:
       - "traefik.frontend.rule=HostRegexp:analytics-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
     restart: on-failure
   kibana:
-    image: docker.elastic.co/kibana/kibana:6.3.2
+    image: blacktop/kibana:6.3
     networks:
       - proxy
       - default
@@ -199,12 +199,10 @@ services:
       - "traefik.port=5601"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana;PathPrefixStrip:/kibana"
     depends_on:
       elasticsearch:
         condition: service_healthy
-    # environment:
-    #   SERVER_NAME: ${COMPOSE_PROJECT_NAME:-default}.altis.dev
     volumes:
       - ${PWD}/kibana.yml:/usr/share/kibana/config/kibana.yml
 

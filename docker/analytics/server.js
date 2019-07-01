@@ -37,15 +37,15 @@ const makeRecord = data => {
 	return {
 		application: {
 			app_id: 'local-pinpoint',
-			cognito_identity_pool_id: 'default',
+			cognito_identity_pool_id: '',
 			version_name: 'local'
 		},
 		arrival_timestamp: Date.now(),
 		attributes: data.attributes || {},
 		metrics: data.metrics || {},
 		client: {
-			client_id: 'default',
-			cognito_id: data.cognitoId || 'default',
+			client_id: data.cognitoId || 'default',
+			cognito_id: '',
 		},
 		device: {
 			model: data.model || 'unknown',
