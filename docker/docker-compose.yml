@@ -46,8 +46,16 @@ x-php: &php
     S3_UPLOADS_REGION: not-needed
     TACHYON_URL: https://${COMPOSE_PROJECT_NAME:-default}.altis.dev/tachyon
     PHP_SENDMAIL_PATH: /usr/sbin/sendmail -t -i -S mailhog:1025
-    HM_ANALYTICS_PINPOINT_ENDPOINT: https://analytics-${COMPOSE_PROJECT_NAME:-default}.altis.dev/pinpoint
-    HM_ANALYTICS_COGNITO_ENDPOINT: https://analytics-${COMPOSE_PROJECT_NAME:-default}.altis.dev/cognito
+    HM_ANALYTICS_PINPOINT_ENDPOINT: https://pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    HM_ANALYTICS_COGNITO_ENDPOINT: https://cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev
+
+x-analytics: &analytics
+  ports:
+    - "3000"
+  networks:
+    - proxy
+    - default
+  restart: on-failure
 
 services:
   db:
@@ -172,22 +180,25 @@ services:
       - "traefik.port=8025"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/mailhog"
+      - "traefik.frontend.rule=Host:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/mailhog"
     environment:
       MH_UI_WEB_PATH: mailhog
-  analytics:
-    image: humanmade/local-pinpoint
-    ports:
-      - "3000"
-    networks:
-      - proxy
-      - default
+  cognito:
+    <<: *analytics
+    image: humanmade/local-cognito
     labels:
       - "traefik.port=3000"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:analytics-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
-    restart: on-failure
+      - "traefik.frontend.rule=Host:cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+  pinpoint:
+    <<: *analytics
+    image: humanmade/local-pinpoint
+    labels:
+      - "traefik.port=3000"
+      - "traefik.protocol=http"
+      - "traefik.docker.network=proxy"
+      - "traefik.frontend.rule=Host:pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   kibana:
     image: blacktop/kibana:6.3
     networks:
@@ -199,7 +210,7 @@ services:
       - "traefik.port=5601"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana;PathPrefixStrip:/kibana"
+      - "traefik.frontend.rule=Host:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana;PathPrefixStrip:/kibana"
     depends_on:
       elasticsearch:
         condition: service_healthy
