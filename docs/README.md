@@ -1,6 +1,8 @@
 # Local Server
 
-The Local Server module providers a local development environment for HM Platform projects. It is built on a containerized architecture using Docker images and Docker Compose to provide drop-in replacements for most components of the Cloud infrastructure.
+**Note:** Local Server is an experimental Docker-based environment, currently in preview. Consult the [Local Chassis](docs://local-chassis) documentation if you are using Chassis for your local environment.
+
+The Local Server module providers a local development environment for Altis projects. It is built on a containerized architecture using Docker images and Docker Compose to provide drop-in replacements for most components of the Cloud infrastructure.
 
 ## Installing
 
@@ -8,7 +10,7 @@ Local Server uses Docker for containerization, therefore you must install the Do
 
 Once Docker is installed and running, you are ready to start the Local Server. Local Server uses the command line via the `composer` command.
 
-Navigate your shell to your project's directory. You should already have installed HM Platform by running `composer install` or `composer create-project` but if not, do so now.
+Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now.
 
 ## Starting the Local Server
 

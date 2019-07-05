@@ -1,14 +1,16 @@
 <?php
+/**
+ * Local Server Composer Command.
+ */
 
-namespace HM\Platform\LocalServer\Composer;
+namespace Altis\LocalServer\Composer;
 
 use Composer\Command\BaseCommand;
-use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
-use Symfony\Component\Console\Input\ArrayInput;
 
 class Command extends BaseCommand {
 	protected function configure() {
@@ -26,6 +28,8 @@ To start the local development server:
 	start
 Stop the local development server:
 	stop
+Destroy the local development server:
+	destroy
 View status of the local development server:
 	status
 Run WP CLI command:
@@ -47,30 +51,40 @@ EOT
 			return $this->start( $input, $output );
 		} elseif ( $subcommand === 'stop' ) {
 			return $this->stop( $input, $output );
+		} elseif ( $subcommand === 'restart' ) {
+			return $this->restart( $input, $output );
+		} elseif ( $subcommand === 'destroy' ) {
+			return $this->destroy( $input, $output );
 		} elseif ( $subcommand === 'cli' ) {
 			return $this->cli( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
 			return $this->logs( $input, $output );
+		} elseif ( $subcommand === 'shell' ) {
+			return $this->shell( $input, $output );
 		}
 	}
 
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Starting...' );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/humanmade/local-server/docker' );
+		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose up -d', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 			'PATH' => getenv( 'PATH' ),
 		] );
 		$compose->setTimeout( 0 );
-		$compose->run( function ( $type, $buffer ) {
+		$failed = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
+
+		if ( $failed ) {
+			return;
+		}
 
 		$cli = $this->getApplication()->find( 'local-server' );
 
@@ -109,10 +123,10 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( 'Stopping...' );
 
-		$proxy = new Process( 'docker-compose down', 'vendor/humanmade/local-server/docker' );
+		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker' );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose down', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
@@ -120,13 +134,46 @@ EOT
 			echo $buffer;
 		} );
 
-		$output->writeln( 'Stopped...' );
+		$output->writeln( 'Stopped.' );
+	}
+
+	protected function destroy( InputInterface $input, OutputInterface $output ) {
+		$output->writeln( 'Destroying...' );
+
+		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker' );
+		$proxy->run();
+
+		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', [
+			'VOLUME' => getcwd(),
+			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+		] );
+		$compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		$output->writeln( 'Destroyed.' );
+	}
+
+	protected function restart( InputInterface $input, OutputInterface $output ) {
+		$this->stop( $input, $output );
+		$this->start( $input, $output );
 	}
 
 	protected function cli( InputInterface $input, OutputInterface $output ) {
 		$site_url = 'https://' . basename( getcwd() ) . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
-		$options[] = '--url=' . $site_url;
+
+		$passed_url = false;
+		foreach ( $options as $option ) {
+			if ( strpos( $option, '--url=' ) === 0 ) {
+				$passed_url = true;
+				break;
+			}
+		}
+
+		if ( ! $passed_url ) {
+			$options[] = '--url=' . $site_url;
+		}
 
 		// Escape all options. Because the shell is going to strip the
 		// initial escaping like "My string" => My String, then we need
@@ -143,20 +190,23 @@ EOT
 			}
 		}
 
-		passthru( sprintf(
+		$has_stdin = ! posix_isatty( STDIN );
+		$command = sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u nobody php wp %s',
-			'vendor/humanmade/local-server/docker',
+			'vendor/altis/local-server/docker',
 			getcwd(),
 			basename( getcwd() ),
-			! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
+			$has_stdin || ! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
 			implode( ' ', $options )
-		), $return_val );
+		);
+
+		passthru( $command, $return_val );
 
 		return $return_val;
 	}
 
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
@@ -167,12 +217,24 @@ EOT
 
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs -f ' . $log , 'vendor/humanmade/local-server/docker', [
+		$compose = new Process( 'docker-compose logs -f ' . $log, 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
 		] );
+		$compose->setTimeout( 0 );
 		$compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
+	}
+
+	protected function shell( InputInterface $input, OutputInterface $output ) {
+		passthru( sprintf(
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
+			'vendor/altis/local-server/docker',
+			getcwd(),
+			basename( getcwd() )
+		), $return_val );
+
+		return $return_val;
 	}
 }

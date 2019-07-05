@@ -1,6 +1,6 @@
 {
-	"name": "humanmade/local-server",
-	"description": "Human Made Platform Local Server",
+	"name": "altis/local-server",
+	"description": "Local Server module for Altis",
 	"type": "composer-plugin",
 	"license": "GPL-2.0-or-later",
 	"authors": [
@@ -10,15 +10,16 @@
 		}
 	],
 	"require": {
+		"php": ">=7.1",
 		"composer-plugin-api": "^1.1"
 	},
 	"extra": {
-		"class": "HM\\Platform\\LocalServer\\Composer\\Plugin"
+		"class": "Altis\\LocalServer\\Composer\\Plugin"
 	},
 	"autoload": {
-		"psr-4": {
-			"HM\\Platform\\LocalServer\\": "inc/"
-		},
+		"classmap": [
+			"inc/"
+		],
 		"files": [
 			"wp-config.php",
 			"load.php"
