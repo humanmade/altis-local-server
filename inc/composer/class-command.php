@@ -74,7 +74,7 @@ EOT
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 			'PATH' => getenv( 'PATH' ),
 		] );
 		$compose->setTimeout( 0 );
@@ -115,7 +115,7 @@ EOT
 			$output->writeln( 'Installed database.' );
 		}
 
-		$site_url = 'https://' . basename( getcwd() ) . '.altis.dev/';
+		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$output->writeln( 'Startup completed.' );
 		$output->writeln( 'To access your site visit: ' . $site_url );
 	}
@@ -128,7 +128,7 @@ EOT
 
 		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -145,7 +145,7 @@ EOT
 
 		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -160,7 +160,7 @@ EOT
 	}
 
 	protected function cli( InputInterface $input, OutputInterface $output ) {
-		$site_url = 'https://' . basename( getcwd() ) . '.altis.dev/';
+		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
 
 		$passed_url = false;
@@ -195,7 +195,7 @@ EOT
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u nobody php wp %s',
 			'vendor/altis/local-server/docker',
 			getcwd(),
-			basename( getcwd() ),
+			$this->get_project_subdomain(),
 			$has_stdin || ! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
 			implode( ' ', $options )
 		);
@@ -208,7 +208,7 @@ EOT
 	protected function status( InputInterface $input, OutputInterface $output ) {
 		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -219,7 +219,7 @@ EOT
 		$log = $input->getArgument( 'options' )[0];
 		$compose = new Process( 'docker-compose logs -f ' . $log, 'vendor/altis/local-server/docker', [
 			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => basename( getcwd() ),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$compose->setTimeout( 0 );
 		$compose->run( function ( $type, $buffer ) {
@@ -232,9 +232,27 @@ EOT
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
 			'vendor/altis/local-server/docker',
 			getcwd(),
-			basename( getcwd() )
+			$this->get_project_subdomain()
 		), $return_val );
 
 		return $return_val;
+	}
+
+	/**
+	 * Get the name of the project for the local subdomain
+	 *
+	 * @return string
+	 */
+	protected function get_project_subdomain() : string {
+
+		$composer_json = json_decode( file_get_contents( getcwd() . '/composer.json' ), true );
+
+		if ( isset( $composer_json['extra']['altis']['modules']['local-server']['name'] ) ) {
+			$project_name = $composer_json['extra']['altis']['modules']['local-server']['name'];
+		} else {
+			$project_name = basename( getcwd() );
+		}
+
+		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
 	}
 }

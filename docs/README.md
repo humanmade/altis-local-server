@@ -25,6 +25,22 @@ To access your site visit: https://my-site.altis.dev/
 
 Visiting your site's URL should now work. Visit `/wp-admin/` and login with `admin` / `admin` to get started!
 
+The subdomain used for the project can be configured via the `modules.local-server.name` setting:
+
+```json
+{
+	"extra": {
+		"altis": {
+			"modules": {
+				"local-server": {
+					"name": "my-project"
+				}
+			}
+		}
+	}
+}
+```
+
 ## Stopping the Local Server
 
 To stop the Local Server containers, simply run `composer local-server stop`.
