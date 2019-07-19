@@ -66,4 +66,9 @@ function bootstrap() {
 			return parse_url( TACHYON_URL, PHP_URL_HOST ) === $host;
 		}, 10, 2 );
 	}
+
+	if ( $config['analytics'] ) {
+		define( 'HM_ANALYTICS_PINPOINT_ENDPOINT', getenv( 'HM_ANALYTICS_PINPOINT_ENDPOINT' ) );
+		define( 'HM_ANALYTICS_COGNITO_ENDPOINT', getenv( 'HM_ANALYTICS_COGNITO_ENDPOINT' ) );
+	}
 }
