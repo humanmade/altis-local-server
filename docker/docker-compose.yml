@@ -11,14 +11,14 @@ x-php: &php
       condition: service_healthy
     xray:
       condition: service_started
+    mailhog:
+      condition: service_started
   image: humanmade/altis-local-server-php:1.0.0-rc1
-  networks:
-    - proxy
   links:
     - "db:db-read-replica"
-    - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
+    - "s3:s3.localhost"
   external_links:
-    - "proxy:${COMPOSE_PROJECT_NAME}.altis.dev"
+    - "proxy:${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
@@ -60,12 +60,10 @@ x-analytics: &analytics
 services:
   db:
     image: mysql:5.7
-    networks:
-      - proxy
     volumes:
       - "db-data:/var/lib/mysql"
     ports:
-      - '3306'
+      - "3306"
     environment:
       MYSQL_ROOT_PASSWORD: wordpress
       MYSQL_DATABASE: wordpress
@@ -78,8 +76,6 @@ services:
       retries: 10
   redis:
     image: redis:3.2-alpine
-    networks:
-      - proxy
     ports:
       - '6379'
   php:
@@ -90,6 +86,7 @@ services:
     image: humanmade/altis-local-server-nginx:1.0.0-rc1
     networks:
       - proxy
+      - default
     depends_on:
       - php
     volumes:
@@ -105,13 +102,11 @@ services:
   xray:
     image: amazon/aws-xray-daemon:3.0.1
     ports:
-      - 2000
+      - "2000"
     environment:
       AWS_ACCESS_KEY_ID: YOUR_KEY_HERE
       AWS_SECRET_ACCESS_KEY: YOUR_SECRET_HERE
       AWS_REGION: us-east-1
-    networks:
-      - proxy
   cavalcade:
     <<: *php
     entrypoint:
@@ -123,17 +118,22 @@ services:
       memlock:
         soft: -1
         hard: -1
+    mem_limit: "768m"
+    memswap_limit: "768m"
     volumes:
       - es-data:/usr/share/elasticsearch/data
     ports:
       - "9200"
     networks:
       - proxy
+      - default
     healthcheck:
-        test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
-        interval: 5s
-        timeout: 5s
-        retries: 10
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
     labels:
       - "traefik.port=9200"
       - "traefik.protocol=http"
@@ -147,6 +147,7 @@ services:
       - "8000"
     networks:
       - proxy
+      - default
     labels:
       - "traefik.port=8000"
       - "traefik.protocol=http"
@@ -155,7 +156,7 @@ services:
   tachyon:
     image: humanmade/tachyon:1.1.0
     ports:
-      - "8081:8080"
+      - "8080"
     networks:
       - proxy
     labels:
@@ -176,6 +177,7 @@ services:
       - "1025"
     networks:
       - proxy
+      - default
     labels:
       - "traefik.port=8025"
       - "traefik.protocol=http"
@@ -210,7 +212,7 @@ services:
       - "traefik.port=5601"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=Host:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana;PathPrefixStrip:/kibana"
+      - "traefik.frontend.rule=Host:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -218,6 +220,7 @@ services:
       - ${PWD}/kibana.yml:/usr/share/kibana/config/kibana.yml
 
 networks:
+  default:
   proxy:
     external:
       name: proxy
