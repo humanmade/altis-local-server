@@ -212,7 +212,7 @@ services:
       - "traefik.port=5601"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=Host:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana;PathPrefixStrip:/kibana"
+      - "traefik.frontend.rule=Host:${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/kibana"
     depends_on:
       elasticsearch:
         condition: service_healthy
