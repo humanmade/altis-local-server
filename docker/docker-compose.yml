@@ -138,6 +138,8 @@ services:
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+    environment:
+      - http.max_content_length=10mb
   s3:
     image: fingershock/fakes3:0.2.4
     volumes:
