@@ -11,3 +11,9 @@ To install a a new language file and activate it:
 ```sh
 composer local-server cli -- language core install fr_FR
 ```
+
+CLI commands via Local Server also support piping, for example import a database SQL file:
+
+```sh
+composer local-server cli -- db import - < ~/Downloads/database.sql
+```
