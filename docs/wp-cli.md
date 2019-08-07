@@ -6,7 +6,7 @@ The Local Server allows you to run [WP CLI](https://wp-cli.org/) commands via th
 composer local-server cli -- post list
 ```
 
-To install a a new language file and activate it:
+To install a new language file and activate it:
 
 ```sh
 composer local-server cli -- language core install fr_FR
