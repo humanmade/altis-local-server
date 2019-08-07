@@ -22,7 +22,7 @@ All containers should have a status of "Up". If they do not, you can inspect the
 
 ## Services keep stopping
 
-By default docker machine sets a default memory limit of 2gb for all of your containers. Because of this if your system becomes too busy or you're running multiple instances of local server it is reccommended to increase this limit to at least 4gb.
+By default docker machine sets a default memory limit of 2gb for all of your containers. Because of this if your system becomes too busy or you're running multiple instances of local server it is recommended to increase this limit to at least 4gb.
 
 In the docker GUI go to the "Preferences" pane, then the "Advanced" tab and move the memory slider up.
 
