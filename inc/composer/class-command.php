@@ -17,7 +17,7 @@ class Command extends BaseCommand {
 		$this->setName( 'local-server' )
 			->setDescription( 'Local server.' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, cli, status. logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, cli, shell, status. logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setHelp(
@@ -34,6 +34,8 @@ View status of the local development server:
 	status
 Run WP CLI command:
 	cli -- <command>              eg: cli -- post list --debug
+Open a shell:
+	shell
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 EOT
