@@ -14,7 +14,8 @@
 		"composer-plugin-api": "^1.1"
 	},
 	"extra": {
-		"class": "Altis\\LocalServer\\Composer\\Plugin"
+		"class": "Altis\\LocalServer\\Composer\\Plugin",
+		"altis": {}
 	},
 	"autoload": {
 		"classmap": [
@@ -22,7 +23,7 @@
 		],
 		"files": [
 			"wp-config.php",
-			"load.php"
+			"inc/namespace.php"
 		]
 	}
 }
