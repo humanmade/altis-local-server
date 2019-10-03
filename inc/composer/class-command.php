@@ -115,11 +115,14 @@ EOT
 
 			] ), $output ) === 0;
 			$output->writeln( 'Installed database.' );
+			$output->writeln( 'Username: admin' );
+			$output->writeln( 'Password: admin' );
 		}
 
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$output->writeln( 'Startup completed.' );
 		$output->writeln( 'To access your site visit: ' . $site_url );
+
 	}
 
 	protected function stop( InputInterface $input, OutputInterface $output ) {
