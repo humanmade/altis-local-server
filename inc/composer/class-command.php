@@ -69,7 +69,7 @@ EOT
 	}
 
 	protected function start( InputInterface $input, OutputInterface $output ) {
-		$output->writeln( 'Starting...' );
+		$output->writeln( '<info>Starting...</info>' );
 
 		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
 		$proxy->run();
@@ -114,14 +114,14 @@ EOT
 				],
 
 			] ), $output ) === 0;
-			$output->writeln( 'Installed database.' );
-			$output->writeln( 'Username: admin' );
-			$output->writeln( 'Password: admin' );
+			$output->writeln( '<info>Installed database.</info>' );
+			$output->writeln( '<info>WP Username:</info>	<comment>admin</comment>' );
+			$output->writeln( '<info>WP Password:</info>	<comment>admin</comment>' );
 		}
 
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
-		$output->writeln( 'Startup completed.' );
-		$output->writeln( 'To access your site visit: ' . $site_url );
+		$output->writeln( '<info>Startup completed.</info>' );
+		$output->writeln( '<info>To access your site visit:</info> <comment>' . $site_url . '</comment>' );
 
 	}
 
