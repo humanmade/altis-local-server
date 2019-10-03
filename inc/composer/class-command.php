@@ -69,7 +69,7 @@ EOT
 	}
 
 	protected function start( InputInterface $input, OutputInterface $output ) {
-		$output->writeln( '<info>Starting...</info>' );
+		$output->writeln( '<info>Starting...</>' );
 
 		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
 		$proxy->run();
@@ -114,19 +114,19 @@ EOT
 				],
 
 			] ), $output ) === 0;
-			$output->writeln( '<info>Installed database.</info>' );
-			$output->writeln( '<info>WP Username:</info>	<comment>admin</comment>' );
-			$output->writeln( '<info>WP Password:</info>	<comment>admin</comment>' );
+			$output->writeln( '<info>Installed database.</>' );
+			$output->writeln( '<info>WP Username:</>	<comment>admin</>' );
+			$output->writeln( '<info>WP Password:</>	<comment>admin</>' );
 		}
 
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
-		$output->writeln( '<info>Startup completed.</info>' );
-		$output->writeln( '<info>To access your site visit:</info> <comment>' . $site_url . '</comment>' );
+		$output->writeln( '<info>Startup completed.</>' );
+		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
 	}
 
 	protected function stop( InputInterface $input, OutputInterface $output ) {
-		$output->writeln( 'Stopping...' );
+		$output->writeln( '<info>Stopping...</>' );
 
 		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker' );
 		$proxy->run();
@@ -139,11 +139,11 @@ EOT
 			echo $buffer;
 		} );
 
-		$output->writeln( 'Stopped.' );
+		$output->writeln( '<info>Stopped.</>' );
 	}
 
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
-		$output->writeln( 'Destroying...' );
+		$output->writeln( '<error>Destroying...</>' );
 
 		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker' );
 		$proxy->run();
@@ -156,7 +156,7 @@ EOT
 			echo $buffer;
 		} );
 
-		$output->writeln( 'Destroyed.' );
+		$output->writeln( '<error>Destroyed.</>' );
 	}
 
 	protected function restart( InputInterface $input, OutputInterface $output ) {
