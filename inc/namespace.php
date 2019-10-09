@@ -91,6 +91,9 @@ function set_file_path_map( $map ) : array {
 		return $map;
 	}
 	$json_string = file_get_contents( '/etc/chassis-constants' );
+	if ( empty( $json_string ) ) {
+		return $map;
+	}
 	$data = json_decode( $json_string, true );
 	if ( empty( $data['synced_folders'] ) ) {
 		return $map;
