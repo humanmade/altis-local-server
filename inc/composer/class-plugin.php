@@ -3,7 +3,7 @@
  * Local Server Composer Plugin.
  */
 
-namespace Altis\LocalServer\Composer;
+namespace Altis\Local_Server\Composer;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
