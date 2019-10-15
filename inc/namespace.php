@@ -80,21 +80,20 @@ function bootstrap() {
 }
 
 /**
- * Enables Query Monitor to map paths to their
- * original values on the host.
+ * Enables Query Monitor to map paths to their original values on the host.
  *
- * @param array $map an associative array of folders as keys, and their mappings as values
- * @return array the adjusted mapping of folders
+ * @param array $map Map of guest path => host path
+ * @return array Adjusted mapping of folders
  */
-function set_file_path_map( $map ) : array {
+function set_file_path_map( array $map ) : array {
 	if ( ! file_exists( '/etc/chassis-constants' ) ) {
 		return $map;
 	}
 	$json_string = file_get_contents( '/etc/chassis-constants' );
-	if ( empty( $json_string ) ) {
+	$data = json_decode( $json_string, true );
+	if ( empty( $data ) ) {
 		return $map;
 	}
-	$data = json_decode( $json_string, true );
 	if ( empty( $data['synced_folders'] ) ) {
 		return $map;
 	}
