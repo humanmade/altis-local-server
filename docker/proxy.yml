@@ -3,7 +3,7 @@ services:
   proxy:
     networks:
       - proxy
-    image: traefik
+    image: traefik:1.7
     volumes:
       - "$PWD/conf/traefik.toml:/etc/traefik/traefik.toml"
       - "$PWD/ssl.cert:/etc/traefik/ssl.cert"
