@@ -12,7 +12,7 @@ Local Server uses Docker for containerization, therefore you must install the Do
 
 Once Docker is installed and running, you are ready to start the Local Server. Local Server uses the command line via the `composer` command.
 
-Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now.
+Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now. See [Creating A New Altis Project](https://www.altis-dxp.com/resources/docs/getting-started/#creating-a-new-altis-project)
 
 ## Starting the Local Server
 
