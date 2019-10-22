@@ -84,7 +84,8 @@ EOT
 		];
 
 		if ( $input->getOption( 'xdebug' ) ) {
-			$env['PHP_IMAGE'] = 'altis-local-server-php:3.0.0-beta1-dev';
+			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.0.0-beta1-dev';
+			$env['XDEBUG_ENABLED'] = true;
 		}
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
@@ -109,6 +110,7 @@ EOT
 		] ), $output ) === 0;
 
 		if ( ! $is_installed ) {
+
 			$cli->run( new ArrayInput( [
 				'subcommand' => 'cli',
 				'options' => [
