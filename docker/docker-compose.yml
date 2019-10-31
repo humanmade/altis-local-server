@@ -13,7 +13,7 @@ x-php: &php
       condition: service_started
     mailhog:
       condition: service_started
-  image: humanmade/altis-local-server-php:1.0.0-rc1
+  image: humanmade/altis-local-server-php:3.0.0-beta1
   links:
     - "db:db-read-replica"
     - "s3:s3.localhost"
@@ -48,6 +48,8 @@ x-php: &php
     PHP_SENDMAIL_PATH: /usr/sbin/sendmail -t -i -S mailhog:1025
     ALTIS_ANALYTICS_PINPOINT_ENDPOINT: https://pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev
     ALTIS_ANALYTICS_COGNITO_ENDPOINT: https://cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    PHP_XDEBUG_ENABLED:
+    PHP_IDE_CONFIG: serverName=${COMPOSE_PROJECT_NAME:-default}.altis.dev
 
 x-analytics: &analytics
   ports:
@@ -80,6 +82,7 @@ services:
       - '6379'
   php:
     <<: *php
+    image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.0.0-beta1}
     ports:
       - '9000'
   nginx:

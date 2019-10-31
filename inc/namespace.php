@@ -75,4 +75,11 @@ function bootstrap() {
 		define( 'ALTIS_ANALYTICS_PINPOINT_ENDPOINT', getenv( 'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' ) );
 		define( 'ALTIS_ANALYTICS_COGNITO_ENDPOINT', getenv( 'ALTIS_ANALYTICS_COGNITO_ENDPOINT' ) );
 	}
+
+	// Set XDebug cookie if environment variable is set.
+	if ( getenv( 'PHP_XDEBUG_ENABLED' ) ) {
+		setcookie( 'XDEBUG_SESSION', $_SERVER['HTTP_HOST'], strtotime( '+1 year' ), '/', $_SERVER['HTTP_HOST'] );
+	} else {
+		setcookie( 'XDEBUG_SESSION', $_SERVER['HTTP_HOST'], time() - 1, '/', $_SERVER['HTTP_HOST'] );
+	}
 }

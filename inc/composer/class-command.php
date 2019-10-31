@@ -17,7 +17,7 @@ class Command extends BaseCommand {
 		$this->setName( 'local-server' )
 			->setDescription( 'Local server.' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, cli, shell, status. logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, shell, status. logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setHelp(
@@ -25,9 +25,11 @@ class Command extends BaseCommand {
 Run the local development server.
 
 To start the local development server:
-	start
+	start [--xdebug]              passing --xdebug starts the server with xdebug enabled
 Stop the local development server:
 	stop
+Restart the local development server:
+	restart [--xdebug]            passing --xdebug restarts the server with xdebug enabled
 Destroy the local development server:
 	destroy
 View status of the local development server:
@@ -39,7 +41,8 @@ Open a shell:
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 EOT
-			);
+			)
+			->addOption( 'xdebug' );
 	}
 
 	public function isProxyCommand() {
@@ -74,11 +77,18 @@ EOT
 		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', [
+		$env = [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 			'PATH' => getenv( 'PATH' ),
-		] );
+		];
+
+		if ( $input->getOption( 'xdebug' ) ) {
+			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.0.0-beta1-dev';
+			$env['PHP_XDEBUG_ENABLED'] = true;
+		}
+
+		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
