@@ -143,6 +143,15 @@ EOT
 				'--quiet',
 			],
 		] ), $output );
+		$cli->run( new ArrayInput( [
+			'subcommand' => 'cli',
+			'options' => [
+				's3-uploads',
+				'rm',
+				's3://s3-' . $this->get_project_subdomain() . '/uploads/composer.json',
+				'--quiet',
+			],
+		] ), $output );
 
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$output->writeln( '<info>Startup completed.</>' );
