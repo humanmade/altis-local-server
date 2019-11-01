@@ -63,9 +63,9 @@ EOT
 		} elseif ( $subcommand === 'destroy' ) {
 			return $this->destroy( $input, $output );
 		} elseif ( $subcommand === 'cli' ) {
-			return $this->cli( $input, $output, 'wp' );
+			return $this->exec( $input, $output, 'wp' );
 		} elseif ( $subcommand === 'exec' ) {
-			return $this->cli( $input, $output );
+			return $this->exec( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
@@ -193,7 +193,7 @@ EOT
 		$this->start( $input, $output );
 	}
 
-	protected function cli( InputInterface $input, OutputInterface $output, ?string $program = null ) {
+	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
 
