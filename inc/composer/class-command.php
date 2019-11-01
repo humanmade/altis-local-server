@@ -61,6 +61,8 @@ EOT
 		} elseif ( $subcommand === 'destroy' ) {
 			return $this->destroy( $input, $output );
 		} elseif ( $subcommand === 'cli' ) {
+			return $this->cli( $input, $output, 'wp' );
+		} elseif ( $subcommand === 'exec' ) {
 			return $this->cli( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
@@ -189,7 +191,7 @@ EOT
 		$this->start( $input, $output );
 	}
 
-	protected function cli( InputInterface $input, OutputInterface $output ) {
+	protected function cli( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
 
@@ -201,7 +203,7 @@ EOT
 			}
 		}
 
-		if ( ! $passed_url ) {
+		if ( ! $passed_url && $program === 'wp' ) {
 			$options[] = '--url=' . $site_url;
 		}
 
@@ -223,13 +225,14 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$command = sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d %s -u nobody php wp %s',
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d %s -u nobody php %s %s',
 			'vendor/altis/local-server/docker',
 			getcwd(),
 			$this->get_project_subdomain(),
 			$columns,
 			$lines,
 			$has_stdin || ! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
+			$program ?? '',
 			implode( ' ', $options )
 		);
 
