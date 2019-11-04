@@ -121,7 +121,7 @@ services:
       memlock:
         soft: -1
         hard: -1
-    mem_limit: 1g
+    mem_limit: ${ES_MEM_LIMIT:-1g}
     volumes:
       - es-data:/usr/share/elasticsearch/data
     ports:
