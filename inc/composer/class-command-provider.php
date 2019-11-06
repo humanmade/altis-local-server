@@ -3,7 +3,7 @@
  * Local Server Composer Command Provider.
  */
 
-namespace Altis\LocalServer\Composer;
+namespace Altis\Local_Server\Composer;
 
 use Composer\Plugin\Capability\CommandProvider as CommandProviderCapability;
 
