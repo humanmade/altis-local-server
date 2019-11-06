@@ -82,4 +82,20 @@ function bootstrap() {
 	} else {
 		setcookie( 'XDEBUG_SESSION', $_SERVER['HTTP_HOST'], time() - 1, '/', $_SERVER['HTTP_HOST'] );
 	}
+
+	add_filter( 'qm/output/file_path_map', __NAMESPACE__ . '\\set_file_path_map', 1 );
+}
+
+/**
+ * Enables Query Monitor to map paths to their original values on the host.
+ *
+ * @param array $map Map of guest path => host path
+ * @return array Adjusted mapping of folders
+ */
+function set_file_path_map( array $map ) : array {
+	if ( ! getenv( 'HOST_PATH' ) ) {
+		return $map;
+	}
+	$map['/usr/src/app'] = rtrim( getenv( 'HOST_PATH' ), DIRECTORY_SEPARATOR );
+	return $map;
 }

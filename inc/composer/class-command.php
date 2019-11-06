@@ -3,7 +3,7 @@
  * Local Server Composer Command.
  */
 
-namespace Altis\LocalServer\Composer;
+namespace Altis\Local_Server\Composer;
 
 use Composer\Command\BaseCommand;
 use Symfony\Component\Console\Input\ArrayInput;
