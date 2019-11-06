@@ -93,6 +93,9 @@ function bootstrap() {
  * @return array Adjusted mapping of folders
  */
 function set_file_path_map( array $map ) : array {
-	$map['/usr/src/app/'] = '';
+	if ( ! getenv( 'HOST_PATH' ) ) {
+		return $map;
+	}
+	$map['/usr/src/app'] = rtrim( getenv( 'HOST_PATH' ), DIRECTORY_SEPARATOR );
 	return $map;
 }

@@ -23,6 +23,7 @@ x-php: &php
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
   environment:
+    HOST_PATH: ${VOLUME}
     DB_HOST: db
     DB_READ_REPLICA_HOST: db-read-replica
     DB_PASSWORD: wordpress
