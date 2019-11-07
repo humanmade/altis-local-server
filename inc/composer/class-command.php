@@ -242,7 +242,7 @@ EOT
 			$this->get_project_subdomain(),
 			$columns,
 			$lines,
-			$has_stdin || ! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
+			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-T' : '', // forward wp-cli's isPiped detection
 			$program ?? '',
 			implode( ' ', $options )
 		);
