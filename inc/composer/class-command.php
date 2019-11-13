@@ -36,6 +36,8 @@ View status of the local development server:
 	status
 Run WP CLI command:
 	cli -- <command>              eg: cli -- post list --debug
+Run any shell command from the PHP container:
+	exec -- <command>             eg: exec -- vendor/bin/phpcs
 Open a shell:
 	shell
 View the logs
@@ -61,7 +63,9 @@ EOT
 		} elseif ( $subcommand === 'destroy' ) {
 			return $this->destroy( $input, $output );
 		} elseif ( $subcommand === 'cli' ) {
-			return $this->cli( $input, $output );
+			return $this->exec( $input, $output, 'wp' );
+		} elseif ( $subcommand === 'exec' ) {
+			return $this->exec( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
@@ -198,7 +202,7 @@ EOT
 		$this->start( $input, $output );
 	}
 
-	protected function cli( InputInterface $input, OutputInterface $output ) {
+	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
 
@@ -210,7 +214,7 @@ EOT
 			}
 		}
 
-		if ( ! $passed_url ) {
+		if ( ! $passed_url && $program === 'wp' ) {
 			$options[] = '--url=' . $site_url;
 		}
 
@@ -232,13 +236,14 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$command = sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d %s -u nobody php wp %s',
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d %s -u nobody php %s %s',
 			'vendor/altis/local-server/docker',
 			getcwd(),
 			$this->get_project_subdomain(),
 			$columns,
 			$lines,
-			$has_stdin || ! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
+			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-T' : '', // forward wp-cli's isPiped detection
+			$program ?? '',
 			implode( ' ', $options )
 		);
 
