@@ -36,7 +36,7 @@ View status of the local development server:
 	status
 Run WP CLI command:
 	cli -- <command>              eg: cli -- post list --debug
-Run any command:
+Run any shell command from the PHP container:
 	exec -- <command>             eg: exec -- vendor/bin/phpcs
 Open a shell:
 	shell
