@@ -232,17 +232,21 @@ EOT
 				$option = $arg . '=' . escapeshellarg( substr( $option, strlen( $arg ) + 1 ) );
 			}
 		}
+
+		$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
+		if ( ! $container_id ) {
+			return $output->writeln( '<error>PHP container not found to run command.</>' );
+		}
+
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$command = sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d %s -u nobody php %s %s',
-			'vendor/altis/local-server/docker',
-			getcwd(),
-			$this->get_project_subdomain(),
+			'docker exec -e COLUMNS=%d -e LINES=%d -u nobody %s %s %s %s',
 			$columns,
 			$lines,
 			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-T' : '', // forward wp-cli's isPiped detection
+			$container_id,
 			$program ?? '',
 			implode( ' ', $options )
 		);
