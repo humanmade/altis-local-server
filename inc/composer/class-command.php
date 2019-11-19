@@ -73,13 +73,19 @@ EOT
 		} elseif ( $subcommand === 'shell' ) {
 			return $this->shell( $input, $output );
 		}
+
+		$output->writeln( '<error>' . $subcommand . ' command not found.</>' );
 	}
 
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
 		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
-		$proxy->run();
+		$proxy->setTimeout( 0 );
+		$proxy->setTty( true );
+		$proxy->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
 
 		$env = [
 			'VOLUME' => getcwd(),
@@ -93,6 +99,7 @@ EOT
 		}
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
+		$compose->setTty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
