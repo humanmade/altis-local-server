@@ -252,7 +252,7 @@ EOT
 			'docker exec -e COLUMNS=%d -e LINES=%d -u nobody %s %s %s %s',
 			$columns,
 			$lines,
-			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-T' : '', // forward wp-cli's isPiped detection
+			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-t' : '', // forward wp-cli's isPiped detection
 			$container_id,
 			$program ?? '',
 			implode( ' ', $options )
