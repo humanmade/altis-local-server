@@ -117,7 +117,7 @@ services:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
   elasticsearch:
-    image: humanmade/altis-local-server-elasticsearch:1.0.0-rc1
+    image: humanmade/altis-local-server-elasticsearch:1.0.0
     ulimits:
       memlock:
         soft: -1
