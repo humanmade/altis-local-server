@@ -176,7 +176,7 @@ services:
     links:
       - "s3:s3.localhost"
   mailhog:
-    image: mailhog/mailhog@sha256:e00a21e210f9bb560913efa409ded5f7ed12601fda0adefdb9a73211f724b7e5
+    image: mailhog/mailhog:latest
     ports:
       - "8025"
       - "1025"
