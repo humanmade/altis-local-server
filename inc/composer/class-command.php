@@ -94,7 +94,7 @@ EOT
 		];
 
 		if ( $input->getOption( 'xdebug' ) ) {
-			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.0.0-beta1-dev';
+			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.0.0-dev';
 			$env['PHP_XDEBUG_ENABLED'] = true;
 		}
 

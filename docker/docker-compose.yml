@@ -13,7 +13,7 @@ x-php: &php
       condition: service_started
     mailhog:
       condition: service_started
-  image: humanmade/altis-local-server-php:3.0.0-beta1
+  image: humanmade/altis-local-server-php:3.0.0
   links:
     - "db:db-read-replica"
     - "s3:s3.localhost"
@@ -83,11 +83,11 @@ services:
       - '6379'
   php:
     <<: *php
-    image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.0.0-beta1}
+    image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.0.0}
     ports:
       - '9000'
   nginx:
-    image: humanmade/altis-local-server-nginx:1.0.0-rc1
+    image: humanmade/altis-local-server-nginx:1.0.0
     networks:
       - proxy
       - default
@@ -117,7 +117,7 @@ services:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
   elasticsearch:
-    image: humanmade/altis-local-server-elasticsearch:1.0.0-rc1
+    image: humanmade/altis-local-server-elasticsearch:1.0.0
     ulimits:
       memlock:
         soft: -1
@@ -192,7 +192,7 @@ services:
       MH_UI_WEB_PATH: mailhog
   cognito:
     <<: *analytics
-    image: humanmade/local-cognito
+    image: humanmade/local-cognito:1.0.0
     labels:
       - "traefik.port=3000"
       - "traefik.protocol=http"
@@ -200,7 +200,7 @@ services:
       - "traefik.frontend.rule=Host:cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   pinpoint:
     <<: *analytics
-    image: humanmade/local-pinpoint
+    image: humanmade/local-pinpoint:1.0.0
     labels:
       - "traefik.port=3000"
       - "traefik.protocol=http"
