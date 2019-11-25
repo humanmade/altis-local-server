@@ -116,6 +116,7 @@ services:
     entrypoint:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
+    restart: on-failure
   elasticsearch:
     image: humanmade/altis-local-server-elasticsearch:1.0.0-rc1
     ulimits:
