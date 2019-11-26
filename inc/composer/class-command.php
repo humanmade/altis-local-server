@@ -112,6 +112,7 @@ EOT
 		} );
 
 		if ( $failed ) {
+			$output->writeln( '<error>Services failed to start successfully.</>' );
 			return $failed;
 		}
 
