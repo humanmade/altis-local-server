@@ -75,6 +75,7 @@ EOT
 		}
 
 		$output->writeln( '<error>' . $subcommand . ' command not found.</>' );
+		return 1;
 	}
 
 	protected function start( InputInterface $input, OutputInterface $output ) {
@@ -83,9 +84,14 @@ EOT
 		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( true );
-		$proxy->run( function ( $type, $buffer ) {
+		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
+
+		if ( $proxy_failed ) {
+			$output->writeln( '<error>Could not start traefik proxy.</>' );
+			return $proxy_failed;
+		}
 
 		$env = [
 			'VOLUME' => getcwd(),
@@ -106,7 +112,8 @@ EOT
 		} );
 
 		if ( $failed ) {
-			return;
+			$output->writeln( '<error>Services failed to start successfully.</>' );
+			return $failed;
 		}
 
 		$cli = $this->getApplication()->find( 'local-server' );
@@ -122,7 +129,7 @@ EOT
 		] ), $output ) === 0;
 
 		if ( ! $is_installed ) {
-			$cli->run( new ArrayInput( [
+			$install_failed = $cli->run( new ArrayInput( [
 				'subcommand' => 'cli',
 				'options' => [
 					'core',
@@ -135,8 +142,14 @@ EOT
 					'--skip-config',
 					'--quiet',
 				],
+			] ), $output );
 
-			] ), $output ) === 0;
+			// Check install was successful.
+			if ( $install_failed ) {
+				$output->writeln( '<error>WordPress install failed.</>' );
+				return $install_failed;
+			}
+
 			$output->writeln( '<info>Installed database.</>' );
 			$output->writeln( '<info>WP Username:</>	<comment>admin</>' );
 			$output->writeln( '<info>WP Password:</>	<comment>admin</>' );
@@ -180,11 +193,17 @@ EOT
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
-		$compose->run( function ( $type, $buffer ) {
+		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
-		$output->writeln( '<info>Stopped.</>' );
+		if ( $return_val === 0 ) {
+			$output->writeln( '<info>Stopped.</>' );
+		} else {
+			$output->writeln( '<error>Failed to stop services.</>' );
+		}
+
+		return $return_val;
 	}
 
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
@@ -197,16 +216,22 @@ EOT
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
-		$compose->run( function ( $type, $buffer ) {
+		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
-		$output->writeln( '<error>Destroyed.</>' );
+		if ( $return_val === 0 ) {
+			$output->writeln( '<error>Destroyed.</>' );
+		} else {
+			$output->writeln( '<error>Failed to destroy services.</>' );
+		}
+
+		return $return_val;
 	}
 
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$this->stop( $input, $output );
-		$this->start( $input, $output );
+		return $this->start( $input, $output );
 	}
 
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
@@ -242,7 +267,8 @@ EOT
 
 		$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
 		if ( ! $container_id ) {
-			return $output->writeln( '<error>PHP container not found to run command.</>' );
+			$output->writeln( '<error>PHP container not found to run command.</>' );
+			return 1;
 		}
 
 		$columns = exec( 'tput cols' );
@@ -268,7 +294,7 @@ EOT
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
-		$compose->run( function ( $type, $buffer ) {
+		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 	}
@@ -280,7 +306,7 @@ EOT
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$compose->setTimeout( 0 );
-		$compose->run( function ( $type, $buffer ) {
+		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 	}
