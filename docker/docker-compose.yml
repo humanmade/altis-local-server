@@ -22,6 +22,7 @@ x-php: &php
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
+    - socket:/var/run/php-fpm
   environment:
     HOST_PATH: ${VOLUME}
     DB_HOST: db
@@ -95,6 +96,7 @@ services:
       - php
     volumes:
       - "${VOLUME}:/usr/src/app:delegated"
+      - socket:/var/run/php-fpm
     ports:
       - "8080"
     labels:
@@ -236,3 +238,4 @@ volumes:
   es-data:
   tmp:
   s3:
+  socket:
