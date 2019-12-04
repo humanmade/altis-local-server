@@ -14,17 +14,19 @@ use Symfony\Component\Process\Process;
 
 class Command extends BaseCommand {
 	protected function configure() {
-		$this->setName( 'local-server' )
-			->setDescription( 'Local server.' )
+		$this
+			->setName( 'serve' )
+			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, shell, status. logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec. shell, status. logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
+			->setAliases( [ 'local-server' ] )
 			->setHelp(
 				<<<EOT
 Run the local development server.
 
-To start the local development server:
+Default command - start the local development server:
 	start [--xdebug]              passing --xdebug starts the server with xdebug enabled
 Stop the local development server:
 	stop
@@ -74,8 +76,8 @@ EOT
 			return $this->shell( $input, $output );
 		}
 
-		$output->writeln( '<error>' . $subcommand . ' command not found.</>' );
-		return 1;
+		// Default to start command.
+		return $this->start( $input, $output );
 	}
 
 	protected function start( InputInterface $input, OutputInterface $output ) {
