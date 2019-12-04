@@ -27,3 +27,7 @@ By default docker machine sets a default memory limit of 2GB for all of your con
 In the docker GUI go to the "Preferences" pane, then the "Advanced" tab and move the memory slider up.
 
 ![Docker Advanced Settings](./assets/docker-gui-advanced.png)
+
+## Windows 10 Home Edition
+
+Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
