@@ -16,7 +16,7 @@ Navigate your shell to your project's directory. You should already have install
 
 ## Starting the Local Server
 
-To start the Local Server, simply run `composer local-server start`. The first time you this will download all the necessary Docker images.
+To start the Local Server, simply run `composer serve`. The first time you this will download all the necessary Docker images.
 
 Once the initial install and download has completed, you should see the output:
 
@@ -27,14 +27,14 @@ To access your site visit: https://my-site.altis.dev/
 
 Visiting your site's URL should now work. Visit `/wp-admin/` and login with `admin` / `admin` to get started!
 
-The subdomain used for the project can be configured via the `modules.local-server.name` setting:
+The subdomain used for the project can be configured via the `modules.serve.name` setting:
 
 ```json
 {
 	"extra": {
 		"altis": {
 			"modules": {
-				"local-server": {
+				"serve": {
 					"name": "my-project"
 				}
 			}
@@ -45,4 +45,4 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Stopping the Local Server
 
-To stop the Local Server containers, simply run `composer local-server stop`.
+To stop the Local Server containers, simply run `composer serve stop`.
