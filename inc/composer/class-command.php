@@ -74,7 +74,7 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( $subcommand === 'shell' ) {
 			return $this->shell( $input, $output );
-		} elseif ( $subcommand === '' ) {
+		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
 		}
