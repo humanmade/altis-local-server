@@ -74,10 +74,13 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( $subcommand === 'shell' ) {
 			return $this->shell( $input, $output );
+		} elseif ( $subcommand === '' ) {
+			// Default to start command.
+			return $this->start( $input, $output );
 		}
 
-		// Default to start command.
-		return $this->start( $input, $output );
+		$output->writeln( '<error>' . $subcommand . ' command not found.</>' );
+		return 1;
 	}
 
 	protected function start( InputInterface $input, OutputInterface $output ) {
