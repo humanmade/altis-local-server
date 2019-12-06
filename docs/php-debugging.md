@@ -9,7 +9,7 @@ XDebug is _not enabled by default_ because it slows PHP down considerably. This 
 When you need to run your debug client you can append the option `--xdebug` to the start command:
 
 ```
-composer serve --xdebug
+composer server --xdebug
 ```
 
 **Note**: you do not need to stop the server first to run the above command.
@@ -19,7 +19,7 @@ composer serve --xdebug
 You can start the server again without the `--xdebug` option at any time to deactivate XDebug:
 
 ```
-composer serve
+composer server
 ```
 
 ## Connecting to XDebug

@@ -15,7 +15,7 @@ use Symfony\Component\Process\Process;
 class Command extends BaseCommand {
 	protected function configure() {
 		$this
-			->setName( 'serve' )
+			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
 				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec. shell, status. logs.' ),

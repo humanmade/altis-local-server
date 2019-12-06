@@ -16,7 +16,7 @@ Navigate your shell to your project's directory. You should already have install
 
 ## Starting the Local Server
 
-To start the Local Server, simply run `composer serve`. The first time you this will download all the necessary Docker images.
+To start the Local Server, simply run `composer server`. The first time you this will download all the necessary Docker images.
 
 Once the initial install and download has completed, you should see the output:
 
@@ -45,4 +45,4 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Stopping the Local Server
 
-To stop the Local Server containers, simply run `composer serve stop`.
+To stop the Local Server containers, simply run `composer server stop`.
