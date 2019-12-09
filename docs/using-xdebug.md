@@ -1,4 +1,4 @@
-# Debugging PHP
+# Using XDebug
 
 Bugs are an inevitability of writing code and so Local Server provides an easy way to enable [XDebug](https://xdebug.org/) when you need it.
 
