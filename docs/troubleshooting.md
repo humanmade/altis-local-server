@@ -2,7 +2,7 @@
 
 ## Getting the Local Server status
 
-To get details on the running Local Server status and containers, run `composer local-server status`. You should see output similar to:
+To get details on the running Local Server status and containers, run `composer server status`. You should see output similar to:
 
 ```sh
         Name                        Command               State                  Ports
@@ -18,7 +18,7 @@ my-site_tachyon_1         node server.js --debug           Up       0.0.0.0:8081
 my-site_xray_1            /usr/bin/xray -b 0.0.0.0:2000    Up       0.0.0.0:32817->2000/tcp, 2000/udp
 ```
 
-All containers should have a status of "Up". If they do not, you can inspect the logs for each service by running `composer local-server logs <service>`, for example, if `site_db_1` shows a status other than "Up", run `composer local-server logs db`.
+All containers should have a status of "Up". If they do not, you can inspect the logs for each service by running `composer server logs <service>`, for example, if `site_db_1` shows a status other than "Up", run `composer server logs db`.
 
 ## Services keep stopping
 
