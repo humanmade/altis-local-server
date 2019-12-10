@@ -192,7 +192,7 @@ EOT
 		$command = sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u nobody php wp %s',
 			'vendor/altis/local-server/docker',
-			getcwd(),
+			escapeshellarg( getcwd() ),
 			basename( getcwd() ),
 			$has_stdin || ! posix_isatty( STDOUT ) ? '-T' : '', // forward wp-cli's isPiped detection
 			implode( ' ', $options )
@@ -229,7 +229,7 @@ EOT
 		passthru( sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
 			'vendor/altis/local-server/docker',
-			getcwd(),
+			escapeshellarg( getcwd() ),
 			basename( getcwd() )
 		), $return_val );
 
