@@ -320,7 +320,7 @@ EOT
 		passthru( sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
 			'vendor/altis/local-server/docker',
-			getcwd(),
+			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain()
 		), $return_val );
 
