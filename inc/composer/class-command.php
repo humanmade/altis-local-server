@@ -102,6 +102,7 @@ EOT
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 			'PATH' => getenv( 'PATH' ),
+			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
 		];
 
 		if ( $input->getOption( 'xdebug' ) ) {
