@@ -14,17 +14,19 @@ use Symfony\Component\Process\Process;
 
 class Command extends BaseCommand {
 	protected function configure() {
-		$this->setName( 'local-server' )
-			->setDescription( 'Local server.' )
+		$this
+			->setName( 'server' )
+			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, shell, status. logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec. shell, status. logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
+			->setAliases( [ 'local-server' ] )
 			->setHelp(
 				<<<EOT
 Run the local development server.
 
-To start the local development server:
+Default command - start the local development server:
 	start [--xdebug]              passing --xdebug starts the server with xdebug enabled
 Stop the local development server:
 	stop
@@ -72,6 +74,9 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( $subcommand === 'shell' ) {
 			return $this->shell( $input, $output );
+		} elseif ( $subcommand === null ) {
+			// Default to start command.
+			return $this->start( $input, $output );
 		}
 
 		$output->writeln( '<error>' . $subcommand . ' command not found.</>' );
@@ -97,10 +102,11 @@ EOT
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 			'PATH' => getenv( 'PATH' ),
+			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
 		];
 
 		if ( $input->getOption( 'xdebug' ) ) {
-			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.0.0-dev';
+			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.1.0-dev';
 			$env['PHP_XDEBUG_ENABLED'] = true;
 		}
 

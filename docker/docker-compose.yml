@@ -13,7 +13,7 @@ x-php: &php
       condition: service_started
     mailhog:
       condition: service_started
-  image: humanmade/altis-local-server-php:3.0.0
+  image: humanmade/altis-local-server-php:3.1.0
   links:
     - "db:db-read-replica"
     - "s3:s3.localhost"
@@ -22,6 +22,7 @@ x-php: &php
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
+    - socket:/var/run/php-fpm
   environment:
     HOST_PATH: ${VOLUME}
     DB_HOST: db
@@ -83,11 +84,11 @@ services:
       - '6379'
   php:
     <<: *php
-    image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.0.0}
+    image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.1.0}
     ports:
       - '9000'
   nginx:
-    image: humanmade/altis-local-server-nginx:1.0.0
+    image: humanmade/altis-local-server-nginx:3.1.0
     networks:
       - proxy
       - default
@@ -95,6 +96,7 @@ services:
       - php
     volumes:
       - "${VOLUME}:/usr/src/app:delegated"
+      - socket:/var/run/php-fpm
     ports:
       - "8080"
     labels:
@@ -160,7 +162,7 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev;AddPrefix:/s3-${COMPOSE_PROJECT_NAME:-default}"
   tachyon:
-    image: humanmade/tachyon:1.3.0
+    image: humanmade/tachyon:2.2.1
     ports:
       - "8080"
     networks:
@@ -236,3 +238,4 @@ volumes:
   es-data:
   tmp:
   s3:
+  socket:

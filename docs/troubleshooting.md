@@ -2,7 +2,7 @@
 
 ## Getting the Local Server status
 
-To get details on the running Local Server status and containers, run `composer local-server status`. You should see output similar to:
+To get details on the running Local Server status and containers, run `composer server status`. You should see output similar to:
 
 ```sh
         Name                        Command               State                  Ports
@@ -18,7 +18,7 @@ my-site_tachyon_1         node server.js --debug           Up       0.0.0.0:8081
 my-site_xray_1            /usr/bin/xray -b 0.0.0.0:2000    Up       0.0.0.0:32817->2000/tcp, 2000/udp
 ```
 
-All containers should have a status of "Up". If they do not, you can inspect the logs for each service by running `composer local-server logs <service>`, for example, if `site_db_1` shows a status other than "Up", run `composer local-server logs db`.
+All containers should have a status of "Up". If they do not, you can inspect the logs for each service by running `composer server logs <service>`, for example, if `site_db_1` shows a status other than "Up", run `composer server logs db`.
 
 ## Services keep stopping
 
@@ -27,3 +27,7 @@ By default docker machine sets a default memory limit of 2GB for all of your con
 In the docker GUI go to the "Preferences" pane, then the "Advanced" tab and move the memory slider up.
 
 ![Docker Advanced Settings](./assets/docker-gui-advanced.png)
+
+## Windows 10 Home Edition
+
+Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
