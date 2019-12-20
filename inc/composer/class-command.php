@@ -146,7 +146,7 @@ EOT
 
 			// Check install was successful.
 			if ( $install_failed ) {
-				$output->writeln( '<error>WordPress install failed.</>' );
+				$output->writeln( sprintf( '<error>WordPress install failed. Exited with error code %d</>', $install_failed ) );
 				return $install_failed;
 			}
 
@@ -312,11 +312,15 @@ EOT
 	}
 
 	protected function shell( InputInterface $input, OutputInterface $output ) {
+		$columns = exec( 'tput cols' );
+		$lines = exec( 'tput lines' );
 		passthru( sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d -u root php /bin/bash',
 			'vendor/altis/local-server/docker',
-			getcwd(),
-			$this->get_project_subdomain()
+			escapeshellarg( getcwd() ),
+			$this->get_project_subdomain(),
+			$columns,
+			$lines
 		), $return_val );
 
 		return $return_val;
