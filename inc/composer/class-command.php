@@ -321,7 +321,7 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		passthru( sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d -u root php /bin/bash',
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash',
 			'vendor/altis/local-server/docker',
 			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain(),
