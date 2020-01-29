@@ -86,9 +86,18 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
+		// Don't set the composer project env var for the proxy, as it's
+		// intended to be shared for all projects.
+		$proxy_env = $this->get_env_for_docker_compose();
+		unset( $proxy_env['COMPOSE_PROJECT_NAME'] );
+
+		$proxy = new Process( 'docker-compose -f proxy.yml up -d', $this->get_docker_compose_directory(), $proxy_env );
 		$proxy->setTimeout( 0 );
-		$proxy->setTty( true );
+
+		if ( ! $this->is_windows() ) {
+			$proxy->setTty( true );
+		}
+
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -98,20 +107,16 @@ EOT
 			return $proxy_failed;
 		}
 
-		$env = [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-			'PATH' => getenv( 'PATH' ),
-			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
-		];
-
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.1.0-dev';
 			$env['PHP_XDEBUG_ENABLED'] = true;
 		}
 
-		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
-		$compose->setTty( true );
+		$compose = new Process( 'docker-compose up -d', $this->get_docker_compose_directory(), $this->get_env_for_docker_compose() );
+		if ( ! $this->is_windows() ) {
+			$proxy->setTty( true );
+		}
+
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -152,7 +157,7 @@ EOT
 
 			// Check install was successful.
 			if ( $install_failed ) {
-				$output->writeln( sprintf( '<error>WordPress install failed. Exited with error code %d</>', $install_failed ) );
+				$output->writeln( '<error>WordPress install failed.</>' );
 				return $install_failed;
 			}
 
@@ -192,13 +197,10 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( 'docker-compose stop', $this->get_docker_compose_directory(),  $this->get_env_for_docker_compose() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose stop', $this->get_docker_compose_directory(),  $this->get_env_for_docker_compose() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -215,13 +217,10 @@ EOT
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<error>Destroying...</>' );
 
-		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( 'docker-compose down -v', $this->get_docker_compose_directory(),  $this->get_env_for_docker_compose() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose down -v', $this->get_docker_compose_directory(),  $this->get_env_for_docker_compose() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -279,12 +278,13 @@ EOT
 
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
-		$has_stdin = ! posix_isatty( STDIN );
+		$has_stdin = function_exists( 'posix_isatty' ) ? ! posix_isatty( STDIN ) : false;
+		$has_stdout = function_exists( 'posix_isatty' ) ? ! posix_isatty( STDOUT ) : false;
 		$command = sprintf(
 			'docker exec -e COLUMNS=%d -e LINES=%d -u nobody %s %s %s %s',
 			$columns,
 			$lines,
-			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-t' : '', // forward wp-cli's isPiped detection
+			( $has_stdin || $has_stdout ) && $program === 'wp' ? '-t' : '', // forward wp-cli's isPiped detection
 			$container_id,
 			$program ?? '',
 			implode( ' ', $options )
@@ -296,10 +296,7 @@ EOT
 	}
 
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose ps', $this->get_docker_compose_directory(), $this->get_env_for_docker_compose() );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -307,26 +304,24 @@ EOT
 
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, $this->get_docker_compose_directory(), $this->get_env_for_docker_compose() );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 	}
 
+	/**
+	 * Start an interactive shell in the PHP container.
+	 * 
+	 * @todo windows support
+	 */
 	protected function shell( InputInterface $input, OutputInterface $output ) {
-		$columns = exec( 'tput cols' );
-		$lines = exec( 'tput lines' );
 		passthru( sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash',
-			'vendor/altis/local-server/docker',
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec php /bin/bash',
+			$this->get_docker_compose_directory(),
 			escapeshellarg( getcwd() ),
-			$this->get_project_subdomain(),
-			$columns,
-			$lines
+			$this->get_project_subdomain()
 		), $return_val );
 
 		return $return_val;
@@ -348,5 +343,48 @@ EOT
 		}
 
 		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
+	}
+
+	/**
+	 * Detect if the current OS is Windows.
+	 * 
+	 * @return bool
+	 */
+	protected function is_windows() : bool {
+		// Detect Windows the way Symfony Process does.
+		// We can only set TTY on non-Windows systems.
+		return '\\' === \DIRECTORY_SEPARATOR;
+	}
+
+	/**
+	 * Get the environment variables for a docker-compose command.
+	 * 
+	 * @return array
+	 */
+	protected function get_env_for_docker_compose() : array {
+		$env = [
+			'VOLUME' => getcwd(),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'PATH' => getenv( 'PATH' ),
+			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
+		];
+
+		// On Windows docker-compose needs access to environment variables
+		// set system-wide.
+		if ( $this->is_windows() ) {
+			$env = array_merge( [ 'PWD' => $this->get_docker_compose_directory() ], $_ENV, $env );
+		}
+
+		return $env;
+	}
+
+	/**
+	 * Get the docker-compose project directory.
+	 * 
+	 * @return string
+	 */
+	protected function get_docker_compose_directory() : string {
+		$root = dirname( $this->getComposer()->getConfig()->getConfigSource()->getName() );
+		return $root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'altis' . DIRECTORY_SEPARATOR . 'local-server' . DIRECTORY_SEPARATOR . 'docker';
 	}
 }
