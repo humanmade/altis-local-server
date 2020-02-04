@@ -10,22 +10,7 @@ use function Altis\get_environment_architecture;
  */
 function bootstrap() {
 	if ( get_environment_architecture() === 'local-server' ) {
-		add_filter( 'admin_menu', function() {
-			$links = [
-				[
-					'label' => 'Kibana',
-					'url' => network_site_url( '/kibana' ),
-				],
-				[
-					'label' => 'MailHog',
-					'url' => network_site_url( '/mailhog' ),
-				],
-			];
-
-			foreach ( $links as $link ) {
-				add_management_page( $link['label'], $link['label'], 'manage_options', $link['url'] );
-			}
-		} );
+		add_filter( 'admin_menu', __NAMESPACE__ . '\\tools_submenus' );
 	}
 
 	$config = get_config()['modules']['local-server'];
@@ -116,4 +101,24 @@ function set_file_path_map( array $map ) : array {
 	}
 	$map['/usr/src/app'] = rtrim( getenv( 'HOST_PATH' ), DIRECTORY_SEPARATOR );
 	return $map;
+}
+
+/**
+ * Add new submenus to Tools admin menu.
+ */
+function tools_submenus() {
+	$links = [
+		[
+			'label' => 'Kibana',
+			'url' => network_site_url( '/kibana' ),
+		],
+		[
+			'label' => 'MailHog',
+			'url' => network_site_url( '/mailhog' ),
+		],
+	];
+
+	foreach ( $links as $link ) {
+		add_management_page( $link['label'], $link['label'], 'manage_options', $link['url'] );
+	}
 }
