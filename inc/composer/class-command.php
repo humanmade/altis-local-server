@@ -90,7 +90,7 @@ EOT
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( true );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
-			echo $buffer; // phpcs:ignore
+			echo $buffer;
 		} );
 
 		if ( $proxy_failed ) {
@@ -114,7 +114,7 @@ EOT
 		$compose->setTty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
-			echo $buffer; // phpcs:ignore
+			echo $buffer;
 		} );
 
 		if ( $failed ) {
@@ -200,7 +200,7 @@ EOT
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$return_val = $compose->run( function ( $type, $buffer ) {
-			echo $buffer; // phpcs:ignore
+			echo $buffer;
 		} );
 
 		if ( $return_val === 0 ) {
@@ -223,7 +223,7 @@ EOT
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$return_val = $compose->run( function ( $type, $buffer ) {
-			echo $buffer; // phpcs:ignore
+			echo $buffer;
 		} );
 
 		if ( $return_val === 0 ) {
