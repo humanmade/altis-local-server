@@ -252,10 +252,8 @@ EOT
 			}
 		}
 
-		if ( $program === 'wp' ) {
-			if ( ! $passed_url ) {
-				$options[] = '--url=' . $site_url;
-			}
+		if ( ! $passed_url && $program === 'wp' ) {
+			$options[] = '--url=' . $site_url;
 		}
 
 		$is_wp_query = $options[0] === 'db' && $options[1] === 'query';
