@@ -11,8 +11,6 @@ use function Altis\get_environment_type;
 function bootstrap() {
 	if ( get_environment_type() === 'local' ) {
 		add_filter( 'admin_menu', function() {
-			global $submenu;
-
 			$links = [
 				[
 					'label' => 'Kibana',
