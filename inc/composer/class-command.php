@@ -243,6 +243,9 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
+//		$options[2] = escapeshellarg( $options[2] );
+//		$options[2] = 'select\ *\ from\ wp_posts;';
+
 
 		$passed_url = false;
 		foreach ( $options as $option ) {
@@ -252,14 +255,28 @@ EOT
 			}
 		}
 
-		if ( ! $passed_url && $program === 'wp' ) {
-			$options[] = '--url=' . $site_url;
+		if ( $program === 'wp' ) {
+			if ( ! $passed_url ) {
+				$options[] = '--url=' . $site_url;
+			}
 		}
+
+		$is_wp_query = $options[0] === 'db' && $options[1] === 'query';
 
 		// Escape all options. Because the shell is going to strip the
 		// initial escaping like "My string" => My String, then we need
 		// to reapply escaping.
 		foreach ( $options as &$option ) {
+			if (
+				$is_wp_query
+				&& strpos( $option, '=' ) !== 0
+				&& strpos( $option, '--' ) !== 0
+				&& preg_match( '/\s/', $option ) // Not an argument and it contains spaces: It must be the query.
+			)
+			{
+				// Escape spaces
+				$option = escapeshellarg( $option );
+			}
 			if ( ! strpos( $option, '=' ) ) {
 				if ( strpos( $option, '--' ) == 0 ) {
 					continue;
