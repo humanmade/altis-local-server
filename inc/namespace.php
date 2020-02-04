@@ -16,18 +16,18 @@ function bootstrap() {
 			$links = [
 				[
 					'label' => 'Kibana',
-					'url' => network_site_url( '/kibana' )
+					'url' => network_site_url( '/kibana' ),
 				],
 				[
 					'label' => 'MailHog',
-					'url' => network_site_url( '/mailhog' )
-				]
+					'url' => network_site_url( '/mailhog' ),
+				],
 			];
 
 			foreach ( $links as $link ) {
 				add_management_page( $link['label'], $link['label'], 'manage_options', $link['url'] );
 			}
-	} );
+		} );
 	}
 
 	$config = get_config()['modules']['local-server'];
