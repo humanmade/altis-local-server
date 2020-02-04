@@ -260,7 +260,7 @@ EOT
 		// initial escaping like "My string" => My String, then we need
 		// to reapply escaping.
 		foreach ( $options as &$option ) {
-			$is_unescaped_string = strpos( $option, "'" ) !== false && preg_match( "/\\'/", $option ) !== false;
+			$is_unescaped_string = preg_match( "/\\'/", $option ) !== false;
 			$double_dash_arg_position = strpos( $option, '--' );
 			$equal_arg_position = strpos( $option, '=' );
 
