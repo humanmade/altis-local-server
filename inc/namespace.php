@@ -3,11 +3,33 @@
 namespace Altis\Local_Server;
 
 use function Altis\get_config;
+use function Altis\get_environment_type;
 
 /**
  * Configure environment for local server.
  */
 function bootstrap() {
+	if ( get_environment_type() === 'local' ) {
+		add_filter( 'admin_menu', function() {
+			global $submenu;
+
+			$links = [
+				[
+					'label' => 'Kibana',
+					'url' => network_site_url( '/kibana' )
+				],
+				[
+					'label' => 'MailHog',
+					'url' => network_site_url( '/mailhog' )
+				]
+			];
+
+			foreach ( $links as $link ) {
+				add_management_page( $link['label'], $link['label'], 'manage_options', $link['url'] );
+			}
+	} );
+	}
+
 	$config = get_config()['modules']['local-server'];
 
 	if ( $config['s3'] ) {
