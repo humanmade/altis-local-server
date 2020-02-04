@@ -256,24 +256,12 @@ EOT
 			$options[] = '--url=' . $site_url;
 		}
 
-		$is_wp_query = $options[0] === 'db' && $options[1] === 'query';
-
 		// Escape all options. Because the shell is going to strip the
 		// initial escaping like "My string" => My String, then we need
 		// to reapply escaping.
 		foreach ( $options as &$option ) {
-			if ( $is_wp_query
-				&& strpos( $option, '=' ) !== 0
-				&& strpos( $option, '--' ) !== 0
-				&& preg_match( '/\s/', $option ) // Not an argument and it contains spaces: It must be the query.
-			) {
-				// Escape spaces
-				$option = escapeshellarg( $option );
-			}
-			if ( ! strpos( $option, '=' ) ) {
-				if ( strpos( $option, '--' ) == 0 ) {
-					continue;
-				}
+			$is_unescaped_string = strpos( $option, "'" ) !== false  && preg_match( "/\\'/", $option ) !== false && strpos( $option, '=' ) !== 0 && strpos( $option, '--' ) !== 0;
+			if ( ! strpos( $option, '=' ) && strpos( $option, '--' ) != 0 || $is_unescaped_string ) {
 				$option = escapeshellarg( $option );
 			} else {
 				$arg = strtok( $option, '=' );
