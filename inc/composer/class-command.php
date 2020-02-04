@@ -90,7 +90,7 @@ EOT
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( true );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
-			echo $buffer;
+			echo $buffer; // phpcs:ignore
 		} );
 
 		if ( $proxy_failed ) {
@@ -114,7 +114,7 @@ EOT
 		$compose->setTty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
-			echo $buffer;
+			echo $buffer; // phpcs:ignore
 		} );
 
 		if ( $failed ) {
@@ -200,7 +200,7 @@ EOT
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$return_val = $compose->run( function ( $type, $buffer ) {
-			echo $buffer;
+			echo $buffer; // phpcs:ignore
 		} );
 
 		if ( $return_val === 0 ) {
@@ -223,7 +223,7 @@ EOT
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 		] );
 		$return_val = $compose->run( function ( $type, $buffer ) {
-			echo $buffer;
+			echo $buffer; // phpcs:ignore
 		} );
 
 		if ( $return_val === 0 ) {
@@ -243,9 +243,6 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
-//		$options[2] = escapeshellarg( $options[2] );
-//		$options[2] = 'select\ *\ from\ wp_posts;';
-
 
 		$passed_url = false;
 		foreach ( $options as $option ) {
@@ -267,13 +264,11 @@ EOT
 		// initial escaping like "My string" => My String, then we need
 		// to reapply escaping.
 		foreach ( $options as &$option ) {
-			if (
-				$is_wp_query
+			if ( $is_wp_query
 				&& strpos( $option, '=' ) !== 0
 				&& strpos( $option, '--' ) !== 0
 				&& preg_match( '/\s/', $option ) // Not an argument and it contains spaces: It must be the query.
-			)
-			{
+			) {
 				// Escape spaces
 				$option = escapeshellarg( $option );
 			}
