@@ -18,7 +18,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec. shell, status. logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -42,6 +42,10 @@ Run any shell command from the PHP container:
 	exec -- <command>             eg: exec -- vendor/bin/phpcs
 Open a shell:
 	shell
+Database commands:
+	db                            Log into MySQL on the Database server
+	db spf                        Generates an SPF file for Sequel Pro
+	db info                       Prints out Database connection details
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 EOT
@@ -68,6 +72,8 @@ EOT
 			return $this->exec( $input, $output, 'wp' );
 		} elseif ( $subcommand === 'exec' ) {
 			return $this->exec( $input, $output );
+		} elseif ( $subcommand === 'db' ) {
+			return $this->db( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
@@ -322,6 +328,21 @@ EOT
 		$lines = exec( 'tput lines' );
 		passthru( sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash',
+			'vendor/altis/local-server/docker',
+			escapeshellarg( getcwd() ),
+			$this->get_project_subdomain(),
+			$columns,
+			$lines
+		), $return_val );
+
+		return $return_val;
+	}
+
+	protected function db( InputInterface $input, OutputInterface $output ) {
+		$columns = exec( 'tput cols' );
+		$lines = exec( 'tput lines' );
+		passthru( sprintf(
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d db mysql --database=wordpress --user=root -pwordpress',
 			'vendor/altis/local-server/docker',
 			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain(),
