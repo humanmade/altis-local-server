@@ -3,15 +3,12 @@
 namespace Altis\Local_Server;
 
 use function Altis\get_config;
-use function Altis\get_environment_architecture;
 
 /**
  * Configure environment for local server.
  */
 function bootstrap() {
-	if ( get_environment_architecture() === 'local-server' ) {
-		add_filter( 'admin_menu', __NAMESPACE__ . '\\tools_submenus' );
-	}
+	add_filter( 'admin_menu', __NAMESPACE__ . '\\tools_submenus' );
 
 	$config = get_config()['modules']['local-server'];
 
