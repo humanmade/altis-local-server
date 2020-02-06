@@ -57,6 +57,15 @@ EOT
 		return true;
 	}
 
+	private function get_base_command_prefix() {
+		return sprintf(
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
+			'vendor/altis/local-server/docker',
+			escapeshellarg( getcwd() ),
+			$this->get_project_subdomain()
+		);
+	}
+
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'subcommand' );
 
@@ -326,11 +335,9 @@ EOT
 	protected function shell( InputInterface $input, OutputInterface $output ) {
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
+		$command_prefix = $this->get_base_command_prefix();
 		passthru( sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash',
-			'vendor/altis/local-server/docker',
-			escapeshellarg( getcwd() ),
-			$this->get_project_subdomain(),
+			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash",
 			$columns,
 			$lines
 		), $return_val );
@@ -343,12 +350,7 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 
-		$base_command_prefix = sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
-			'vendor/altis/local-server/docker',
-			escapeshellarg( getcwd() ),
-			$this->get_project_subdomain()
-		);
+		$base_command_prefix = $this->get_base_command_prefix();
 
 		$base_command = sprintf(
 			"$base_command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
@@ -358,34 +360,21 @@ EOT
 
 		switch ( $db ) {
 			case 'info':
-				// Env variables
-				$env_variables = explode( PHP_EOL, shell_exec( "$base_command printenv" ) );
-				$values = array_reduce( $env_variables, function( $values, $env_variable_text ) {
-					$env_variable = explode( '=', $env_variable_text );
-					$values[ $env_variable[0] ] = $env_variable[1] ?? '';
-					return $values;
-				}, [] );
-
 				// Ports
-
-				// Find the container ID with Docker Compose
-				$db_container_id = shell_exec( "$base_command_prefix docker-compose ps -q db" );
-
-				// Retrrieve the forwarded ports using Docker and the container ID
-				$ports = shell_exec( sprintf( "$base_command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
-				preg_match( '/.*,\s([\d.]+:[\d]+)->.*/', $ports, $ports_matches );
+				$connection_data = $this->get_db_connection_data();
 
 				$db_info = <<<EOT
-<info>Root password</info>:  ${values['MYSQL_ROOT_PASSWORD']}
+<info>Root password</info>:  ${connection_data['MYSQL_ROOT_PASSWORD']}
 
-<info>Database</info>:       ${values['MYSQL_PASSWORD']}
-<info>User</info>:           ${values['MYSQL_USER']}
-<info>Password</info>:       ${values['MYSQL_PASSWORD']}
+<info>Database</info>:       ${connection_data['MYSQL_DATABASE']}
+<info>User</info>:           ${connection_data['MYSQL_USER']}
+<info>Password</info>:       ${connection_data['MYSQL_PASSWORD']}
 
-<comment>Version</comment>:        ${values['MYSQL_VERSION']}
-<comment>Ports</comment>:          ${ports_matches[1]}
+<comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
+<comment>Ports</comment>:          ${connection_data['host']}:${connection_data['port']}
+
 EOT;
-				echo $output->write( $db_info ) . PHP_EOL;
+				$output->write( $db_info );
 				$return_val = 0;
 				break;
 			default:
@@ -393,6 +382,53 @@ EOT;
 		}
 
 		return $return_val;
+	}
+
+	/**
+	 * Return the Database connection details.
+	 *
+	 * @return array
+	 */
+	private function get_db_connection_data() {
+		$command_prefix = $this->get_base_command_prefix();
+		$columns = exec( 'tput cols' );
+		$lines = exec( 'tput lines' );
+
+		$base_command = sprintf(
+			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			$columns,
+			$lines
+		);
+
+		// Env variables
+		$env_variables = explode( PHP_EOL, shell_exec( "$base_command printenv" ) );
+		$values = array_reduce( $env_variables, function( $values, $env_variable_text ) {
+			$env_variable = explode( '=', $env_variable_text );
+			$values[ $env_variable[0] ] = $env_variable[1] ?? '';
+			return $values;
+		}, [] );
+
+		$db_container_id = shell_exec( "$command_prefix docker-compose ps -q db" );
+
+		// Retrieve the forwarded ports using Docker and the container ID
+		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
+		preg_match( '/.*,\s([\d.]+):([\d]+)->.*/', $ports, $ports_matches );
+
+
+		$keys = [
+			'MYSQL_ROOT_PASSWORD' => true,
+			'MYSQL_PASSWORD' => true,
+			'MYSQL_USER' => true,
+			'MYSQL_DATABASE' => true,
+			'MYSQL_VERSION' => true,
+		];
+		return array_merge(
+			array_intersect_key( $values, $keys ),
+			[
+				'host' => $ports_matches[1],
+				'port' => $ports_matches[2],
+			]
+		);
 	}
 
 	/**

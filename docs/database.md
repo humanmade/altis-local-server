@@ -1,12 +1,12 @@
-# Interacting with Database
+# Interacting with the Database
 
-- You can log into MySQL and run any query in the default database (`wordpress`) by using:
+You can log into MySQL and run any query in the default database (`wordpress`) by using:
 
 ```sh
 composer server db
 ```
 
-- Use `composer server info` to retrieve MySQL info, connection details and forwarded ports:
+Use `composer server info` to retrieve MySQL info, connection details and forwarded ports:
 
 ```sh
 Root password:  wordpress
