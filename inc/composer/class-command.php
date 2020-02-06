@@ -376,17 +376,16 @@ EOT
 				preg_match( '/.*,\s([\d.]+:[\d]+)->.*/', $ports, $ports_matches );
 
 				$db_info = <<<EOT
-Root password:  ${values['MYSQL_ROOT_PASSWORD']}
+<info>Root password</info>:  ${values['MYSQL_ROOT_PASSWORD']}
 
-Database:       ${values['MYSQL_PASSWORD']}
-User:           ${values['MYSQL_USER']}
-Password:       ${values['MYSQL_PASSWORD']}
+<info>Database</info>:       ${values['MYSQL_PASSWORD']}
+<info>User</info>:           ${values['MYSQL_USER']}
+<info>Password</info>:       ${values['MYSQL_PASSWORD']}
 
-Version:        ${values['MYSQL_VERSION']}
-
-Ports:          ${ports_matches[1]}
+<comment>Version</comment>:        ${values['MYSQL_VERSION']}
+<comment>Ports</comment>:          ${ports_matches[1]}
 EOT;
-				echo shell_exec( "echo '$db_info'" ) . PHP_EOL;
+				echo $output->write( $db_info ) . PHP_EOL;
 				$return_val = 0;
 				break;
 			default:
