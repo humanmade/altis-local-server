@@ -339,16 +339,59 @@ EOT
 	}
 
 	protected function db( InputInterface $input, OutputInterface $output ) {
+		$db = $input->getArgument( 'options' )[0] ?? '';
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
-		passthru( sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d db mysql --database=wordpress --user=root -pwordpress',
+
+		$base_command_prefix = sprintf(
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
 			'vendor/altis/local-server/docker',
 			escapeshellarg( getcwd() ),
-			$this->get_project_subdomain(),
+			$this->get_project_subdomain()
+		);
+
+		$base_command = sprintf(
+			"$base_command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
 			$columns,
 			$lines
-		), $return_val );
+		);
+
+		switch ( $db ) {
+			case 'info':
+				// Env variables
+				$env_variables = explode( PHP_EOL, shell_exec( "$base_command printenv" ) );
+				$values = array_reduce( $env_variables, function( $values, $env_variable_text ) {
+					$env_variable = explode( '=', $env_variable_text );
+					$values[ $env_variable[0] ] = $env_variable[1] ?? '';
+					return $values;
+				}, [] );
+
+				// Ports
+
+				// Find the container ID with Docker Compose
+				$db_container_id = shell_exec( "$base_command_prefix docker-compose ps -q db" );
+
+				// Retrrieve the forwarded ports using Docker and the container ID
+				$ports = shell_exec( sprintf( "$base_command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
+				preg_match( '/.*,\s([\d.]+:[\d]+)->.*/', $ports, $ports_matches );
+
+				$db_info = <<<EOT
+Root password:  ${values['MYSQL_ROOT_PASSWORD']}
+
+Database:       ${values['MYSQL_PASSWORD']}
+User:           ${values['MYSQL_USER']}
+Password:       ${values['MYSQL_PASSWORD']}
+
+Version:        ${values['MYSQL_VERSION']}
+
+Ports:          ${ports_matches[1]}
+EOT;
+				echo shell_exec( "echo '$db_info'" ) . PHP_EOL;
+				$return_val = 0;
+				break;
+			default:
+				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
+		}
 
 		return $return_val;
 	}
