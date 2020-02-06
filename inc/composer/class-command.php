@@ -360,7 +360,6 @@ EOT
 
 		switch ( $db ) {
 			case 'info':
-				// Ports
 				$connection_data = $this->get_db_connection_data();
 
 				$db_info = <<<EOT
@@ -376,6 +375,9 @@ EOT
 EOT;
 				$output->write( $db_info );
 				$return_val = 0;
+				break;
+			case 'spf':
+				$connection_data = $this->get_db_connection_data();
 				break;
 			default:
 				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
@@ -408,22 +410,26 @@ EOT;
 			return $values;
 		}, [] );
 
+		$keys = [
+			'MYSQL_ROOT_PASSWORD',
+			'MYSQL_PASSWORD',
+			'MYSQL_USER',
+			'MYSQL_DATABASE',
+			'MYSQL_VERSION',
+		];
+
+		array_walk( $values, function ( $value, $key ) use ( $keys ) {
+			return in_array( $key, $keys, true ) ? $value : false;
+		} );
+
 		$db_container_id = shell_exec( "$command_prefix docker-compose ps -q db" );
 
 		// Retrieve the forwarded ports using Docker and the container ID
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
 		preg_match( '/.*,\s([\d.]+):([\d]+)->.*/', $ports, $ports_matches );
 
-
-		$keys = [
-			'MYSQL_ROOT_PASSWORD' => true,
-			'MYSQL_PASSWORD' => true,
-			'MYSQL_USER' => true,
-			'MYSQL_DATABASE' => true,
-			'MYSQL_VERSION' => true,
-		];
 		return array_merge(
-			array_intersect_key( $values, $keys ),
+			array_filter( $values ),
 			[
 				'host' => $ports_matches[1],
 				'port' => $ports_matches[2],
