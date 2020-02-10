@@ -370,7 +370,8 @@ EOT
 <info>Password</info>:       ${connection_data['MYSQL_PASSWORD']}
 
 <comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
-<comment>Ports</comment>:          ${connection_data['host']}:${connection_data['port']}
+<comment>Host</comment>:          ${connection_data['HOST']}
+<comment>Port</comment>:          ${connection_data['PORT']}
 
 EOT;
 				$output->write( $db_info );
@@ -445,8 +446,8 @@ EOT;
 		return array_merge(
 			array_filter( $values ),
 			[
-				'host' => $ports_matches[1],
-				'port' => $ports_matches[2],
+				'HOST' => $ports_matches[1],
+				'PORT' => $ports_matches[2],
 			]
 		);
 	}
