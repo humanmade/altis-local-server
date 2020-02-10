@@ -378,6 +378,20 @@ EOT;
 				break;
 			case 'spf':
 				$connection_data = $this->get_db_connection_data();
+				$rpf_file_contents = file_get_contents( getcwd() . '/vendor/altis/local-server/templates/sequel.xml' );
+				foreach ( $connection_data as $field_name => $field_value ) {
+					$rpf_file_contents = preg_replace( "/(<%=\s)($field_name)(\s%>)/i", $field_value, $rpf_file_contents );
+				}
+				$output_file_path = getcwd() . '/rpf.xml';
+				file_put_contents( $output_file_path, $rpf_file_contents );
+
+				$output_message = <<<EOT
+The RPF file has been placed in <info>$output_file_path</info>.
+
+EOT;
+
+				$output->write( $output_message );
+				$return_val = 0;
 				break;
 			default:
 				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
@@ -403,7 +417,7 @@ EOT;
 		);
 
 		// Env variables
-		$env_variables = explode( PHP_EOL, shell_exec( "$base_command printenv" ) );
+		$env_variables = preg_split( '/\r\n|\r|\n/', shell_exec( "$base_command printenv" ) );
 		$values = array_reduce( $env_variables, function( $values, $env_variable_text ) {
 			$env_variable = explode( '=', $env_variable_text );
 			$values[ $env_variable[0] ] = $env_variable[1] ?? '';
