@@ -358,6 +358,8 @@ EOT
 			$lines
 		);
 
+		$return_val = 0;
+
 		switch ( $db ) {
 			case 'info':
 				$connection_data = $this->get_db_connection_data();
@@ -375,7 +377,6 @@ EOT
 
 EOT;
 				$output->write( $db_info );
-				$return_val = 0;
 				break;
 			case 'spf':
 				$connection_data = $this->get_db_connection_data();
@@ -392,7 +393,6 @@ The RPF file has been placed in <info>$output_file_path</info>.
 EOT;
 
 				$output->write( $output_message );
-				$return_val = 0;
 				break;
 			default:
 				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
