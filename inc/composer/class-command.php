@@ -384,15 +384,27 @@ EOT;
 				foreach ( $connection_data as $field_name => $field_value ) {
 					$rpf_file_contents = preg_replace( "/(<%=\s)($field_name)(\s%>)/i", $field_value, $rpf_file_contents );
 				}
-				$output_file_path = getcwd() . '/rpf.xml';
+				$output_file_path = getcwd() . '/sequel.spf';
 				file_put_contents( $output_file_path, $rpf_file_contents );
 
 				$output_message = <<<EOT
-The RPF file has been placed in <info>$output_file_path</info>.
+The SPF file has been placed in <info>$output_file_path</info>.
 
 EOT;
 
 				$output->write( $output_message );
+
+				$os = php_uname();
+				if ( strpos( $os, 'Darwin' ) !== false ) {
+					exec( "open $output_file_path", $null, $return_val );
+				} elseif ( strpos( $os, 'Windows' ) !== false ) {
+					exec( "start $output_file_path", $null, $return_val );
+				}
+
+				if ( $return_val !== 0 ) {
+					$output->writeln( '<error>You must have Sequel Pro installed to use this command</error>' );
+				}
+
 				break;
 			default:
 				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
