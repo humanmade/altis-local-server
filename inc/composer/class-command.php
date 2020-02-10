@@ -372,42 +372,37 @@ EOT
 <info>Password</info>:       ${connection_data['MYSQL_PASSWORD']}
 
 <comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
-<comment>Host</comment>:          ${connection_data['HOST']}
-<comment>Port</comment>:          ${connection_data['PORT']}
+<comment>Host</comment>:           ${connection_data['HOST']}
+<comment>Port</comment>:           ${connection_data['PORT']}
 
 EOT;
 				$output->write( $db_info );
 				break;
 			case 'spf':
+				if ( strpos( php_uname(), 'Darwin' ) === false ) {
+					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
+					return 1;
+				}
+
 				$connection_data = $this->get_db_connection_data();
-				$rpf_file_contents = file_get_contents( getcwd() . '/vendor/altis/local-server/templates/sequel.xml' );
+				$spf_file_contents = file_get_contents( dirname( __DIR__, 2 ) . '/templates/sequel.xml' );
 				foreach ( $connection_data as $field_name => $field_value ) {
-					$rpf_file_contents = preg_replace( "/(<%=\s)($field_name)(\s%>)/i", $field_value, $rpf_file_contents );
+					$spf_file_contents = preg_replace( "/(<%=\s)($field_name)(\s%>)/i", $field_value, $spf_file_contents );
 				}
-				$output_file_path = getcwd() . '/sequel.spf';
-				file_put_contents( $output_file_path, $rpf_file_contents );
+				$output_file_path = sprintf( '/tmp/%s.spf', $this->get_project_subdomain() );
+				file_put_contents( $output_file_path, $spf_file_contents );
 
-				$output_message = <<<EOT
-The SPF file has been placed in <info>$output_file_path</info>.
-
-EOT;
-
-				$output->write( $output_message );
-
-				$os = php_uname();
-				if ( strpos( $os, 'Darwin' ) !== false ) {
-					exec( "open $output_file_path", $null, $return_val );
-				} elseif ( strpos( $os, 'Windows' ) !== false ) {
-					exec( "start $output_file_path", $null, $return_val );
-				}
-
+				exec( "open $output_file_path", $null, $return_val );
 				if ( $return_val !== 0 ) {
 					$output->writeln( '<error>You must have Sequel Pro installed to use this command</error>' );
 				}
 
 				break;
-			default:
+			case null:
 				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
+				break;
+			default:
+				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
 		}
 
 		return $return_val;
