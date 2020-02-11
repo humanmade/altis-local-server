@@ -371,9 +371,10 @@ EOT
 <info>User</info>:           ${connection_data['MYSQL_USER']}
 <info>Password</info>:       ${connection_data['MYSQL_PASSWORD']}
 
+<info>Host</info>:           ${connection_data['HOST']}
+<info>Port</info>:           ${connection_data['PORT']}
+
 <comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
-<comment>Host</comment>:           ${connection_data['HOST']}
-<comment>Port</comment>:           ${connection_data['PORT']}
 
 EOT;
 				$output->write( $db_info );

@@ -31,7 +31,7 @@
 				<key>ssh_keyLocation</key>
 				<string></string>
 				<key>ssh_keyLocationEnabled</key>
-				<integer>1</integer>
+				<integer>0</integer>
 				<key>sslCACertFileLocation</key>
 				<string></string>
 				<key>sslCACertFileLocationEnabled</key>
@@ -45,7 +45,7 @@
 				<key>sslKeyFileLocationEnabled</key>
 				<integer>0</integer>
 				<key>type</key>
-				<string>SPSSHTunnelConnection</string>
+				<string>StandardConnection</string>
 				<key>useSSL</key>
 				<integer>0</integer>
 				<key>user</key>
