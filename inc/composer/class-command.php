@@ -44,7 +44,7 @@ Open a shell:
 	shell
 Database commands:
 	db                            Log into MySQL on the Database server
-	db spf                        Generates an SPF file for Sequel Pro
+	db sequel                     Generates an SPF file for Sequel Pro
 	db info                       Prints out Database connection details
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
@@ -346,7 +346,7 @@ EOT
 	}
 
 	protected function db( InputInterface $input, OutputInterface $output ) {
-		$db = $input->getArgument( 'options' )[0] ?? '';
+		$db = $input->getArgument( 'options' )[0] ?? null;
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 
@@ -378,7 +378,7 @@ EOT
 EOT;
 				$output->write( $db_info );
 				break;
-			case 'spf':
+			case 'sequel':
 				if ( strpos( php_uname(), 'Darwin' ) === false ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
@@ -394,7 +394,7 @@ EOT;
 
 				exec( "open $output_file_path", $null, $return_val );
 				if ( $return_val !== 0 ) {
-					$output->writeln( '<error>You must have Sequel Pro installed to use this command</error>' );
+					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) installed to use this command</error>' );
 				}
 
 				break;
@@ -403,6 +403,7 @@ EOT;
 				break;
 			default:
 				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
+				$return_val = 1;
 		}
 
 		return $return_val;
