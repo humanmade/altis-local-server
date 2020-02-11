@@ -18,7 +18,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec. shell, status. logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -42,6 +42,10 @@ Run any shell command from the PHP container:
 	exec -- <command>             eg: exec -- vendor/bin/phpcs
 Open a shell:
 	shell
+Database commands:
+	db                            Log into MySQL on the Database server
+	db sequel                     Generates an SPF file for Sequel Pro
+	db info                       Prints out Database connection details
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 EOT
@@ -51,6 +55,15 @@ EOT
 
 	public function isProxyCommand() {
 		return true;
+	}
+
+	private function get_base_command_prefix() {
+		return sprintf(
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
+			'vendor/altis/local-server/docker',
+			escapeshellarg( getcwd() ),
+			$this->get_project_subdomain()
+		);
 	}
 
 	protected function execute( InputInterface $input, OutputInterface $output ) {
@@ -68,6 +81,8 @@ EOT
 			return $this->exec( $input, $output, 'wp' );
 		} elseif ( $subcommand === 'exec' ) {
 			return $this->exec( $input, $output );
+		} elseif ( $subcommand === 'db' ) {
+			return $this->db( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
@@ -320,16 +335,130 @@ EOT
 	protected function shell( InputInterface $input, OutputInterface $output ) {
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
+		$command_prefix = $this->get_base_command_prefix();
 		passthru( sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash',
-			'vendor/altis/local-server/docker',
-			escapeshellarg( getcwd() ),
-			$this->get_project_subdomain(),
+			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash",
 			$columns,
 			$lines
 		), $return_val );
 
 		return $return_val;
+	}
+
+	protected function db( InputInterface $input, OutputInterface $output ) {
+		$db = $input->getArgument( 'options' )[0] ?? null;
+		$columns = exec( 'tput cols' );
+		$lines = exec( 'tput lines' );
+
+		$base_command_prefix = $this->get_base_command_prefix();
+
+		$base_command = sprintf(
+			"$base_command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			$columns,
+			$lines
+		);
+
+		$return_val = 0;
+
+		switch ( $db ) {
+			case 'info':
+				$connection_data = $this->get_db_connection_data();
+
+				$db_info = <<<EOT
+<info>Root password</info>:  ${connection_data['MYSQL_ROOT_PASSWORD']}
+
+<info>Database</info>:       ${connection_data['MYSQL_DATABASE']}
+<info>User</info>:           ${connection_data['MYSQL_USER']}
+<info>Password</info>:       ${connection_data['MYSQL_PASSWORD']}
+
+<info>Host</info>:           ${connection_data['HOST']}
+<info>Port</info>:           ${connection_data['PORT']}
+
+<comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
+
+EOT;
+				$output->write( $db_info );
+				break;
+			case 'sequel':
+				if ( strpos( php_uname(), 'Darwin' ) === false ) {
+					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
+					return 1;
+				}
+
+				$connection_data = $this->get_db_connection_data();
+				$spf_file_contents = file_get_contents( dirname( __DIR__, 2 ) . '/templates/sequel.xml' );
+				foreach ( $connection_data as $field_name => $field_value ) {
+					$spf_file_contents = preg_replace( "/(<%=\s)($field_name)(\s%>)/i", $field_value, $spf_file_contents );
+				}
+				$output_file_path = sprintf( '/tmp/%s.spf', $this->get_project_subdomain() );
+				file_put_contents( $output_file_path, $spf_file_contents );
+
+				exec( "open $output_file_path", $null, $return_val );
+				if ( $return_val !== 0 ) {
+					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) installed to use this command</error>' );
+				}
+
+				break;
+			case null:
+				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
+				break;
+			default:
+				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
+				$return_val = 1;
+		}
+
+		return $return_val;
+	}
+
+	/**
+	 * Return the Database connection details.
+	 *
+	 * @return array
+	 */
+	private function get_db_connection_data() {
+		$command_prefix = $this->get_base_command_prefix();
+		$columns = exec( 'tput cols' );
+		$lines = exec( 'tput lines' );
+
+		$base_command = sprintf(
+			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			$columns,
+			$lines
+		);
+
+		// Env variables
+		$env_variables = preg_split( '/\r\n|\r|\n/', shell_exec( "$base_command printenv" ) );
+		$values = array_reduce( $env_variables, function( $values, $env_variable_text ) {
+			$env_variable = explode( '=', $env_variable_text );
+			$values[ $env_variable[0] ] = $env_variable[1] ?? '';
+			return $values;
+		}, [] );
+
+		$keys = [
+			'MYSQL_ROOT_PASSWORD',
+			'MYSQL_PASSWORD',
+			'MYSQL_USER',
+			'MYSQL_DATABASE',
+			'MYSQL_VERSION',
+		];
+
+		array_walk( $values, function ( $value, $key ) use ( $keys ) {
+			return in_array( $key, $keys, true ) ? $value : false;
+		} );
+
+		$db_container_id = shell_exec( "$command_prefix docker-compose ps -q db" );
+
+		// Retrieve the forwarded ports using Docker and the container ID
+		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
+		preg_match( '/.*,\s([\d.]+):([\d]+)->.*/', $ports, $ports_matches );
+
+		return array_merge(
+			array_filter( $values ),
+			[
+				'HOST' => $ports_matches[1],
+				'PORT' => $ports_matches[2],
+			]
+		);
 	}
 
 	/**
