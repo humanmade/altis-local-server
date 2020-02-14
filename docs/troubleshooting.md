@@ -28,6 +28,20 @@ In the docker GUI go to the "Preferences" pane, then the "Advanced" tab and move
 
 ![Docker Advanced Settings](./assets/docker-gui-advanced.png)
 
+## Configuration updates when using ElasticSearch on Local Environment
+
+ElasticSearch uses more memory within the local server environment, which can also cause services to stop working,n particularly when using Ubuntu. Altis includes an environment variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`. 
+
+### Change variable during current session only
+
+Using this variable with the `composer server start` command, users can update the memory limit for the current session only; it won't change the variable permenantly. An example might be: 
+
+`ES_MEM_LIMIT=2g composer server start`
+
+### Change variable permanently
+
+Users can also define that environment variable on the container's config file if they wanted a permanent fix. For instance, editing or adding the variable to the "environment" section of the [/docker-compose.yml](https://github.com/humanmade/altis-local-server/blob/master/docker/docker-compose.yml) Altis Local Server setup.
+
 ## Windows 10 Home Edition
 
 Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
