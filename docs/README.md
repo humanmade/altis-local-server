@@ -27,7 +27,7 @@ Visiting your site's URL should now work. Visit `/wp-admin/` and login with `adm
 
 ## Available Commands
 
-* `composer server start` - Starts the container.
+* `composer server start` - Starts the containers.
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.
