@@ -45,7 +45,7 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
-* `composer server start` - Starts the container.
+* `composer server start` - Starts the containers.
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.
