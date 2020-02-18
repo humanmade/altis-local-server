@@ -54,3 +54,6 @@ The subdomain used for the project can be configured via the `modules.local-serv
 * `composer server shell` - Logs in to the PHP container.
 * `composer server cli -- <command>` - Runs a WP CLI command, you should omit the 'wp' for example `composer server cli -- info`
 * `composer server exec -- <command>` - Runs any command on the PHP container.
+* `composer server db` - Logs into MySQL on the DB container.
+  * `composer server db info` - Print MySQL connection details.
+  * `composer server db sequel` - Opens a connection to the database in [Sequel Pro](https://sequelpro.com).
