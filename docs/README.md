@@ -14,7 +14,7 @@ Navigate your shell to your project's directory. You should already have install
 
 ## Starting the Local Server
 
-To start the Local Server, simply run `composer local-server start`. The first time you this will download all the necessary Docker images.
+To start the Local Server, simply run `composer local-server start`. The first time you run this it will download all the necessary Docker images.
 
 Once the initial install and download has completed, you should see the output:
 
@@ -25,6 +25,13 @@ To access your site visit: https://my-site.altis.dev/
 
 Visiting your site's URL should now work. Visit `/wp-admin/` and login with `admin` / `admin` to get started!
 
-## Stopping the Local Server
+## Available Commands
 
-To stop the Local Server containers, simply run `composer local-server stop`.
+* `composer server start` - Starts the containers.
+* `composer server stop` - Stops the containers.
+* `composer server restart` - Restart the containers.
+* `composer server destroy` - Stops and destroys all containers.
+* `composer server status` - Displays the status of all containers.
+* `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
+* `composer server shell` - Logs in to the PHP container.
+* `composer server cli -- <command>` - Runs a WP CLI command, you should omit the 'wp' for example `composer server cli -- info`
