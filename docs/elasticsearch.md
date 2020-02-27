@@ -58,7 +58,3 @@ ElasticSearch uses more memory within the local server environment, which can al
 Using this variable with the `composer server start` command, users can update the memory limit for the current session only; it won't change the variable permenantly. An example might be: 
 
 `ES_MEM_LIMIT=2g composer server start`
-
-### Change variable permanently
-
-Users can also define that environment variable on the container's config file if they wanted a permanent fix. For instance, editing or adding the variable to the "environment" section of the [/docker-compose.yml](https://github.com/humanmade/altis-local-server/blob/master/docker/docker-compose.yml) Altis Local Server setup.
