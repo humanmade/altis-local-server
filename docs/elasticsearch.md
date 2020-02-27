@@ -53,8 +53,6 @@ curl -XGET http://0.0.0.0:32871
 
 ElasticSearch uses more memory within the local server environment, which can also cause services to stop working,n particularly when using Ubuntu. Altis includes an environment variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`. 
 
-### Change variable during current session only
-
 Using this variable with the `composer server start` command, users can update the memory limit for the current session only; it won't change the variable permenantly. An example might be: 
 
 `ES_MEM_LIMIT=2g composer server start`
