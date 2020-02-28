@@ -48,3 +48,12 @@ Copy the mapped IP and port (highlighted in bold above) and use it to query Elas
 ```
 curl -XGET http://0.0.0.0:32871
 ```
+
+## ElasticSearch Memory Limit
+
+ElasticSearch requires more memory on certain operating systems such as Ubuntu or when using Continuous Integration services. If ElasticSearch does not have enough memory it can cause other services to stop working. The Local Server supports an environment variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`. 
+
+You can set the `ES_MEM_LIMIT` variable in 2 ways:
+
+- Set it globally eg: `export ES_MEM_LIMIT=2g`
+- Set it for the local server process only: `ES_MEM_LIMIT=2g composer server start`
