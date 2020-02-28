@@ -49,10 +49,11 @@ Copy the mapped IP and port (highlighted in bold above) and use it to query Elas
 curl -XGET http://0.0.0.0:32871
 ```
 
-## Configuration updates when using ElasticSearch on Local Environment
+## ElasticSearch Memory Limit
 
-ElasticSearch uses more memory within the local server environment, which can also cause services to stop working,n particularly when using Ubuntu. Altis includes an environment variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`. 
+ElasticSearch requires more memory on certain operating systems such as Ubuntu or when using Continuous Integration services. If ElasticSearch does not have enough memory it can cause other services to stop working. The Local Server supports an environment variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`. 
 
-Using this variable with the `composer server start` command, users can update the memory limit for the current session only; it won't change the variable permenantly. An example might be: 
+You can set the `ES_MEM_LIMIT` variable in 2 ways:
 
-`ES_MEM_LIMIT=2g composer server start`
+- Set it globally eg: `export ES_MEM_LIMIT=2g`
+- Set it for the local server process only: `ES_MEM_LIMIT=2g composer server start`
