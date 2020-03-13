@@ -137,6 +137,30 @@ EOT
 			return $failed;
 		}
 
+		// Get internal host IP.
+		// Redirect stderr to /dev/null as a false negative is output.
+		$lookup = exec( sprintf(
+			'docker exec %s_php_1 nslookup host.docker.internal 2>/dev/null',
+			$this->get_project_subdomain()
+		) );
+		preg_match( '/\d+\.\d+\.\d+\.\d+/', $lookup, $nslookup_matches );
+		$ip = $nslookup_matches[0];
+
+		// Add external altis.dev host names to PHP container.
+		$hosts = [
+			'%1$s.altis.dev',
+			's3-%1$s.altis.dev',
+			'cognito-%1$s.altis.dev',
+			'pinpoint-%1$s.altis.dev',
+			'elasticsearch-%1$s.altis.dev',
+		];
+		exec( sprintf(
+			'docker exec -u root %s_php_1 /bin/bash -c "echo \"%s %s\" >> /etc/hosts"',
+			$this->get_project_subdomain(),
+			$ip,
+			sprintf( implode( ' ', $hosts ), $this->get_project_subdomain() )
+		) );
+
 		$cli = $this->getApplication()->find( 'local-server' );
 
 		// Check if WP is already installed.
