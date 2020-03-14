@@ -203,7 +203,7 @@ services:
       - "traefik.frontend.rule=Host:cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   pinpoint:
     <<: *analytics
-    image: humanmade/local-pinpoint:1.1.0
+    image: humanmade/local-pinpoint:1.2.2
     labels:
       - "traefik.port=3000"
       - "traefik.protocol=http"
