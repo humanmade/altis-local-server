@@ -21,6 +21,8 @@ x-php: &php
     - "proxy:${COMPOSE_PROJECT_NAME:-default}.altis.dev"
     - "proxy:pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
     - "proxy:cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+    - "proxy:elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+    - "proxy:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
