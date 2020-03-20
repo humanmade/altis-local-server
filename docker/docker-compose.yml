@@ -19,10 +19,15 @@ x-php: &php
     - "s3:s3.localhost"
   external_links:
     - "proxy:${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+    - "proxy:pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+    - "proxy:cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
     - socket:/var/run/php-fpm
+  networks:
+    - proxy
+    - default
   environment:
     HOST_PATH: ${VOLUME}
     DB_HOST: db
@@ -85,8 +90,6 @@ services:
   php:
     <<: *php
     image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.1.0}
-    ports:
-      - '9000'
   nginx:
     image: humanmade/altis-local-server-nginx:3.1.0
     networks:
