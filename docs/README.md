@@ -45,7 +45,9 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
-* `composer server start [--xdebug]` - Starts the containers. If the `--xdebug` option is passed the PHP container will have XDebug enabled. To switch off XDebug run this command again without the `--xdebug` option.
+* `composer server start [--xdebug]` - Starts the containers.
+  * If the `--xdebug` option is passed the PHP container will have XDebug enabled. To switch off XDebug run this command again without the `--xdebug` option.
+  * Any files in `content/upload` are synced to the S3 server on start up. Run this any time you need to synchronise files.
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.

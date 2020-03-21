@@ -2,9 +2,9 @@
 	"version": "9",
 	"hosts": {
 		"local": {
-			"url": "http://minio:9000",
-			"accessKey": "not-needed",
-			"secretKey": "not-needed",
+			"url": "http://s3:9000",
+			"accessKey": "admin",
+			"secretKey": "password",
 			"api": "S3v4",
 			"lookup": "auto"
 		}

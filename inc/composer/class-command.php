@@ -176,28 +176,6 @@ EOT
 			$output->writeln( '<info>WP Password:</>	<comment>admin</>' );
 		}
 
-		// Ensure uploads directory is present by copying a known file.
-		// Prevents errors when running WordPress unit tests.
-		$cli->run( new ArrayInput( [
-			'subcommand' => 'cli',
-			'options' => [
-				's3-uploads',
-				'cp',
-				'composer.json',
-				's3://s3-' . $this->get_project_subdomain() . '/uploads/composer.json',
-				'--quiet',
-			],
-		] ), $output );
-		$cli->run( new ArrayInput( [
-			'subcommand' => 'cli',
-			'options' => [
-				's3-uploads',
-				'rm',
-				's3://s3-' . $this->get_project_subdomain() . '/uploads/composer.json',
-				'--quiet',
-			],
-		] ), $output );
-
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
