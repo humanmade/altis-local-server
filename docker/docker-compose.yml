@@ -205,7 +205,7 @@ services:
     <<: *mc
     depends_on:
       - s3-make-bucket
-    command: ["mirror", "/content", "local/s3-${COMPOSE_PROJECT_NAME:-default}"]
+    command: ["mirror", "/content", "--overwrite", "local/s3-${COMPOSE_PROJECT_NAME:-default}"]
   tachyon:
     image: humanmade/tachyon:2.2.1
     ports:

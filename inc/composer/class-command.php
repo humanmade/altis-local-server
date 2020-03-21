@@ -48,6 +48,8 @@ Database commands:
 	db info                       Prints out Database connection details
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
+Sync content/uploads directly to s3:
+	sync                          Copies files from `content/uploads` to s3
 EOT
 			)
 			->addOption( 'xdebug' );
@@ -89,6 +91,8 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( $subcommand === 'shell' ) {
 			return $this->shell( $input, $output );
+		} elseif ( $subcommand === 'sync' ) {
+			return $this->sync( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -437,6 +441,12 @@ EOT;
 				'PORT' => $ports_matches[2],
 			]
 		);
+	}
+
+	protected function sync() {
+		$command = sprintf( '%s docker-compose run s3-sync-down', $this->get_base_command_prefix() );
+		passthru( $command, $return_var );
+		return $return_var;
 	}
 
 	/**
