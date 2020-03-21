@@ -162,6 +162,7 @@ services:
       - proxy
       - default
     environment:
+      MINIO_DOMAIN: altis.dev
       MINIO_ACCESS_KEY: not-needed
       MINIO_SECRET_KEY: not-needed
     command: server /data
