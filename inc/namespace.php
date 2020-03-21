@@ -112,6 +112,10 @@ function tools_submenus() {
 			'label' => 'MailHog',
 			'url' => network_site_url( '/mailhog' ),
 		],
+		[
+			'label' => 'S3 Browser',
+			'url' => S3_UPLOADS_BUCKET_URL . '/minio',
+		],
 	];
 
 	foreach ( $links as $link ) {
