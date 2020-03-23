@@ -17,6 +17,7 @@ x-php: &php
   links:
     - "db:db-read-replica"
     - "s3:s3.localhost"
+    - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
   external_links:
     - "proxy:${COMPOSE_PROJECT_NAME:-default}.altis.dev"
     - "proxy:pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
@@ -47,12 +48,12 @@ x-php: &php
     ELASTICSEARCH_HOST: elasticsearch
     ELASTICSEARCH_PORT: 9200
     AWS_XRAY_DAEMON_HOST: xray
-    S3_UPLOADS_ENDPOINT: http://s3.localhost:8000/
+    S3_UPLOADS_ENDPOINT: http://s3.localhost:9000/
     S3_UPLOADS_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
     S3_UPLOADS_BUCKET_URL: https://s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev
-    S3_UPLOADS_KEY: not-needed
-    S3_UPLOADS_SECRET: not-needed
-    S3_UPLOADS_REGION: not-needed
+    S3_UPLOADS_KEY: admin
+    S3_UPLOADS_SECRET: password
+    S3_UPLOADS_REGION: us-east-1
     TACHYON_URL: https://${COMPOSE_PROJECT_NAME:-default}.altis.dev/tachyon
     PHP_SENDMAIL_PATH: /usr/sbin/sendmail -t -i -S mailhog:1025
     ALTIS_ANALYTICS_PINPOINT_ENDPOINT: https://pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev
@@ -153,19 +154,44 @@ services:
     environment:
       - http.max_content_length=10mb
   s3:
-    image: fingershock/fakes3:0.2.4
+    image: minio/minio:RELEASE.2020-03-19T21-49-00Z
     volumes:
-      - "s3:/fakes3_data:rw"
+      - "s3:/data:rw"
     ports:
-      - "8000"
+      - "9000"
     networks:
       - proxy
       - default
+    environment:
+      MINIO_DOMAIN: s3.localhost,altis.dev,s3
+      MINIO_REGION_NAME: us-east-1
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: password
+    command: server /data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     labels:
-      - "traefik.port=8000"
+      - "traefik.port=9000"
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev;AddPrefix:/s3-${COMPOSE_PROJECT_NAME:-default}"
+      - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+  s3-sync-to-host:
+    image: minio/mc:RELEASE.2020-03-14T01-23-37Z
+    depends_on:
+      - s3
+    volumes:
+      - "${PWD}/minio.json:/root/.mc/config.json"
+      - "${VOLUME}/content/uploads:/content/uploads:delegated"
+    links:
+      - s3
+    entrypoint: >
+      /bin/sh -c "
+      mc mb -p local/s3-${COMPOSE_PROJECT_NAME:-default}
+      && mc policy set public local/s3-${COMPOSE_PROJECT_NAME:-default}
+      && mc mirror --watch local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
   tachyon:
     image: humanmade/tachyon:2.2.1
     ports:
@@ -178,11 +204,12 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev;PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1"
     environment:
-      AWS_REGION: not-needed
+      AWS_REGION: us-east-1
       AWS_S3_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
-      AWS_S3_ENDPOINT: http://s3.localhost:8000/
+      AWS_S3_ENDPOINT: http://s3.localhost:9000/
     links:
       - "s3:s3.localhost"
+      - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
   mailhog:
     image: mailhog/mailhog:latest
     ports:

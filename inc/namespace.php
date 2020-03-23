@@ -23,7 +23,6 @@ function bootstrap() {
 		add_filter( 's3_uploads_s3_client_params', function ( $params ) {
 			if ( defined( 'S3_UPLOADS_ENDPOINT' ) ) {
 				$params['endpoint'] = S3_UPLOADS_ENDPOINT;
-				$params['use_path_style_endpoint'] = true;
 			}
 			return $params;
 		}, 5, 1 );
@@ -112,6 +111,10 @@ function tools_submenus() {
 		[
 			'label' => 'MailHog',
 			'url' => network_site_url( '/mailhog' ),
+		],
+		[
+			'label' => 'S3 Browser',
+			'url' => S3_UPLOADS_BUCKET_URL . '/minio',
 		],
 	];
 
