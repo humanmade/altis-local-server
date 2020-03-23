@@ -48,8 +48,8 @@ Database commands:
 	db info                       Prints out Database connection details
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
-Sync content/uploads directly to s3:
-	sync                          Copies files from `content/uploads` to s3
+Import files from content/uploads directly to s3:
+	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
 			->addOption( 'xdebug' );
@@ -91,8 +91,8 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( $subcommand === 'shell' ) {
 			return $this->shell( $input, $output );
-		} elseif ( $subcommand === 'sync' ) {
-			return $this->sync( $input, $output );
+		} elseif ( $subcommand === 'import-uploads' ) {
+			return $this->import_uploads( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -443,9 +443,33 @@ EOT;
 		);
 	}
 
-	protected function sync() {
-		$command = sprintf( '%s docker-compose run s3-sync-down', $this->get_base_command_prefix() );
-		passthru( $command, $return_var );
+	protected function import_uploads() {
+		return $this->minio_client( sprintf(
+			'mirror --exclude ".*" /content local/s3-%s',
+			$this->get_project_subdomain()
+		) );
+	}
+
+	protected function minio_client( string $command ) {
+		$columns = exec( 'tput cols' );
+		$lines = exec( 'tput lines' );
+
+		$base_command = sprintf(
+			'docker run ' .
+				'-e COLUMNS=%1%d -e LINES=%2$d ' .
+				'--volume=%3$s/vendor/altis/local-server/docker/minio.json:/root/.mc/config.json ' .
+				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
+				'--network=%4$s_default ' .
+				'minio/mc:RELEASE.2020-03-14T01-23-37Z %5$s',
+			$columns,
+			$lines,
+			getcwd(),
+			$this->get_project_subdomain(),
+			escapeshellcmd( $command )
+		);
+
+		passthru( $base_command, $return_var );
+
 		return $return_var;
 	}
 

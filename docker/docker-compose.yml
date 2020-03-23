@@ -69,14 +69,6 @@ x-analytics: &analytics
     - default
   restart: on-failure
 
-x-mc: &mc
-  image: minio/mc:RELEASE.2020-03-14T01-23-37Z
-  volumes:
-    - "${PWD}/minio.json:/root/.mc/config.json"
-    - "${VOLUME}/content/uploads:/content/uploads:delegated"
-  links:
-    - "s3"
-
 services:
   db:
     image: mysql:5.7
@@ -186,26 +178,20 @@ services:
       - "traefik.protocol=http"
       - "traefik.docker.network=proxy"
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
-  s3-make-bucket:
-    <<: *mc
+  s3-sync-to-host:
+    image: minio/mc:RELEASE.2020-03-14T01-23-37Z
     depends_on:
       - s3
-    command: ["mb", "local/s3-${COMPOSE_PROJECT_NAME:-default}"]
-  s3-set-policy:
-    <<: *mc
-    depends_on:
-      - s3-make-bucket
-    command: ["policy", "set", "public", "local/s3-${COMPOSE_PROJECT_NAME:-default}"]
-  s3-sync-up:
-    <<: *mc
-    depends_on:
-      - s3-make-bucket
-    command: ["mirror", "--watch", "--overwrite", "local/s3-${COMPOSE_PROJECT_NAME:-default}", "/content"]
-  s3-sync-down:
-    <<: *mc
-    depends_on:
-      - s3-make-bucket
-    command: ["mirror", "/content", "--overwrite", "local/s3-${COMPOSE_PROJECT_NAME:-default}"]
+    volumes:
+      - "${PWD}/minio.json:/root/.mc/config.json"
+      - "${VOLUME}/content/uploads:/content/uploads:delegated"
+    links:
+      - s3
+    entrypoint: >
+      /bin/sh -c "
+      mc mb -p local/s3-${COMPOSE_PROJECT_NAME:-default}
+      && mc policy set public local/s3-${COMPOSE_PROJECT_NAME:-default}
+      && mc mirror --watch local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
   tachyon:
     image: humanmade/tachyon:2.2.1
     ports:
