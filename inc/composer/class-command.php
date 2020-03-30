@@ -193,7 +193,7 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$command = sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d %s -u nobody php wp %s',
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec -e COLUMNS=%d -e LINES=%d %s -u www-data php wp %s',
 			'vendor/altis/local-server/docker',
 			getcwd(),
 			$this->get_project_subdomain(),
