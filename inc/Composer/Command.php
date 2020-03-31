@@ -190,7 +190,7 @@ EOT
 
 		$has_stdin = ! posix_isatty( STDIN );
 		$command = sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u nobody php wp %s',
+			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s docker-compose exec %s -u www-data php wp %s',
 			'vendor/altis/local-server/docker',
 			escapeshellarg( getcwd() ),
 			basename( getcwd() ),
