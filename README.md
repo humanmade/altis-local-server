@@ -12,10 +12,10 @@ In your Altis project you can run the following commands:
 
 ```
 # Start the server cluster
-composer local-server start
+composer server start
 
 # Stop the server cluster
-composer local-server stop
+composer server stop
 ```
 
 [For full documentation click here](./docs).
