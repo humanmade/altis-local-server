@@ -6,7 +6,24 @@
 
 ## Local Server
 
-This module is built on docker and requires [Docker Desktop](https://hub.docker.com/?overlay=onboarding) to be installed on your system. You can also [install Docker Machine directly](https://docs.docker.com/machine/install-machine/) if preferred.
+A local development environment for Altis projects, built on Docker.
+
+## Dependencies
+
+* [Composer](https://getcomposer.org/download/)
+* [Docker Desktop](https://www.docker.com/get-started) (you can [install Docker Machine directly](https://docs.docker.com/machine/install-machine/) if preferred)
+
+## Installation with Altis
+
+Altis Local Server is included by default in an Altis project, so you don't need to install anything else.
+
+## Installation without Altis
+
+Altis Local Server can be installed as a dependency within a Composer-based WordPress project:
+
+`composer require --dev altis/local-server`
+
+## Getting Started
 
 In your Altis project you can run the following commands:
 
