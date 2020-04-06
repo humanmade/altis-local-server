@@ -16,7 +16,7 @@ Navigate your shell to your project's directory. You should already have install
 
 ## Starting the Local Server
 
-To start the Local Server, simply run `composer server`. The first time you run this it will download all the necessary Docker images.
+To start the Local Server, run `composer server`. The first time you run this it will download all the necessary Docker images.
 
 Once the initial install and download has completed, you should see the output:
 
