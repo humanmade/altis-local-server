@@ -48,7 +48,7 @@ x-php: &php
     ELASTICSEARCH_HOST: elasticsearch
     ELASTICSEARCH_PORT: 9200
     AWS_XRAY_DAEMON_HOST: xray
-    S3_UPLOADS_ENDPOINT: http://s3.localhost:9000/
+    S3_UPLOADS_ENDPOINT: https://altis.dev/
     S3_UPLOADS_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
     S3_UPLOADS_BUCKET_URL: https://s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev
     S3_UPLOADS_KEY: admin
@@ -193,7 +193,7 @@ services:
       && mc policy set public local/s3-${COMPOSE_PROJECT_NAME:-default}
       && mc mirror --watch local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
   tachyon:
-    image: humanmade/tachyon:2.2.1
+    image: humanmade/tachyon:2.3.0
     ports:
       - "8080"
     networks:
@@ -206,10 +206,9 @@ services:
     environment:
       AWS_REGION: us-east-1
       AWS_S3_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
-      AWS_S3_ENDPOINT: http://s3.localhost:9000/
-    links:
-      - "s3:s3.localhost"
-      - "s3:s3-${COMPOSE_PROJECT_NAME:-default}.s3.localhost"
+      AWS_S3_ENDPOINT: https://altis.dev/
+    external_links:
+      - "proxy:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   mailhog:
     image: mailhog/mailhog:latest
     ports:
