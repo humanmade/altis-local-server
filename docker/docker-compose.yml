@@ -13,7 +13,7 @@ x-php: &php
       condition: service_started
     mailhog:
       condition: service_started
-  image: humanmade/altis-local-server-php:3.1.0
+  image: humanmade/altis-local-server-php:3.2.0
   links:
     - "db:db-read-replica"
     - "s3:s3.localhost"
@@ -92,7 +92,7 @@ services:
       - '6379'
   php:
     <<: *php
-    image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.1.0}
+    image: ${PHP_IMAGE:-humanmade/altis-local-server-php:3.2.0}
   nginx:
     image: humanmade/altis-local-server-nginx:3.1.0
     networks:
