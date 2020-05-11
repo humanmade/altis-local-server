@@ -368,11 +368,13 @@ EOT;
 				}
 
 				$connection_data = $this->get_db_connection_data();
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 				$spf_file_contents = file_get_contents( dirname( __DIR__, 2 ) . '/templates/sequel.xml' );
 				foreach ( $connection_data as $field_name => $field_value ) {
 					$spf_file_contents = preg_replace( "/(<%=\s)($field_name)(\s%>)/i", $field_value, $spf_file_contents );
 				}
 				$output_file_path = sprintf( '/tmp/%s.spf', $this->get_project_subdomain() );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 				file_put_contents( $output_file_path, $spf_file_contents );
 
 				exec( "open $output_file_path", $null, $return_val );
@@ -382,6 +384,7 @@ EOT;
 
 				break;
 			case null:
+				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
 				break;
 			default:
@@ -480,6 +483,7 @@ EOT;
 	 */
 	protected function get_project_subdomain() : string {
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		$composer_json = json_decode( file_get_contents( getcwd() . '/composer.json' ), true );
 
 		if ( isset( $composer_json['extra']['altis']['modules']['local-server']['name'] ) ) {
