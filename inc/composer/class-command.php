@@ -50,6 +50,7 @@ View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
+	regenerate-ssl-cert           Regenerate the SSL certificate.
 EOT
 			)
 			->addOption( 'xdebug' );
@@ -93,6 +94,8 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
 			return $this->import_uploads( $input, $output );
+		} elseif ( $subcommand === 'regenerate-ssl-cert' ) {
+			return $this->regenerate_ssl_cert( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -450,6 +453,10 @@ EOT;
 		) );
 	}
 
+	protected function regenerate_ssl_cert() {
+		$this->generate_ssl_certificate();
+	}
+
 	protected function minio_client( string $command ) {
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
@@ -489,5 +496,79 @@ EOT;
 		}
 
 		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
+	}
+
+	protected function generate_ssl_certificate() {
+		$domain = $this->get_project_subdomain() . '.altis.dev';
+		$dn = [
+			'countryName' => 'GB',
+			'stateOrProvinceName' => 'Derbyshire',
+			'localityName' => 'Matlock',
+			'organizationName' => 'Altis',
+			'organizationalUnitName' => 'IT',
+			'commonName' => $domain,
+			'emailAddress' => 'altis@local',
+		];
+
+		// Generate a new private (and public) key pair
+		$private_key = openssl_pkey_new( [
+			'private_key_bits' => 4096,
+			'private_key_type' => OPENSSL_KEYTYPE_RSA,
+		] );
+
+		$config = <<<EOL
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+[ req_distinguished_name ]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @san
+[usr_cert]
+basicConstraints=CA:FALSE
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+subjectAltName = @san
+[ san ]
+DNS.1 = {$domain}
+DNS.2 = *.{$domain}
+
+
+
+EOL;
+
+echo $config;
+
+		$config_path = tempnam( sys_get_temp_dir(), 'altis-openssl' );
+		echo $config_path;
+
+		file_put_contents( $config_path, $config );
+
+		echo $config_path;
+		// Generate a certificate signing request
+		$csr = openssl_csr_new( $dn, $private_key, [
+			'digest_alg' => 'sha256',
+			'config' => $config_path,
+		] );
+
+		// Generate a self-signed cert, valid for 365 days
+		$x509 = openssl_csr_sign( $csr, null, $private_key, 365, [
+			'digest_alg' => 'sha256',
+			'config' => $config_path,
+			'x509_extensions' => 'usr_cert',
+		] );
+		openssl_x509_export( $x509, $certout );
+		openssl_pkey_export( $private_key, $pkeyout );
+		openssl_csr_export( $csr, $csrout );
+
+		file_put_contents( 'req.csr', $csrout );
+		file_put_contents( dirname( __DIR__, 2 ) . '/docker/sni/key/altis.pem', $pkeyout );
+		file_put_contents( dirname( __DIR__, 2 ) . '/docker/sni/cert/altis.pem', $certout );
+
+		echo $certout;
+		echo $pkeyout;
+
+		//unlink( $config_path );
 	}
 }
