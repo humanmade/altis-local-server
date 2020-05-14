@@ -277,11 +277,12 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
+		$has_stdout = ! posix_isatty( STDOUT );
 		$command = sprintf(
 			'docker exec -e COLUMNS=%d -e LINES=%d -u www-data %s %s %s %s',
 			$columns,
 			$lines,
-			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-t' : '', // forward wp-cli's isPiped detection
+			( ! $has_stdin && ! $has_stdout ) && $program === 'wp' ? '-ti' : '', // forward wp-cli's isPiped detection
 			$container_id,
 			$program ?? '',
 			implode( ' ', $options )
