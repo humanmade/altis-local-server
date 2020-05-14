@@ -50,6 +50,7 @@ View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
+	dump-docker-compose           Print out the generated docker-composer.yml file
 EOT
 			)
 			->addOption( 'xdebug' );
@@ -93,6 +94,8 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
 			return $this->import_uploads( $input, $output );
+		} elseif ( $subcommand === 'dump-docker-compose' ) {
+			return $this->dump_docker_compose( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -393,6 +396,11 @@ EOT;
 		}
 
 		return $return_val;
+	}
+
+	protected function dump_docker_compose( InputInterface $input, OutputInterface $output ) {
+		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd() );
+		echo $docker_compose->get_yaml();
 	}
 
 	/**
