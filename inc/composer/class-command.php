@@ -233,8 +233,32 @@ EOT
 	}
 
 	protected function restart( InputInterface $input, OutputInterface $output ) {
-		$this->stop( $input, $output );
-		return $this->start( $input, $output );
+		$output->writeln( '<info>Restarting...</>' );
+
+		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker' );
+		$proxy->run();
+
+		$options = $input->getArgument( 'options' );
+		if ( isset( $options[0] ) ) {
+			$service = $options[0];
+		} else {
+			$service = '';
+		}
+		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', [
+			'VOLUME' => getcwd(),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+		] );
+		$return_val = $compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		if ( $return_val === 0 ) {
+			$output->writeln( '<info>Restarted.</>' );
+		} else {
+			$output->writeln( '<error>Failed to restart services.</>' );
+		}
+
+		return $return_val;
 	}
 
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
