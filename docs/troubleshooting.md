@@ -30,12 +30,24 @@ In the docker GUI go to the "Preferences" pane, then the "Advanced" tab and move
 
 ## ElasticSearch service fails to start
 
-ElasticSearch requires more memory on certain operating systems such as Ubuntu or when using Continuous Integration services. If ElasticSearch does not have enough memory it can cause other services to stop working. The Local Server supports an environment variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`. 
+ElasticSearch requires more memory on certain operating systems such as Ubuntu or when using Continuous Integration services. If ElasticSearch does not have enough memory it can cause other services to stop working. The Local Server supports an environment variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`.
 
 You can set the `ES_MEM_LIMIT` variable in 2 ways:
 
 - Set it globally eg: `export ES_MEM_LIMIT=2g`
 - Set it for the local server process only: `ES_MEM_LIMIT=2g composer server start`
+
+Another problem can be related to the Docker Virtual Machine settings. In Linux environments the ElasticSearch container is in production mode and requires the setting `vm.max_map_count` to be increased. To do this edit the file `/etc/sysctl.conf` and add the following line:
+
+```
+vm.max_map_count=262144
+```
+
+You can also apply the setting live using the following command:
+
+```
+sysctl -w vm.max_map_count=262144
+```
 
 ## Windows 10 Home Edition
 

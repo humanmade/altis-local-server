@@ -27,6 +27,8 @@ To access your site visit: https://my-site.altis.dev/
 
 Visiting your site's URL should now work. Visit `/wp-admin/` and login with `admin` / `admin` to get started!
 
+> [If the server does not start for any reason take a look at the troubleshooting guide](./troubleshooting.md)
+
 The subdomain used for the project can be configured via the `modules.local-server.name` setting:
 
 ```json
