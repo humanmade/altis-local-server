@@ -18,14 +18,17 @@ Navigate your shell to your project's directory. You should already have install
 
 To start the Local Server, run `composer server`. The first time you run this it will download all the necessary Docker images.
 
-Once the initial install and download has completed, you should see the output:
+Once the initial download and install has completed, you should see the output:
 
 ```sh
+Installed database.
+WP Username:	admin
+WP Password:	password
 Startup completed.
 To access your site visit: https://my-site.altis.dev/
 ```
 
-Visiting your site's URL should now work. Visit `/wp-admin/` and login with `admin` / `admin` to get started!
+Visiting your site's URL should now work. Visit `/wp-admin/` and login with the username `admin` and password `password` to get started!
 
 > [If the server does not start for any reason take a look at the troubleshooting guide](./troubleshooting.md)
 
