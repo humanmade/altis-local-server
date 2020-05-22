@@ -161,7 +161,7 @@ EOT
 					'multisite-install',
 					'--title=Altis',
 					'--admin_user=admin',
-					'--admin_password=admin',
+					'--admin_password=password',
 					'--admin_email=no-reply@altis.dev',
 					'--skip-email',
 					'--skip-config',
@@ -177,7 +177,7 @@ EOT
 
 			$output->writeln( '<info>Installed database.</>' );
 			$output->writeln( '<info>WP Username:</>	<comment>admin</>' );
-			$output->writeln( '<info>WP Password:</>	<comment>admin</>' );
+			$output->writeln( '<info>WP Password:</>	<comment>password</>' );
 		}
 
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
