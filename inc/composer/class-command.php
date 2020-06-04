@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
 /**
  * Local Server Composer Command.
  */
@@ -102,6 +103,20 @@ EOT
 		return 1;
 	}
 
+	/**
+	 * Get environment variables to pass to docker-compose and other subcommands.
+	 *
+	 * @return array Map of var name => value.
+	 */
+	protected function get_env() : array {
+		return [
+			'VOLUME' => getcwd(),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'PATH' => getenv( 'PATH' ),
+			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
+		];
+	}
+
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
@@ -117,13 +132,7 @@ EOT
 			return $proxy_failed;
 		}
 
-		$env = [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-			'PATH' => getenv( 'PATH' ),
-			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
-		];
-
+		$env = $this->get_env();
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
 			$env['PHP_XDEBUG_ENABLED'] = true;
@@ -189,13 +198,10 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -212,13 +218,10 @@ EOT
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<error>Destroying...</>' );
 
-		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -235,7 +238,7 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
 		$options = $input->getArgument( 'options' );
@@ -244,10 +247,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -318,10 +318,7 @@ EOT
 	}
 
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', $this->get_env() );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -329,10 +326,7 @@ EOT
 
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor/altis/local-server/docker', $this->get_env() );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
