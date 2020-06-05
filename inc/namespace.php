@@ -1,8 +1,13 @@
 <?php
+/**
+ * Altis Local Server.
+ *
+ * @package altis/local-server
+ */
 
 namespace Altis\Local_Server;
 
-use function Altis\get_config;
+use Altis;
 
 /**
  * Configure environment for local server.
@@ -10,7 +15,7 @@ use function Altis\get_config;
 function bootstrap() {
 	add_filter( 'admin_menu', __NAMESPACE__ . '\\tools_submenus' );
 
-	$config = get_config()['modules']['local-server'];
+	$config = Altis\get_config()['modules']['local-server'];
 
 	if ( $config['s3'] ) {
 		define( 'S3_UPLOADS_BUCKET', getenv( 'S3_UPLOADS_BUCKET' ) );
@@ -90,8 +95,8 @@ function bootstrap() {
 /**
  * Enables Query Monitor to map paths to their original values on the host.
  *
- * @param array $map Map of guest path => host path
- * @return array Adjusted mapping of folders
+ * @param array $map Map of guest path => host path.
+ * @return array Adjusted mapping of folders.
  */
 function set_file_path_map( array $map ) : array {
 	if ( ! getenv( 'HOST_PATH' ) ) {
