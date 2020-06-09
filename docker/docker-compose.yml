@@ -134,6 +134,7 @@ services:
     mem_limit: ${ES_MEM_LIMIT:-1g}
     volumes:
       - es-data:/usr/share/elasticsearch/data
+      - "${VOLUME}/content/uploads/search:/usr/share/elasticsearch/config/packages"
     ports:
       - "9200"
     networks:
