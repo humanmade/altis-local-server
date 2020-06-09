@@ -126,7 +126,7 @@ services:
     user: "nobody:nobody"
     restart: on-failure
   elasticsearch:
-    image: humanmade/altis-local-server-elasticsearch:1.0.0
+    image: humanmade/altis-local-server-elasticsearch:3.0.0
     ulimits:
       memlock:
         soft: -1
