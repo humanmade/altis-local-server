@@ -144,8 +144,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    environment:
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
     labels:
       - "traefik.port=9200"
       - "traefik.protocol=http"
@@ -153,6 +151,13 @@ services:
       - "traefik.frontend.rule=HostRegexp:elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
     environment:
       - http.max_content_length=10mb
+
+      # Force ES into single-node mode (otherwise defaults to zen discovery as
+      # network.host is set in the default config)
+      - discovery.type=single-node
+
+      # Reduce from default of 1GB of memory to 512MB
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
   s3:
     image: minio/minio:RELEASE.2020-03-19T21-49-00Z
     volumes:
