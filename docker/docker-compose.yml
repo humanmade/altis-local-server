@@ -145,6 +145,8 @@ services:
       - "traefik.frontend.rule=HostRegexp:elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
     environment:
       - http.max_content_length=10mb
+
+      # Reduce from default of 1GB of memory to 512MB
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
   s3:
     image: fingershock/fakes3:0.2.4
