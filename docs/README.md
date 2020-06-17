@@ -16,16 +16,21 @@ Navigate your shell to your project's directory. You should already have install
 
 ## Starting the Local Server
 
-To start the Local Server, simply run `composer server`. The first time you this will download all the necessary Docker images.
+To start the Local Server, run `composer server`. The first time you run this it will download all the necessary Docker images.
 
-Once the initial install and download has completed, you should see the output:
+Once the initial download and install has completed, you should see the output:
 
 ```sh
+Installed database.
+WP Username:	admin
+WP Password:	password
 Startup completed.
 To access your site visit: https://my-site.altis.dev/
 ```
 
-Visiting your site's URL should now work. Visit `/wp-admin/` and login with `admin` / `admin` to get started!
+Visiting your site's URL should now work. Visit `/wp-admin/` and login with the username `admin` and password `password` to get started!
+
+> [If the server does not start for any reason take a look at the troubleshooting guide](./troubleshooting.md)
 
 The subdomain used for the project can be configured via the `modules.local-server.name` setting:
 
@@ -43,6 +48,19 @@ The subdomain used for the project can be configured via the `modules.local-serv
 }
 ```
 
-## Stopping the Local Server
+## Available Commands
 
-To stop the Local Server containers, simply run `composer server stop`.
+* `composer server start [--xdebug]` - Starts the containers.
+  * If the `--xdebug` option is passed the PHP container will have XDebug enabled. To switch off XDebug run this command again without the `--xdebug` option.
+* `composer server stop` - Stops the containers.
+* `composer server restart` - Restart the containers.
+* `composer server destroy` - Stops and destroys all containers.
+* `composer server status` - Displays the status of all containers.
+* `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
+* `composer server shell` - Logs in to the PHP container.
+* `composer server cli -- <command>` - Runs a WP CLI command, you should omit the 'wp' for example `composer server cli -- info`
+* `composer server exec -- <command>` - Runs any command on the PHP container.
+* `composer server db` - Logs into MySQL on the DB container.
+  * `composer server db info` - Print MySQL connection details.
+  * `composer server db sequel` - Opens a connection to the database in [Sequel Pro](https://sequelpro.com).
+* `composer server import-uploads` - Syncs files from `content/uploads` to the s3 container.

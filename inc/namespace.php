@@ -1,14 +1,21 @@
 <?php
+/**
+ * Altis Local Server.
+ *
+ * @package altis/local-server
+ */
 
 namespace Altis\Local_Server;
 
-use function Altis\get_config;
+use Altis;
 
 /**
  * Configure environment for local server.
  */
 function bootstrap() {
-	$config = get_config()['modules']['local-server'];
+	add_filter( 'admin_menu', __NAMESPACE__ . '\\tools_submenus' );
+
+	$config = Altis\get_config()['modules']['local-server'];
 
 	if ( $config['s3'] ) {
 		define( 'S3_UPLOADS_BUCKET', getenv( 'S3_UPLOADS_BUCKET' ) );
@@ -21,7 +28,6 @@ function bootstrap() {
 		add_filter( 's3_uploads_s3_client_params', function ( $params ) {
 			if ( defined( 'S3_UPLOADS_ENDPOINT' ) ) {
 				$params['endpoint'] = S3_UPLOADS_ENDPOINT;
-				$params['use_path_style_endpoint'] = true;
 			}
 			return $params;
 		}, 5, 1 );
@@ -39,7 +45,9 @@ function bootstrap() {
 	define( 'ELASTICSEARCH_HOST', getenv( 'ELASTICSEARCH_HOST' ) );
 	define( 'ELASTICSEARCH_PORT', getenv( 'ELASTICSEARCH_PORT' ) );
 
-	define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
+	if ( ! defined( 'AWS_XRAY_DAEMON_IP_ADDRESS' ) ) {
+		define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
+	}
 
 	global $redis_server;
 	$redis_server = [
@@ -87,8 +95,8 @@ function bootstrap() {
 /**
  * Enables Query Monitor to map paths to their original values on the host.
  *
- * @param array $map Map of guest path => host path
- * @return array Adjusted mapping of folders
+ * @param array $map Map of guest path => host path.
+ * @return array Adjusted mapping of folders.
  */
 function set_file_path_map( array $map ) : array {
 	if ( ! getenv( 'HOST_PATH' ) ) {
@@ -96,4 +104,28 @@ function set_file_path_map( array $map ) : array {
 	}
 	$map['/usr/src/app'] = rtrim( getenv( 'HOST_PATH' ), DIRECTORY_SEPARATOR );
 	return $map;
+}
+
+/**
+ * Add new submenus to Tools admin menu.
+ */
+function tools_submenus() {
+	$links = [
+		[
+			'label' => 'Kibana',
+			'url' => network_site_url( '/kibana' ),
+		],
+		[
+			'label' => 'MailHog',
+			'url' => network_site_url( '/mailhog' ),
+		],
+		[
+			'label' => 'S3 Browser',
+			'url' => S3_UPLOADS_BUCKET_URL . '/minio',
+		],
+	];
+
+	foreach ( $links as $link ) {
+		add_management_page( $link['label'], $link['label'], 'manage_options', $link['url'] );
+	}
 }
