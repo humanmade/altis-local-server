@@ -332,9 +332,6 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
-//		var_dump($input->getArguments());
-		var_dump( $_GET );
-//		var_dump($input->escapeToken( implode( ' ', $input->getParameterOption() ) ) );
 		$passed_url = false;
 		foreach ( $options as $option ) {
 			if ( strpos( $option, '--url=' ) === 0 ) {
@@ -372,7 +369,6 @@ EOT
 			$container_id,
 			escapeshellarg( $cli_command )
 		);
-
 		passthru( $command, $return_val );
 
 		return $return_val;
