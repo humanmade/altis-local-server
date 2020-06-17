@@ -365,8 +365,6 @@ EOT
 			implode( ' ', array_map( 'escapeshellarg', $options ) )
 		);
 
-		var_dump($command);
-
 		passthru( $command, $return_val );
 
 		return $return_val;
