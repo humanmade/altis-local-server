@@ -348,24 +348,15 @@ EOT
 		// initial escaping like "My string" => My String, then we need
 		// to reapply escaping.
 		foreach ( $options as &$option ) {
-			$is_unescaped_string = preg_match( "/\\'/", $option ) !== false;
-			$double_dash_arg_position = strpos( $option, '--' );
 			$equal_arg_position = strpos( $option, '=' );
 
-			if ( $is_unescaped_string && $double_dash_arg_position !== 0 && $equal_arg_position !== 0 ) {
-				// It's an string without escaping and it doesn't start with = or --
-				$option = escapeshellarg( $option );
-			} elseif ( ! $equal_arg_position ) {
-				// The option starts with = or there isn't an = at all.
-				if ( $double_dash_arg_position == 0 ) {
-					// The option starts with double dash or there isn't a -- at all.
-					continue;
-				}
-				$option = escapeshellarg( $option );
-			} else {
+			if ( is_int( $equal_arg_position ) && $equal_arg_position >= 0 ) {
+				// The option starts with =
 				$arg = strtok( $option, '=' );
-				$option = $arg . '=' . escapeshellarg( substr( $option, strlen( $arg ) + 1 ) );
+				$option = $arg . '=' . substr( $option, strlen( $arg ) + 1 );
 			}
+
+			$option = escapeshellarg( $option );
 		}
 
 		$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
