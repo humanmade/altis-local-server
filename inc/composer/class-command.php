@@ -344,21 +344,6 @@ EOT
 			$options[] = '--url=' . $site_url;
 		}
 
-		// Escape all options. Because the shell is going to strip the
-		// initial escaping like "My string" => My String, then we need
-		// to reapply escaping.
-		foreach ( $options as &$option ) {
-			$equal_arg_position = strpos( $option, '=' );
-
-			if ( is_int( $equal_arg_position ) && $equal_arg_position >= 0 ) {
-				// The option starts with =
-				$arg = strtok( $option, '=' );
-				$option = $arg . '=' . substr( $option, strlen( $arg ) + 1 );
-			}
-
-			$option = escapeshellarg( $option );
-		}
-
 		$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
 		if ( ! $container_id ) {
 			$output->writeln( '<error>PHP container not found to run command.</>' );
@@ -369,6 +354,7 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$has_stdout = ! posix_isatty( STDOUT );
+
 		$command = sprintf(
 			'docker exec -e COLUMNS=%d -e LINES=%d -u www-data %s %s %s %s',
 			$columns,
@@ -376,8 +362,10 @@ EOT
 			( ! $has_stdin && ! $has_stdout ) && $program === 'wp' ? '-ti' : '', // forward wp-cli's isPiped detection.
 			$container_id,
 			$program ?? '',
-			implode( ' ', $options )
+			implode( ' ', array_map( 'escapeshellarg', $options ) )
 		);
+
+		var_dump($command);
 
 		passthru( $command, $return_val );
 
