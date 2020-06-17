@@ -102,7 +102,6 @@ EOT
 	 */
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'subcommand' );
-		var_dump('$subcommand', $subcommand );
 
 		if ( $subcommand === 'start' ) {
 			return $this->start( $input, $output );
