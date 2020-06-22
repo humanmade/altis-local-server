@@ -59,7 +59,7 @@ x-analytics: &analytics
   networks:
     - proxy
     - default
-  restart: on-failure
+  restart: unless-stopped
 
 services:
   db:
@@ -118,7 +118,7 @@ services:
     entrypoint:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
-    restart: on-failure
+    restart: unless-stopped
   elasticsearch:
     image: humanmade/altis-local-server-elasticsearch:1.0.0
     ulimits:
