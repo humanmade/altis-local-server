@@ -197,7 +197,7 @@ services:
       /bin/sh -c "
       mc mb -p local/s3-${COMPOSE_PROJECT_NAME:-default}
       && mc policy set public local/s3-${COMPOSE_PROJECT_NAME:-default}
-      && mc mirror --watch local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
+      && mc mirror --watch --overwrite local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
   tachyon:
     image: humanmade/tachyon:2.3.0
     ports:
