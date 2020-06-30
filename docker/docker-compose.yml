@@ -186,6 +186,7 @@ services:
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3-sync-to-host:
     image: minio/mc:RELEASE.2020-03-14T01-23-37Z
+    restart: unless-stopped
     depends_on:
       - s3
     volumes:
