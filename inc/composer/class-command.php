@@ -331,6 +331,7 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
+
 		$passed_url = false;
 		foreach ( $options as $option ) {
 			if ( strpos( $option, '--url=' ) === 0 ) {
@@ -354,20 +355,16 @@ EOT
 		$has_stdin = ! posix_isatty( STDIN );
 		$has_stdout = ! posix_isatty( STDOUT );
 
-		$cli_command = sprintf(
-			'%s %s %s',
+		$command = sprintf(
+			'docker exec -e COLUMNS=%d -e LINES=%d -u www-data %s %s %s %s',
+			$columns,
+			$lines,
 			( ! $has_stdin && ! $has_stdout ) && $program === 'wp' ? '-ti' : '', // forward wp-cli's isPiped detection.
+			$container_id,
 			$program ?? '',
 			implode( ' ', array_map( 'escapeshellarg', $options ) )
 		);
 
-		$command = sprintf(
-			'docker exec -e COLUMNS=%d -e LINES=%d -u www-data %s %s',
-			$columns,
-			$lines,
-			$container_id,
-			escapeshellarg( $cli_command )
-		);
 		passthru( $command, $return_val );
 
 		return $return_val;
