@@ -55,8 +55,6 @@ function bootstrap() {
 		'port' => getenv( 'REDIS_PORT' ),
 	];
 
-	ini_set( 'display_errors', 'on' );
-
 	if ( $config['tachyon'] ) {
 		define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
 

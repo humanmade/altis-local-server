@@ -13,3 +13,7 @@
 if ( getenv( 'HM_ENV_ARCHITECTURE' ) === 'local-server' ) {
 	define( 'HM_ENV_ARCHITECTURE', getenv( 'HM_ENV_ARCHITECTURE' ) );
 }
+
+if ( defined( 'PHP_SAPI' ) && PHP_SAPI === 'cli' ) {
+	ini_set( 'display_errors', 'on' );
+}
