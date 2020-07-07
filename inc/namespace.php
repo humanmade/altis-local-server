@@ -26,7 +26,7 @@ function bootstrap() {
 		define( 'S3_UPLOADS_BUCKET_URL', getenv( 'S3_UPLOADS_BUCKET_URL' ) );
 
 		add_filter( 's3_uploads_s3_client_params', function ( $params ) {
-			if ( defined( 'S3_UPLOADS_ENDPOINT' ) ) {
+			if ( defined( 'S3_UPLOADS_ENDPOINT' ) && S3_UPLOADS_ENDPOINT ) {
 				$params['endpoint'] = S3_UPLOADS_ENDPOINT;
 			}
 			return $params;
@@ -138,9 +138,9 @@ function tools_submenus() {
  *
  * @param string|null $id The package ID used for the file path in ES.
  * @param string $file The package file path on S3.
- * @return string
+ * @return string|null
  */
-function set_search_package_id( $id, string $file ) : string {
+function set_search_package_id( $id, string $file ) : ?string {
 	$id = sprintf( 'packages/%s', basename( $file ) );
 	return $id;
 }

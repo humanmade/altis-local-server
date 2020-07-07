@@ -28,6 +28,7 @@ x-php: &php
     - "${VOLUME}:/usr/src/app:delegated"
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
     - socket:/var/run/php-fpm
+    - es-packages:/usr/src/es-packages:delegated
   networks:
     - proxy
     - default
@@ -134,7 +135,7 @@ services:
     mem_limit: ${ES_MEM_LIMIT:-1g}
     volumes:
       - es-data:/usr/share/elasticsearch/data
-      - "${VOLUME}/content/uploads/search:/usr/share/elasticsearch/config/packages"
+      - es-packages:/usr/share/elasticsearch/config/packages
     ports:
       - "9200"
     networks:
@@ -276,6 +277,7 @@ networks:
 volumes:
   db-data:
   es-data:
+  es-packages:
   tmp:
   s3:
   socket:
