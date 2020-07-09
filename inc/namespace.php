@@ -92,7 +92,8 @@ function bootstrap() {
 	add_filter( 'qm/output/file_path_map', __NAMESPACE__ . '\\set_file_path_map', 1 );
 
 	// Filter ES package IDs for local.
-	add_filter( 'altis.search.package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 2 );
+	add_filter( 'altis.search.packages_dir', __NAMESPACE__ . '\\set_search_packages_dir' );
+	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 2 );
 }
 
 /**
@@ -134,6 +135,17 @@ function tools_submenus() {
 }
 
 /**
+ * Override Elasticsearch package storage location to es-packages volume.
+ *
+ * This directory is shared with the Elasticsearch container.
+ *
+ * @return string
+ */
+function set_search_packages_dir() : string {
+	return '/usr/src/es-packages';
+}
+
+/**
  * Override the derived ES package file name for local server.
  *
  * @param string|null $id The package ID used for the file path in ES.
@@ -141,6 +153,6 @@ function tools_submenus() {
  * @return string|null
  */
 function set_search_package_id( $id, string $file ) : ?string {
-	$id = sprintf( 'packages/%s', basename( $file ) );
+	$id = sprintf( 'es-packages/%s', basename( $file ) );
 	return $id;
 }
