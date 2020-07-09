@@ -93,7 +93,7 @@ function bootstrap() {
 
 	// Filter ES package IDs for local.
 	add_filter( 'altis.search.packages_dir', __NAMESPACE__ . '\\set_search_packages_dir' );
-	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 2 );
+	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 3 );
 }
 
 /**
@@ -142,17 +142,18 @@ function tools_submenus() {
  * @return string
  */
 function set_search_packages_dir() : string {
-	return '/usr/src/es-packages';
+	return sprintf( 's3://%s/uploads/es-packages', S3_UPLOADS_BUCKET );
 }
 
 /**
  * Override the derived ES package file name for local server.
  *
  * @param string|null $id The package ID used for the file path in ES.
+ * @param string $slug The package slug.
  * @param string $file The package file path on S3.
  * @return string|null
  */
-function set_search_package_id( $id, string $file ) : ?string {
-	$id = sprintf( 'es-packages/%s', basename( $file ) );
+function set_search_package_id( $id, string $slug, string $file ) : ?string {
+	$id = sprintf( 'packages/%s', basename( $file ) );
 	return $id;
 }
