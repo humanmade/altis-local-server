@@ -15,6 +15,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 /**
  * Altis Local Server Composer Command.
@@ -268,6 +269,12 @@ EOT
 	 * @return int
 	 */
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
+		$helper   = $this->getHelper( 'question' );
+		$question = new ConfirmationQuestion( 'Continue with this action?', false );
+		if ( ! $helper->ask( $input, $output, $question ) ) {
+			return false;
+		}
+
 		$output->writeln( '<error>Destroying...</>' );
 
 		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
