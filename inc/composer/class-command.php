@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
 
 /**
@@ -270,6 +271,12 @@ EOT
 	 * @return int
 	 */
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
+		$helper = $this->getHelper( 'question' );
+		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server?', false );
+		if ( ! $helper->ask( $input, $output, $question ) ) {
+			return false;
+		}
+
 		$output->writeln( '<error>Destroying...</>' );
 
 		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
