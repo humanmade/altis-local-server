@@ -82,11 +82,6 @@ function bootstrap() {
 		define( 'ALTIS_ANALYTICS_COGNITO_ENDPOINT', getenv( 'ALTIS_ANALYTICS_COGNITO_ENDPOINT' ) );
 	}
 
-	// Set XDebug cookie if environment variable is set.
-	if ( getenv( 'PHP_XDEBUG_ENABLED' ) ) {
-		setcookie( 'XDEBUG_SESSION', $_SERVER['HTTP_HOST'], strtotime( '+1 year' ), '/', $_SERVER['HTTP_HOST'] );
-	}
-
 	add_filter( 'qm/output/file_path_map', __NAMESPACE__ . '\\set_file_path_map', 1 );
 }
 
