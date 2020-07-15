@@ -173,7 +173,6 @@ EOT
 		$env = $this->get_env();
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			$env['PHP_XDEBUG_ENABLED'] = true;
 		}
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
@@ -297,7 +296,12 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $this->get_env() );
+		$env = $this->get_env();
+		if ( $input->getOption( 'xdebug' ) ) {
+			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
+		}
+
+		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $env );
 		$proxy->run();
 
 		$options = $input->getArgument( 'options' );
@@ -306,7 +310,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $env );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
