@@ -107,6 +107,7 @@ EOT
 
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.1.0-dev';
+			// phpcs:ignore PHPCompatibility.Constants.NewConstants.php_os_familyFound
 			if ( in_array( PHP_OS_FAMILY, [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
 				$env['XEBUG_REMOTE_HOST'] = '172.17.0.1';
 			}
