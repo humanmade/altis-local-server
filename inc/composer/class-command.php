@@ -107,7 +107,9 @@ EOT
 
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.1.0-dev';
-			$env['PHP_XDEBUG_ENABLED'] = true;
+			if ( in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
+				$env['XDEBUG_REMOTE_HOST'] = '172.17.0.1';
+			}
 		}
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
