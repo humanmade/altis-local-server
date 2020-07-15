@@ -269,8 +269,8 @@ EOT
 	 * @return int
 	 */
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
-		$helper   = $this->getHelper( 'question' );
-		$question = new ConfirmationQuestion( 'Continue with this action?', false );
+		$helper = $this->getHelper( 'question' );
+		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server?', false );
 		if ( ! $helper->ask( $input, $output, $question ) ) {
 			return false;
 		}
