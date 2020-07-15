@@ -173,6 +173,9 @@ EOT
 		$env = $this->get_env();
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
+			if ( in_array( PHP_OS_FAMILY, [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
+				$env['XEBUG_REMOTE_HOST'] = '172.17.0.1';
+			}
 		}
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
@@ -296,12 +299,7 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$env = $this->get_env();
-		if ( $input->getOption( 'xdebug' ) ) {
-			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-		}
-
-		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $env );
+		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
 		$options = $input->getArgument( 'options' );
@@ -310,7 +308,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $env );
+		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -480,7 +478,7 @@ EOT;
 				$output->write( $db_info );
 				break;
 			case 'sequel':
-				if ( strpos( php_uname(), 'Darwin' ) === false ) {
+				if ( PHP_OS_FAMILY === 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
 				}
