@@ -60,7 +60,7 @@ x-php: &php
     ALTIS_ANALYTICS_PINPOINT_ENDPOINT: https://pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev
     ALTIS_ANALYTICS_COGNITO_ENDPOINT: https://cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev
     PHP_IDE_CONFIG: serverName=${COMPOSE_PROJECT_NAME:-default}.altis.dev
-    XDEBUG_CONFIG: idekey=${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    XDEBUG_CONFIG: idekey=${COMPOSE_PROJECT_NAME:-default}.altis.dev remote_host=${XDEBUG_REMOTE_HOST:-host.docker.internal}
 
 x-analytics: &analytics
   ports:
