@@ -173,8 +173,7 @@ EOT
 		$env = $this->get_env();
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			// phpcs:ignore PHPCompatibility.Constants.NewConstants.php_os_familyFound
-			if ( in_array( PHP_OS_FAMILY, [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
+			if ( in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
 				$env['XEBUG_REMOTE_HOST'] = '172.17.0.1';
 			}
 		}
@@ -479,8 +478,7 @@ EOT;
 				$output->write( $db_info );
 				break;
 			case 'sequel':
-				// phpcs:ignore PHPCompatibility.Constants.NewConstants.php_os_familyFound
-				if ( PHP_OS_FAMILY === 'Darwin' ) {
+				if ( php_uname( 's' ) === 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
 				}
