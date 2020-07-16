@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
 
 /**
@@ -173,7 +174,9 @@ EOT
 		$env = $this->get_env();
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			$env['PHP_XDEBUG_ENABLED'] = true;
+			if ( in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
+				$env['XDEBUG_REMOTE_HOST'] = '172.17.0.1';
+			}
 		}
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
@@ -268,6 +271,12 @@ EOT
 	 * @return int
 	 */
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
+		$helper = $this->getHelper( 'question' );
+		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server?', false );
+		if ( ! $helper->ask( $input, $output, $question ) ) {
+			return false;
+		}
+
 		$output->writeln( '<error>Destroying...</>' );
 
 		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
@@ -476,7 +485,7 @@ EOT;
 				$output->write( $db_info );
 				break;
 			case 'sequel':
-				if ( strpos( php_uname(), 'Darwin' ) === false ) {
+				if ( php_uname( 's' ) === 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
 				}
