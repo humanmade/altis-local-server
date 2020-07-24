@@ -478,7 +478,7 @@ EOT;
 				$output->write( $db_info );
 				break;
 			case 'sequel':
-				if ( php_uname( 's' ) === 'Darwin' ) {
+				if ( php_uname( 's' ) !== 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
 				}
