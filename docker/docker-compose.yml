@@ -33,6 +33,7 @@ x-php: &php
     - proxy
     - default
   environment:
+    COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-default}
     HOST_PATH: ${VOLUME}
     DB_HOST: db
     DB_READ_REPLICA_HOST: db-read-replica
