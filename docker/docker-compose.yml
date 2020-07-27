@@ -25,6 +25,7 @@ x-php: &php
     - "${PWD}/php.ini:/usr/local/etc/php/conf.d/zzz-altis.ini"
     - socket:/var/run/php-fpm
   environment:
+    COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-default}
     HOST_PATH: ${VOLUME}
     DB_HOST: db
     DB_READ_REPLICA_HOST: db-read-replica
