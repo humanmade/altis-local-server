@@ -272,7 +272,7 @@ EOT
 	 */
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
 		$helper = $this->getHelper( 'question' );
-		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server?', false );
+		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server? [y/N] ', false );
 		if ( ! $helper->ask( $input, $output, $question ) ) {
 			return false;
 		}
