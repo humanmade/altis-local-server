@@ -204,7 +204,7 @@ services:
       && mc policy set public local/s3-${COMPOSE_PROJECT_NAME:-default}
       && mc mirror --watch --overwrite local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
   tachyon:
-    image: humanmade/tachyon:2.3.0
+    image: humanmade/tachyon:2.3.2
     ports:
       - "8080"
     networks:
