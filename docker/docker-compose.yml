@@ -114,7 +114,7 @@ services:
       - "traefik.port=8080"
       - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z._-]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   xray:
     image: amazon/aws-xray-daemon:3.0.1
     ports:
