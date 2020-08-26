@@ -52,7 +52,7 @@ x-php: &php
     AWS_XRAY_DAEMON_HOST: xray
     S3_UPLOADS_ENDPOINT: https://altis.dev/
     S3_UPLOADS_BUCKET: s3-${COMPOSE_PROJECT_NAME:-default}
-    S3_UPLOADS_BUCKET_URL: https://s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    S3_UPLOADS_BUCKET_URL: https://${COMPOSE_PROJECT_NAME:-default}.altis.dev
     S3_UPLOADS_KEY: admin
     S3_UPLOADS_SECRET: password
     S3_UPLOADS_REGION: us-east-1
@@ -114,6 +114,10 @@ services:
       - "traefik.port=8080"
       - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
+      # Redirect any requests to /uploads to the S3 container frontend.
+      - "traefik.uploads.frontend.redirect.regex=^https?://(?:.*?).altis.dev/uploads/(.*)"
+      - "traefik.uploads.frontend.redirect.replacement=https://s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev/uploads/$$1"
+      - "traefik.uploads.frontend.redirect.permanent=true"
       - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z._-]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   xray:
     image: amazon/aws-xray-daemon:3.0.1
