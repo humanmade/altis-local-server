@@ -28,7 +28,7 @@ class Docker_Compose_Generator {
 	}
 	protected function get_php_reusable() : array {
 		$image = getenv( 'PHP_IMAGE' ) ?: 'humanmade/altis-local-server-php:3.2.0';
-		return [
+		$services = [
 			'init' => true,
 			'depends_on' => [
 				'db' => [
@@ -36,9 +36,6 @@ class Docker_Compose_Generator {
 				],
 				'redis' => [
 					'condition' => 'service_started',
-				],
-				'elasticsearch' => [
-					'condition' => 'service_healthy',
 				],
 				'mailhog' => [
 					'condition' => 'service_started',
@@ -96,20 +93,13 @@ class Docker_Compose_Generator {
 				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
 			],
 		];
-	}
-	protected function get_reusables() : array {
-		return [
-			'x-analytics' => [
-				'ports' => [
-					'3000',
-				],
-				'networks' => [
-					'proxy',
-					'default',
-				],
-				'restart' => 'on-failure',
-			],
-		];
+
+		if ( $this->get_config()['elasticsearch'] ) {
+			$services['depends_on']['elasticsearch'] = [
+				'condition' => 'service_healthy',
+			];
+		}
+		return $services;
 	}
 	protected function get_service_php() : array {
 		return [
@@ -447,16 +437,33 @@ class Docker_Compose_Generator {
 			$this->get_service_db(),
 			$this->get_service_redis(),
 			$this->get_service_php(),
-			$this->get_service_nginx(),
-			$this->get_service_xray(),
-			$this->get_service_cavalcade(),
-			$this->get_service_elasticsearch(),
+			$this->get_service_nginx()
+		);
+
+		if ( $this->get_config()['xray'] ) {
+			$services = array_merge( $services, $this->get_service_xray() );
+		}
+
+		if ( $this->get_config()['cavalcade'] ) {
+			$services = array_merge( $services, $this->get_service_cavalcade() );
+		}
+
+		if ( $this->get_config()['elasticsearch'] ) {
+			$services = array_merge( $services, $this->get_service_elasticsearch() );
+		}
+
+		$services = array_merge(
+			$services,
 			$this->get_service_s3(),
 			$this->get_service_tachyon(),
 			$this->get_service_mailhog(),
-			$this->get_service_analytics(),
-			$this->get_service_kibana(),
 		);
+		if ( $this->get_config()['analytics'] ) {
+			$services = array_merge( $services, $this->get_service_analytics() );
+		}
+		if ( $this->get_config()['elasticsearch'] ) {
+			$services = array_merge( $services, $this->get_service_kibana() );
+		}
 		return [
 			'version' => '2.3',
 			'services' => $services,
@@ -479,6 +486,28 @@ class Docker_Compose_Generator {
 	}
 	public function get_yaml() : string {
 		return Yaml::dump( $this->get_array(), 10, 2 );
+	}
+
+	/**
+	 * Get a module config from composer.json.
+	 *
+	 * @param string $module The module to get the config for.
+	 * @return array
+	 */
+	protected function get_config( $module = 'local-server' ) : array {
+		// @codingStandardsIgnoreLine
+		$json = file_get_contents( $this->root_dir . DIRECTORY_SEPARATOR . 'composer.json' );
+		$composer_json = json_decode( $json, true );
+
+		$config = ( $composer_json['extra']['altis']['modules'][ $module ] ?? [] );
+		$defaults = [
+			'analytics' => true,
+			'cavalcade' => true,
+			'elasticsearch' => true,
+			'xray' => false,
+		];
+
+		return array_merge( $defaults, $config );
 	}
 }
 
