@@ -8,6 +8,17 @@ namespace Altis\Local_Server\Composer;
 use Symfony\Component\Yaml\Yaml;
 
 class Docker_Compose_Generator {
+	/** @var string */
+	protected $project_name;
+	/** @var string */
+	protected $root_dir;
+	/** @var string */
+	protected $config_dir;
+	/** @var string */
+	protected $tld;
+	/** @var string */
+	protected $hostname;
+
 	public function __construct( string $project_name, string $root_dir ) {
 		$this->project_name = $project_name;
 		$this->root_dir = $root_dir;
@@ -142,7 +153,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname },{subdomain:[a-z.-_]+}.{ $this->hostname}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
 				],
 			]
 		];
@@ -195,7 +206,7 @@ class Docker_Compose_Generator {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
 		return [
 			'elasticsearch' => [
-				'image' => 'humanmade/altis-local-server-elasticsearch:1.0.0',
+				'image' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -205,6 +216,7 @@ class Docker_Compose_Generator {
 				'mem_limit' => $mem_limit,
 				'volumes' => [
 					'es-data:/usr/share/elasticsearch/data',
+					"{$this->root_dir}/content/uploads/es-packages:/usr/share/elasticsearch/config/packages",
 				],
 				'ports' => [
 					'9200',
@@ -220,7 +232,7 @@ class Docker_Compose_Generator {
 					],
 					'interval' => '5s',
 					'timeout' => '5s',
-					'retries' => 10,
+					'retries' => 25,
 				],
 				'labels' => [
 					'traefik.port=9200',
@@ -229,10 +241,18 @@ class Docker_Compose_Generator {
 					"traefik.frontend.rule=HostRegexp:elasticsearch-{$this->hostname}",
 				],
 				'environment' => [
-					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
 					'http.max_content_length=10mb',
+					// Force ES into single-node mode (otherwise defaults to zen discovery as
+					// network.host is set in the default config)
+					'discovery.type=single-node',
+					// Reduce from default of 1GB of memory to 512MB
+					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
 				],
 			],
+		];
+	}
+	protected function get_service_kibana() : array {
+		return [
 			'kibana' => [
 				'image' => 'blacktop/kibana:6.3',
 				'networks' => [
@@ -274,7 +294,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => $this->tld,
+					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ACCESS_KEY' => 'admin',
 					'MINIO_SECRET_KEY' => 'password',
@@ -300,6 +320,7 @@ class Docker_Compose_Generator {
 			],
 			's3-sync-to-host' => [
 				'image' => 'minio/mc:RELEASE.2020-03-14T01-23-37Z',
+				'restart' => 'unless-stopped',
 				'depends_on' => [
 					's3',
 				],
@@ -310,14 +331,14 @@ class Docker_Compose_Generator {
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \" mc mb -p local/s3-{$this->project_name } && mc policy set public local/s3-{ $this->project_name } && mc mirror --watch local/s3-{ $this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \" mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch local/s3-{$this->project_name} /content\"",
 			],
 		];
 	}
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
-				'image' => 'humanmade/tachyon:2.3.0',
+				'image' => 'humanmade/tachyon:2.3.2',
 				'ports' => [
 					'8080',
 				],
@@ -328,7 +349,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname },{subdomain:[a-z.-_]+}.{ $this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
 				],
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
@@ -423,17 +444,18 @@ class Docker_Compose_Generator {
 	}
 	public function get_array() : array {
 		$services = array_merge(
-			$this->get_service_analytics(),
-			$this->get_service_cavalcade(),
 			$this->get_service_db(),
-			$this->get_service_elasticsearch(),
-			$this->get_service_mailhog(),
-			$this->get_service_nginx(),
-			$this->get_service_php(),
 			$this->get_service_redis(),
+			$this->get_service_php(),
+			$this->get_service_nginx(),
+			$this->get_service_xray(),
+			$this->get_service_cavalcade(),
+			$this->get_service_elasticsearch(),
 			$this->get_service_s3(),
 			$this->get_service_tachyon(),
-			$this->get_service_xray(),
+			$this->get_service_mailhog(),
+			$this->get_service_analytics(),
+			$this->get_service_kibana(),
 		);
 		return [
 			'version' => '2.3',
@@ -456,7 +478,7 @@ class Docker_Compose_Generator {
 		];
 	}
 	public function get_yaml() : string {
-		return Yaml::dump( $this->get_array(), 10, 4 );
+		return Yaml::dump( $this->get_array(), 10, 2 );
 	}
 }
 
