@@ -26,12 +26,14 @@ x-php: &php
     - "proxy:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   volumes:
     - "${VOLUME}:/usr/src/app:delegated"
-    - "${PWD}/php.ini:/usr/local/etc/php/conf.d/altis.ini"
+    # Use zzz as a prefix to ensure the php.ini overrides are loaded last
+    - "${PWD}/php.ini:/usr/local/etc/php/conf.d/zzz-altis.ini"
     - socket:/var/run/php-fpm
   networks:
     - proxy
     - default
   environment:
+    COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-default}
     HOST_PATH: ${VOLUME}
     DB_HOST: db
     DB_READ_REPLICA_HOST: db-read-replica
@@ -58,8 +60,10 @@ x-php: &php
     PHP_SENDMAIL_PATH: /usr/sbin/sendmail -t -i -S mailhog:1025
     ALTIS_ANALYTICS_PINPOINT_ENDPOINT: https://pinpoint-${COMPOSE_PROJECT_NAME:-default}.altis.dev
     ALTIS_ANALYTICS_COGNITO_ENDPOINT: https://cognito-${COMPOSE_PROJECT_NAME:-default}.altis.dev
-    PHP_XDEBUG_ENABLED:
+    # Setting required for minimal config in PHPStorm
     PHP_IDE_CONFIG: serverName=${COMPOSE_PROJECT_NAME:-default}.altis.dev
+    # Enables XDebug for all processes and allows setting remote_host externally for Linux support
+    XDEBUG_CONFIG: idekey=${COMPOSE_PROJECT_NAME:-default}.altis.dev remote_host=${XDEBUG_REMOTE_HOST:-host.docker.internal}
 
 x-analytics: &analytics
   ports:
@@ -67,7 +71,7 @@ x-analytics: &analytics
   networks:
     - proxy
     - default
-  restart: on-failure
+  restart: unless-stopped
 
 services:
   db:
@@ -110,7 +114,7 @@ services:
       - "traefik.port=8080"
       - "traefik.protocol=https"
       - "traefik.docker.network=proxy"
-      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z.-_]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
+      - "traefik.frontend.rule=HostRegexp:${COMPOSE_PROJECT_NAME:-default}.altis.dev,{subdomain:[a-z._-]+}.${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   xray:
     image: amazon/aws-xray-daemon:3.0.1
     ports:
@@ -124,9 +128,9 @@ services:
     entrypoint:
       - /usr/local/bin/cavalcade
     user: "nobody:nobody"
-    restart: on-failure
+    restart: unless-stopped
   elasticsearch:
-    image: humanmade/altis-local-server-elasticsearch:1.0.0
+    image: humanmade/altis-local-server-elasticsearch:3.0.0
     ulimits:
       memlock:
         soft: -1
@@ -134,6 +138,7 @@ services:
     mem_limit: ${ES_MEM_LIMIT:-1g}
     volumes:
       - es-data:/usr/share/elasticsearch/data
+      - ${VOLUME}/content/uploads/es-packages:/usr/share/elasticsearch/config/packages
     ports:
       - "9200"
     networks:
@@ -143,9 +148,7 @@ services:
       test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
       interval: 5s
       timeout: 5s
-      retries: 10
-    environment:
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      retries: 25
     labels:
       - "traefik.port=9200"
       - "traefik.protocol=http"
@@ -153,6 +156,13 @@ services:
       - "traefik.frontend.rule=HostRegexp:elasticsearch-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
     environment:
       - http.max_content_length=10mb
+
+      # Force ES into single-node mode (otherwise defaults to zen discovery as
+      # network.host is set in the default config)
+      - discovery.type=single-node
+
+      # Reduce from default of 1GB of memory to 512MB
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
   s3:
     image: minio/minio:RELEASE.2020-03-19T21-49-00Z
     volumes:
@@ -180,6 +190,7 @@ services:
       - "traefik.frontend.rule=HostRegexp:s3-${COMPOSE_PROJECT_NAME:-default}.altis.dev"
   s3-sync-to-host:
     image: minio/mc:RELEASE.2020-03-14T01-23-37Z
+    restart: unless-stopped
     depends_on:
       - s3
     volumes:
@@ -191,9 +202,9 @@ services:
       /bin/sh -c "
       mc mb -p local/s3-${COMPOSE_PROJECT_NAME:-default}
       && mc policy set public local/s3-${COMPOSE_PROJECT_NAME:-default}
-      && mc mirror --watch local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
+      && mc mirror --watch --overwrite local/s3-${COMPOSE_PROJECT_NAME:-default} /content"
   tachyon:
-    image: humanmade/tachyon:2.3.0
+    image: humanmade/tachyon:2.3.2
     ports:
       - "8080"
     networks:

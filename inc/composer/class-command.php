@@ -1,6 +1,10 @@
 <?php
 /**
  * Local Server Composer Command.
+ *
+ * phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
+ *
+ * @package altis/local-server
  */
 
 namespace Altis\Local_Server\Composer;
@@ -10,9 +14,21 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
 
+/**
+ * Altis Local Server Composer Command.
+ *
+ * @package altis/local-server
+ */
 class Command extends BaseCommand {
+
+	/**
+	 * Command configuration.
+	 *
+	 * @return void
+	 */
 	protected function configure() {
 		$this
 			->setName( 'server' )
@@ -56,11 +72,21 @@ EOT
 			->addOption( 'xdebug' );
 	}
 
+	/**
+	 * Whether the command is proxied.
+	 *
+	 * @return boolean
+	 */
 	public function isProxyCommand() {
 		return true;
 	}
 
-	private function get_base_command_prefix() {
+	/**
+	 * Get the common docker-composer command prefix.
+	 *
+	 * @return string
+	 */
+	private function get_base_command_prefix() : string {
 		return sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
 			'vendor/altis/local-server/docker',
@@ -69,6 +95,13 @@ EOT
 		);
 	}
 
+	/**
+	 * Execute the given command.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int|null
+	 */
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'subcommand' );
 
@@ -105,6 +138,27 @@ EOT
 		return 1;
 	}
 
+	/**
+	 * Get environment variables to pass to docker-compose and other subcommands.
+	 *
+	 * @return array Map of var name => value.
+	 */
+	protected function get_env() : array {
+		return [
+			'VOLUME' => getcwd(),
+			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'PATH' => getenv( 'PATH' ),
+			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
+		];
+	}
+
+	/**
+	 * Start the application.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int|null
+	 */
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
@@ -120,16 +174,12 @@ EOT
 			return $proxy_failed;
 		}
 
-		$env = [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-			'PATH' => getenv( 'PATH' ),
-			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
-		];
-
+		$env = $this->get_env();
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			$env['PHP_XDEBUG_ENABLED'] = true;
+			if ( in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
+				$env['XDEBUG_REMOTE_HOST'] = '172.17.0.1';
+			}
 		}
 
 		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
@@ -164,7 +214,7 @@ EOT
 					'multisite-install',
 					'--title=Altis',
 					'--admin_user=admin',
-					'--admin_password=admin',
+					'--admin_password=password',
 					'--admin_email=no-reply@altis.dev',
 					'--skip-email',
 					'--skip-config',
@@ -180,7 +230,7 @@ EOT
 
 			$output->writeln( '<info>Installed database.</>' );
 			$output->writeln( '<info>WP Username:</>	<comment>admin</>' );
-			$output->writeln( '<info>WP Password:</>	<comment>admin</>' );
+			$output->writeln( '<info>WP Password:</>	<comment>password</>' );
 		}
 
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
@@ -189,16 +239,20 @@ EOT
 
 	}
 
+	/**
+	 * Stop the application.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -212,16 +266,26 @@ EOT
 		return $return_val;
 	}
 
+	/**
+	 * Destroys the application.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
+		$helper = $this->getHelper( 'question' );
+		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server? [y/N] ', false );
+		if ( ! $helper->ask( $input, $output, $question ) ) {
+			return false;
+		}
+
 		$output->writeln( '<error>Destroying...</>' );
 
-		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -235,11 +299,47 @@ EOT
 		return $return_val;
 	}
 
+	/**
+	 * Restart the application.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
 	protected function restart( InputInterface $input, OutputInterface $output ) {
-		$this->stop( $input, $output );
-		return $this->start( $input, $output );
+		$output->writeln( '<info>Restarting...</>' );
+
+		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $this->get_env() );
+		$proxy->run();
+
+		$options = $input->getArgument( 'options' );
+		if ( isset( $options[0] ) ) {
+			$service = $options[0];
+		} else {
+			$service = '';
+		}
+		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $this->get_env() );
+		$return_val = $compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		if ( $return_val === 0 ) {
+			$output->writeln( '<info>Restarted.</>' );
+		} else {
+			$output->writeln( '<error>Failed to restart services.</>' );
+		}
+
+		return $return_val;
 	}
 
+	/**
+	 * Execute a command on the PHP container.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @param string|null $program The default program to pass input to.
+	 * @return int
+	 */
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
 		$options = $input->getArgument( 'options' );
@@ -261,7 +361,7 @@ EOT
 		// to reapply escaping.
 		foreach ( $options as &$option ) {
 			if ( ! strpos( $option, '=' ) ) {
-				if ( strpos( $option, '--' ) == 0 ) {
+				if ( strpos( $option, '--' ) === 0 ) {
 					continue;
 				}
 				$option = escapeshellarg( $option );
@@ -280,11 +380,12 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
+		$has_stdout = ! posix_isatty( STDOUT );
 		$command = sprintf(
 			'docker exec -e COLUMNS=%d -e LINES=%d -u www-data %s %s %s %s',
 			$columns,
 			$lines,
-			( $has_stdin || ! posix_isatty( STDOUT ) ) && $program === 'wp' ? '-t' : '', // forward wp-cli's isPiped detection
+			( ! $has_stdin && ! $has_stdout ) && $program === 'wp' ? '-ti' : '', // forward wp-cli's isPiped detection.
 			$container_id,
 			$program ?? '',
 			implode( ' ', $options )
@@ -295,28 +396,43 @@ EOT
 		return $return_val;
 	}
 
+	/**
+	 * Get the status of all application containers.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', $this->get_env() );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 	}
 
+	/**
+	 * Fetch the logs for a given container.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor/altis/local-server/docker', [
-			'VOLUME' => getcwd(),
-			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-		] );
+		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor/altis/local-server/docker', $this->get_env() );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 	}
 
+	/**
+	 * SSH into the PHP container.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
 	protected function shell( InputInterface $input, OutputInterface $output ) {
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
@@ -330,6 +446,13 @@ EOT
 		return $return_val;
 	}
 
+	/**
+	 * Access the database or database connection information.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
 	protected function db( InputInterface $input, OutputInterface $output ) {
 		$db = $input->getArgument( 'options' )[0] ?? null;
 		$columns = exec( 'tput cols' );
@@ -365,7 +488,7 @@ EOT;
 				$output->write( $db_info );
 				break;
 			case 'sequel':
-				if ( strpos( php_uname(), 'Darwin' ) === false ) {
+				if ( php_uname( 's' ) !== 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
 				}
@@ -419,7 +542,7 @@ EOT;
 			$lines
 		);
 
-		// Env variables
+		// Env variables.
 		$env_variables = preg_split( '/\r\n|\r|\n/', shell_exec( "$base_command printenv" ) );
 		$values = array_reduce( $env_variables, function( $values, $env_variable_text ) {
 			$env_variable = explode( '=', $env_variable_text );
@@ -441,7 +564,7 @@ EOT;
 
 		$db_container_id = shell_exec( "$command_prefix docker-compose ps -q db" );
 
-		// Retrieve the forwarded ports using Docker and the container ID
+		// Retrieve the forwarded ports using Docker and the container ID.
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
 		preg_match( '/.*,\s([\d.]+):([\d]+)->.*/', $ports, $ports_matches );
 
@@ -454,6 +577,11 @@ EOT;
 		);
 	}
 
+	/**
+	 * Import uploads from the host machine to the S3 container.
+	 *
+	 * @return int
+	 */
 	protected function import_uploads() {
 		return $this->minio_client( sprintf(
 			'mirror --exclude ".*" /content local/s3-%s',
@@ -461,6 +589,12 @@ EOT;
 		) );
 	}
 
+	/**
+	 * Pass a command through to the minio client.
+	 *
+	 * @param string $command The command for minio client.
+	 * @return int
+	 */
 	protected function minio_client( string $command ) {
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
