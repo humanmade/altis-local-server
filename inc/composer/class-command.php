@@ -173,7 +173,7 @@ EOT
 		$env = $this->get_env();
 		if ( $input->getOption( 'xdebug' ) ) {
 			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			if ( in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true ) ) {
+			if ( $this->is_linux() ) {
 				$env['XDEBUG_REMOTE_HOST'] = '172.17.0.1';
 			}
 		}
@@ -371,10 +371,10 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$has_stdout = ! posix_isatty( STDOUT );
-		if ( php_uname( 's' ) === 'Linux' ) {
+		if ( $this->is_linux() ) {
 			$user = '$UID';
 		} else {
-			$user = 'www-data'
+			$user = 'www-data';
 		}
 		$command = sprintf(
 			'docker exec -e COLUMNS=%d -e LINES=%d -u %s %s %s %s %s',
@@ -626,5 +626,14 @@ EOT;
 		}
 
 		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
+	}
+
+	/**
+	 * Check if the current host operating system is Linux based.
+	 *
+	 * @return boolean
+	 */
+	protected function is_linux() : bool {
+		return in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true );
 	}
 }
