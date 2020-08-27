@@ -378,10 +378,16 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$has_stdout = ! posix_isatty( STDOUT );
+		if ( php_uname( 's' ) === 'Linux' ) {
+			$user = '$UID';
+		} else {
+			$user = 'www-data'
+		}
 		$command = sprintf(
-			'docker exec -e COLUMNS=%d -e LINES=%d -u www-data %s %s %s %s',
+			'docker exec -e COLUMNS=%d -e LINES=%d -u %s %s %s %s %s',
 			$columns,
 			$lines,
+			$user,
 			( ! $has_stdin && ! $has_stdout ) && $program === 'wp' ? '-ti' : '', // forward wp-cli's isPiped detection.
 			$container_id,
 			$program ?? '',
