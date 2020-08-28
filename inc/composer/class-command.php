@@ -372,7 +372,7 @@ EOT
 		$has_stdin = ! posix_isatty( STDIN );
 		$has_stdout = ! posix_isatty( STDOUT );
 		if ( $this->is_linux() ) {
-			$user = '$UID';
+			$user = posix_getuid();
 		} else {
 			$user = 'www-data';
 		}
