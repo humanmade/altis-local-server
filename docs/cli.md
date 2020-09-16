@@ -31,5 +31,5 @@ composer server cli -- language core install fr_FR
 CLI commands via Local Server also support piping, for example import a database SQL file:
 
 ```sh
-composer server cli -- db import - < ~/Downloads/database.sql
+composer server cli -- db import ignore/database.sql
 ```
