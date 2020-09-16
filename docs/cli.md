@@ -28,6 +28,7 @@ To install a new language file and activate it:
 composer server cli -- language core install fr_FR
 ```
 
+CLI commands via Local Server also support piping for more complex shell commands.
 
 ### Importing a database backup
 
