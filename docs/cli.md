@@ -28,7 +28,10 @@ To install a new language file and activate it:
 composer server cli -- language core install fr_FR
 ```
 
-CLI commands via Local Server also support piping, for example import a database SQL file:
+
+### Importing a database backup
+
+To import a database backup with local server, you will need to have a database backup file in a folder that is accessible from the project root (for example, a `.gitignore`d folder).
 
 ```sh
 composer server cli -- db import ignore/database.sql
