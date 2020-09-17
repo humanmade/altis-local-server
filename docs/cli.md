@@ -32,8 +32,8 @@ CLI commands via Local Server also support piping for more complex shell command
 
 ### Importing a database backup
 
-To import a database backup with local server, you will need to have a database backup file in a folder that is accessible from the project root (for example, a `.gitignore`d folder).
+To import a database backup with local server, you will need to have a database backup file in a location that is accessible from the project root.
 
 ```sh
-composer server cli -- db import ignore/database.sql
+composer server cli -- db import database.sql
 ```
