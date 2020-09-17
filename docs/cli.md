@@ -37,3 +37,5 @@ To import a database backup with local server, you will need to have a database 
 ```sh
 composer server cli -- db import database.sql
 ```
+
+**Note:** For privacy reasons, any database backups that are version controlled should be scrubbed as to be free from any personal identifying information and care should be taken that database backup files committed to the repository are free from personal data.
