@@ -114,7 +114,7 @@ class Docker_Compose_Generator {
 						'/usr/local/bin/cavalcade',
 					],
 					'user' => 'nobody:nobody',
-					'restart' => 'on-failure',
+					'restart' => 'unless-stopped',
 				],
 				$this->get_php_reusable()
 			),
@@ -145,7 +145,7 @@ class Docker_Compose_Generator {
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
 				],
-			]
+			],
 		];
 	}
 	protected function get_service_redis() : array {
@@ -321,7 +321,7 @@ class Docker_Compose_Generator {
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \" mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch local/s3-{$this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite local/s3-{$this->project_name} /content\"",
 			],
 		];
 	}
@@ -386,7 +386,7 @@ class Docker_Compose_Generator {
 					'proxy',
 					'default',
 				],
-				'restart' => 'on-failure',
+				'restart' => 'unless-stopped',
 				'image' => 'humanmade/local-cognito:1.0.0',
 				'labels' => [
 					'traefik.port=3000',
@@ -403,7 +403,7 @@ class Docker_Compose_Generator {
 					'proxy',
 					'default',
 				],
-				'restart' => 'on-failure',
+				'restart' => 'unless-stopped',
 				'image' => 'humanmade/local-pinpoint:1.2.2',
 				'labels' => [
 					'traefik.port=3000',
@@ -456,12 +456,12 @@ class Docker_Compose_Generator {
 			$services,
 			$this->get_service_s3(),
 			$this->get_service_tachyon(),
-			$this->get_service_mailhog(),
+			$this->get_service_mailhog()
 		);
-		if ( $this->get_config()['analytics'] ) {
+		if ( $this->get_config()['analytics'] && $this->get_config()['elasticsearch'] ) {
 			$services = array_merge( $services, $this->get_service_analytics() );
 		}
-		if ( $this->get_config()['elasticsearch'] ) {
+		if ( $this->get_config()['kibana'] && $this->get_config()['elasticsearch'] ) {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
 		return [
@@ -504,10 +504,10 @@ class Docker_Compose_Generator {
 			'analytics' => true,
 			'cavalcade' => true,
 			'elasticsearch' => true,
+			'kibana' => true,
 			'xray' => false,
 		];
 
 		return array_merge( $defaults, $config );
 	}
 }
-
