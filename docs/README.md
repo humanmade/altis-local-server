@@ -59,6 +59,7 @@ The subdomain used for the project can be configured via the `modules.local-serv
 * `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server shell` - Logs in to the PHP container.
 * `composer server cli -- <command>` - Runs a WP CLI command, you should omit the 'wp' for example `composer server cli -- info`
+  * `composer server cli -- db import database.sql` - Imports a database file located in the project root.
 * `composer server exec -- <command>` - Runs any command on the PHP container.
 * `composer server db` - Logs into MySQL on the DB container.
   * `composer server db info` - Print MySQL connection details.
