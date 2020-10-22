@@ -7,18 +7,54 @@ namespace Altis\Local_Server\Composer;
 
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * Generates a docker compose file for Altis Local Server.
+ */
 class Docker_Compose_Generator {
-	/** @var string */
+
+	/**
+	 * The Docker Compose project name.
+	 *
+	 * Commonly set via the `COMPOSE_PROJECT_NAME` environment variable.
+	 *
+	 * @var string
+	 */
 	protected $project_name;
-	/** @var string */
+
+	/**
+	 * The Altis project root directory.
+	 *
+	 * @var string
+	 */
 	protected $root_dir;
-	/** @var string */
+
+	/**
+	 * The docker-compose.yml directory.
+	 *
+	 * @var string
+	 */
 	protected $config_dir;
-	/** @var string */
+
+	/**
+	 * The primary top level domain for the server.
+	 *
+	 * @var string
+	 */
 	protected $tld;
-	/** @var string */
+
+	/**
+	 * The primary domain name for the project.
+	 *
+	 * @var string
+	 */
 	protected $hostname;
 
+	/**
+	 * Create and configure the generator.
+	 *
+	 * @param string $project_name The docker compose project name.
+	 * @param string $root_dir The project root directory.
+	 */
 	public function __construct( string $project_name, string $root_dir ) {
 		$this->project_name = $project_name;
 		$this->root_dir = $root_dir;
@@ -26,6 +62,12 @@ class Docker_Compose_Generator {
 		$this->tld = 'altis.dev';
 		$this->hostname = $this->project_name . '.' . $this->tld;
 	}
+
+	/**
+	 * Get the PHP server configuration.
+	 *
+	 * @return array
+	 */
 	protected function get_php_reusable() : array {
 		$image = getenv( 'PHP_IMAGE' ) ?: 'humanmade/altis-local-server-php:3.2.0';
 		$services = [
@@ -99,13 +141,26 @@ class Docker_Compose_Generator {
 				'condition' => 'service_healthy',
 			];
 		}
+
 		return $services;
 	}
+
+	/**
+	 * Get the PHP container service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_php() : array {
 		return [
 			'php' => $this->get_php_reusable(),
 		];
 	}
+
+	/**
+	 * Get the Cavalcade service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_cavalcade() : array {
 		return [
 			'cavalcade' => array_merge(
@@ -120,6 +175,12 @@ class Docker_Compose_Generator {
 			),
 		];
 	}
+
+	/**
+	 * Get the nginx service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
@@ -148,6 +209,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the Redis service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_redis() : array {
 		return [
 			'redis' => [
@@ -158,6 +225,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the DB service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_db() : array {
 		return [
 			'db' => [
@@ -192,6 +265,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the Elasticsearch service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_elasticsearch() : array {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
 		return [
@@ -241,6 +320,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the Kibana service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_kibana() : array {
 		return [
 			'kibana' => [
@@ -269,6 +354,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the S3 service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_s3() : array {
 		return [
 			's3' => [
@@ -325,6 +416,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the Tachyon service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
@@ -352,6 +449,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the Mailhog service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
@@ -376,6 +479,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the Analytics services.
+	 *
+	 * @return array
+	 */
 	protected function get_service_analytics() : array {
 		return [
 			'cognito' => [
@@ -417,6 +526,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the XRay service.
+	 *
+	 * @return array
+	 */
 	protected function get_service_xray() : array {
 		return [
 			'xray' => [
@@ -432,6 +547,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get the full docker compose configuration.
+	 *
+	 * @return array
+	 */
 	public function get_array() : array {
 		$services = array_merge(
 			$this->get_service_db(),
@@ -458,12 +579,15 @@ class Docker_Compose_Generator {
 			$this->get_service_tachyon(),
 			$this->get_service_mailhog()
 		);
+
 		if ( $this->get_config()['analytics'] && $this->get_config()['elasticsearch'] ) {
 			$services = array_merge( $services, $this->get_service_analytics() );
 		}
+
 		if ( $this->get_config()['kibana'] && $this->get_config()['elasticsearch'] ) {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
+
 		return [
 			'version' => '2.3',
 			'services' => $services,
@@ -484,6 +608,12 @@ class Docker_Compose_Generator {
 			],
 		];
 	}
+
+	/**
+	 * Get Yaml output for config.
+	 *
+	 * @return string
+	 */
 	public function get_yaml() : string {
 		return Yaml::dump( $this->get_array(), 10, 2 );
 	}
