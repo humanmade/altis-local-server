@@ -88,7 +88,7 @@ EOT
 	private function get_base_command_prefix() : string {
 		return sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
-			'vendor/altis/local-server/docker',
+			'vendor',
 			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain()
 		);
@@ -103,6 +103,9 @@ EOT
 	 */
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'subcommand' );
+
+		// Refresh the docker-compose.yml file.
+		$this->generate_docker_compose();
 
 		if ( $subcommand === 'start' ) {
 			return $this->start( $input, $output );
@@ -179,7 +182,7 @@ EOT
 			}
 		}
 
-		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
+		$compose = new Process( 'docker-compose up -d --remove-orphans', 'vendor', $env );
 		$compose->setTty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
@@ -249,7 +252,7 @@ EOT
 		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( 'docker-compose stop', 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -282,7 +285,7 @@ EOT
 		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
 		$proxy->run();
 
-		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( 'docker-compose down -v --remove-orphans', 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -315,7 +318,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( "docker-compose restart $service", 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -407,7 +410,7 @@ EOT
 	 * @return int
 	 */
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( 'docker-compose ps', 'vendor', $this->get_env() );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -422,7 +425,7 @@ EOT
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor', $this->get_env() );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -522,6 +525,20 @@ EOT;
 		}
 
 		return $return_val;
+	}
+
+	/**
+	 * Generates the docker-compose.yml file.
+	 *
+	 * @return void
+	 */
+	protected function generate_docker_compose() : void {
+		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
+		file_put_contents(
+			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
+			$docker_compose->get_yaml()
+		);
 	}
 
 	/**
