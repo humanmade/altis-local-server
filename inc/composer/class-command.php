@@ -249,11 +249,13 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
-		$proxy->run();
-
 		$compose = new Process( 'docker-compose stop', 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		$proxy = new Process( 'docker-compose -f proxy.yml stop', 'vendor/altis/local-server/docker' );
+		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
@@ -282,11 +284,13 @@ EOT
 
 		$output->writeln( '<error>Destroying...</>' );
 
-		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
-		$proxy->run();
-
 		$compose = new Process( 'docker-compose down -v --remove-orphans', 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		$proxy = new Process( 'docker-compose -f proxy.yml down -v', 'vendor/altis/local-server/docker' );
+		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
@@ -309,8 +313,10 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $this->get_env() );
-		$proxy->run();
+		$proxy = new Process( 'docker-compose -f proxy.yml restart', 'vendor/altis/local-server/docker' );
+		$proxy->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
 
 		$options = $input->getArgument( 'options' );
 		if ( isset( $options[0] ) ) {
