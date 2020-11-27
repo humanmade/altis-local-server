@@ -275,7 +275,7 @@ class Docker_Compose_Generator {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
 		return [
 			'elasticsearch' => [
-				'image' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+				'image' => 'humanmade/altis-local-server-elasticsearch:4.0.0',
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
