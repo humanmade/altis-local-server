@@ -200,6 +200,7 @@ EOT
 		return [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'COMPOSE_PROJECT_TLD' => $this->get_project_tld(),
 			'DOCKER_CLIENT_TIMEOUT' => 120,
 			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
@@ -283,7 +284,7 @@ EOT
 			$output->writeln( '<info>WP Password:</>	<comment>password</>' );
 		}
 
-		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
+		$site_url = $this->get_project_url();
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
@@ -428,7 +429,7 @@ EOT
 	 * @return int
 	 */
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
-		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
+		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
 
 		$passed_url = false;
@@ -841,7 +842,7 @@ EOT;
 	 * @return void
 	 */
 	protected function generate_docker_compose( array $args = [] ) : void {
-		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $args );
+		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $this->get_project_tld(), $args );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 		file_put_contents(
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
@@ -951,13 +952,22 @@ EOT;
 	 *
 	 * @return string
 	 */
+	protected function get_project_url() : string {
+		$is_secure = $this->get_composer_config()['secure'] ?? true;
+		$site_url = 'http' . ( $is_secure ? 's' : '' ) . '://' . $this->get_project_subdomain() . '.' . $this->get_project_tld() . '/';
+		return $site_url;
+	}
+
+	/**
+	 * Get the name of the project for the local subdomain
+	 *
+	 * @return string
+	 */
 	protected function get_project_subdomain() : string {
+		$config = $this->get_composer_config();
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$composer_json = json_decode( file_get_contents( getcwd() . '/composer.json' ), true );
-
-		if ( isset( $composer_json['extra']['altis']['modules']['local-server']['name'] ) ) {
-			$project_name = $composer_json['extra']['altis']['modules']['local-server']['name'];
+		if ( isset( $config['name'] ) ) {
+			$project_name = $config['name'];
 		} else {
 			$project_name = basename( getcwd() );
 		}
@@ -981,6 +991,36 @@ EOT;
 		}
 
 		return new Process( ...$args );
+	}
+
+	/**
+	 * Get the root name to use for the project.
+	 *
+	 * @return string
+	 */
+	protected function get_project_tld() : string {
+		$config = $this->get_composer_config();
+
+		if ( isset( $config['tld'] ) ) {
+			$project_name = $config['tld'];
+		} else {
+			$project_name = 'altis.dev';
+		}
+
+		return $project_name;
+	}
+
+	/**
+	 * Get the config from the composer.json project file.
+	 *
+	 * @return array
+	 */
+	protected function get_composer_config() : array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$composer_json = json_decode( file_get_contents( getcwd() . '/composer.json' ), true );
+		$config = $composer_json['extra']['altis']['modules']['local-server'] ?? [];
+
+		return $config;
 	}
 
 	/**

@@ -61,13 +61,14 @@ class Docker_Compose_Generator {
 	 *
 	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param string $tld The primary top level domain for the server.
 	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
-	public function __construct( string $project_name, string $root_dir, array $args = [] ) {
+	public function __construct( string $project_name, string $root_dir, string $tld, array $args = [] ) {
 		$this->project_name = $project_name;
-		$this->root_dir = $root_dir;
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
-		$this->tld = 'altis.dev';
+		$this->root_dir = $root_dir;
+		$this->tld = $tld;
 		$this->hostname = $this->project_name . '.' . $this->tld;
 		$this->args = $args;
 	}
