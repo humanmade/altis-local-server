@@ -153,7 +153,6 @@ address = ":8080"
 # Optional
 # Default: ""
 #
-domain = "altis.dev"
 
 # Expose containers by default in traefik
 #

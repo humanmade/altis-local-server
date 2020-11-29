@@ -55,11 +55,11 @@ class Docker_Compose_Generator {
 	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
 	 */
-	public function __construct( string $project_name, string $root_dir ) {
+	public function __construct( string $project_name, string $root_dir, string $tld ) {
 		$this->project_name = $project_name;
 		$this->root_dir = $root_dir;
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
-		$this->tld = 'altis.dev';
+		$this->tld = $tld;
 		$this->hostname = $this->project_name . '.' . $this->tld;
 	}
 
