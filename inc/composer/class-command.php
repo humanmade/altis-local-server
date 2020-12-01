@@ -104,16 +104,14 @@ EOT
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'subcommand' );
 
-		// Set env vars required before generating docker-composer.yml.
+		// Collect args to pass to the docker compose file generator.
+		$docker_compose_args = [];
 		if ( $input->getOption( 'xdebug' ) ) {
-			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			if ( $this->is_linux() ) {
-				$env['XDEBUG_REMOTE_HOST'] = '172.17.0.1';
-			}
+			$docker_compose_args['xdebug'] = true;
 		}
 
 		// Refresh the docker-compose.yml file.
-		$this->generate_docker_compose();
+		$this->generate_docker_compose( $docker_compose_args );
 
 		if ( $subcommand === 'start' ) {
 			return $this->start( $input, $output );
@@ -538,10 +536,11 @@ EOT;
 	/**
 	 * Generates the docker-compose.yml file.
 	 *
+	 * @param array $args An optional array of arguments to pass through to the generator.
 	 * @return void
 	 */
-	protected function generate_docker_compose() : void {
-		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd() );
+	protected function generate_docker_compose( array $args = [] ) : void {
+		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $args );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 		file_put_contents(
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
