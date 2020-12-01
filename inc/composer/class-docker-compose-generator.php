@@ -70,6 +70,7 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$image = getenv( 'PHP_IMAGE' ) ?: 'humanmade/altis-local-server-php:3.2.0';
+		$xdebug_remote_host = getenv( 'XDEBUG_REMOTE_HOST' ) ?: 'host.docker.internal';
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -131,8 +132,9 @@ class Docker_Compose_Generator {
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
-				'PHP_XDEBUG_ENABLED' => null,
 				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
+				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
+				'XDEBUG_CONFIG' => "idekey={$this->hostname} remote_host={$xdebug_remote_host}",
 			],
 		];
 

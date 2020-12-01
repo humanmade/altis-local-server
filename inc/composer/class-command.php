@@ -104,6 +104,14 @@ EOT
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'subcommand' );
 
+		// Set env vars required before generating docker-composer.yml.
+		if ( $input->getOption( 'xdebug' ) ) {
+			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
+			if ( $this->is_linux() ) {
+				$env['XDEBUG_REMOTE_HOST'] = '172.17.0.1';
+			}
+		}
+
 		// Refresh the docker-compose.yml file.
 		$this->generate_docker_compose();
 
@@ -175,12 +183,6 @@ EOT
 		}
 
 		$env = $this->get_env();
-		if ( $input->getOption( 'xdebug' ) ) {
-			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			if ( $this->is_linux() ) {
-				$env['XDEBUG_REMOTE_HOST'] = '172.17.0.1';
-			}
-		}
 
 		$compose = new Process( 'docker-compose up -d --remove-orphans', 'vendor', $env );
 		$compose->setTty( true );
