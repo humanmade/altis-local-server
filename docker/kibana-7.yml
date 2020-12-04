@@ -1,0 +1,9 @@
+elasticsearch.hosts: http://elasticsearch:9200
+
+server.name: kibana
+server.host: 0.0.0.0
+server.basePath: /kibana
+server.rewriteBasePath: true
+
+logging.quiet: true
+logging.verbose: false
