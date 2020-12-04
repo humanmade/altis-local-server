@@ -273,9 +273,15 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_elasticsearch() : array {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
+
+		$image_tag = '3.0.0';
+		if ( $this->get_elasticsearch_version() === 7 ) {
+			$image_tag = '4.0.0';
+		}
+
 		return [
 			'elasticsearch' => [
-				'image' => 'humanmade/altis-local-server-elasticsearch:4.0.0',
+				'image' => "humanmade/altis-local-server-elasticsearch:{$image_tag}",
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -315,7 +321,7 @@ class Docker_Compose_Generator {
 					// network.host is set in the default config)
 					'discovery.type=single-node',
 					// Reduce from default of 1GB of memory to 512MB
-					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
+					'ES_JAVA_OPTS=-Xms1g -Xmx1g',
 				],
 			],
 		];
@@ -327,9 +333,16 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_kibana() : array {
+		$image = 'blacktop/kibana:6.3';
+		$yml_file = 'kibana.yml';
+		if ( $this->get_elasticsearch_version() === 7 ) {
+			$image = 'humanmade/altis-local-server-kibana:1.0.0';
+			$yml_file = 'kibana-7.yml';
+		}
+
 		return [
 			'kibana' => [
-				'image' => 'blacktop/kibana:6.3',
+				'image' => $image,
 				'networks' => [
 					'proxy',
 					'default',
@@ -349,7 +362,7 @@ class Docker_Compose_Generator {
 					],
 				],
 				'volumes' => [
-					"{$this->config_dir}/kibana.yml:/usr/share/kibana/config/kibana.yml",
+					"{$this->config_dir}/{$yml_file}:/usr/share/kibana/config/kibana.yml",
 				],
 			],
 		];
@@ -513,7 +526,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-pinpoint:1.2.2',
+				'image' => 'humanmade/local-pinpoint:1.2.3',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
@@ -633,11 +646,24 @@ class Docker_Compose_Generator {
 		$defaults = [
 			'analytics' => true,
 			'cavalcade' => true,
-			'elasticsearch' => true,
+			'elasticsearch' => 6,
 			'kibana' => true,
 			'xray' => false,
 		];
 
 		return array_merge( $defaults, $config );
+	}
+
+	/**
+	 * Get the configured Elasticsearch version.
+	 *
+	 * @return int
+	 */
+	protected function get_elasticsearch_version() : int {
+		if ( is_int( $this->get_config()['elasticsearch'] ) ) {
+			return $this->get_config()['elasticsearch'];
+		}
+
+		return 6;
 	}
 }
