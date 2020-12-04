@@ -647,7 +647,12 @@ EOT;
 	 */
 	protected function get_project_url() : string {
 		$is_secure = $this->get_composer_config()['secure'] ?? true;
-		$site_url = 'http' . ( $is_secure ? 's' : '' ) . '://' . $this->get_project_subdomain() . '.' . $this->get_project_tld() . '/';
+		$site_url = sprintf(
+			'http%s://%s.%s/',
+			$is_secure ? 's' : '',
+			$this->get_project_subdomain(),
+			$this->get_project_tld()
+		);
 		return $site_url;
 	}
 
