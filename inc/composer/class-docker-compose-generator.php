@@ -682,9 +682,9 @@ class Docker_Compose_Generator {
 		}
 
 		return 6;
-  }
+	}
 
-  /**
+	/**
 	 * Check if the current host operating system is Linux based.
 	 *
 	 * @return boolean
