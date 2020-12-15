@@ -13,6 +13,7 @@ use Composer\Command\BaseCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
@@ -43,11 +44,12 @@ class Command extends BaseCommand {
 Run the local development server.
 
 Default command - start the local development server:
-	start [--xdebug]              passing --xdebug starts the server with xdebug enabled
+	start [--xdebug=<mode>]       passing --xdebug starts the server with xdebug enabled
+	                              optionally set the xdebug mode by assigning a value.
 Stop the local development server:
 	stop
 Restart the local development server:
-	restart [--xdebug]            passing --xdebug restarts the server with xdebug enabled
+	restart [--xdebug=<mode>]     passing --xdebug restarts the server with xdebug enabled
 Destroy the local development server:
 	destroy
 View status of the local development server:
@@ -68,7 +70,7 @@ Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
-			->addOption( 'xdebug' );
+			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with XDebug', 'debug' );
 	}
 
 	/**
@@ -107,7 +109,7 @@ EOT
 		// Collect args to pass to the docker compose file generator.
 		$docker_compose_args = [];
 		if ( $input->getOption( 'xdebug' ) ) {
-			$docker_compose_args['xdebug'] = true;
+			$docker_compose_args['xdebug'] = $input->getOption( 'xdebug' );
 		}
 
 		// Refresh the docker-compose.yml file.
