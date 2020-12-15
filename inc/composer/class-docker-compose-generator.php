@@ -50,17 +50,26 @@ class Docker_Compose_Generator {
 	protected $hostname;
 
 	/**
+	 * An array of data passed to
+	 *
+	 * @var array
+	 */
+	protected $args;
+
+	/**
 	 * Create and configure the generator.
 	 *
 	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
-	public function __construct( string $project_name, string $root_dir ) {
+	public function __construct( string $project_name, string $root_dir, array $args = [] ) {
 		$this->project_name = $project_name;
 		$this->root_dir = $root_dir;
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
 		$this->tld = 'altis.dev';
 		$this->hostname = $this->project_name . '.' . $this->tld;
+		$this->args = $args;
 	}
 
 	/**
@@ -69,7 +78,6 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_php_reusable() : array {
-		$image = getenv( 'PHP_IMAGE' ) ?: 'humanmade/altis-local-server-php:3.2.0';
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -83,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => $image,
+			'image' => 'humanmade/altis-local-server-php:3.2.0',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -131,10 +139,19 @@ class Docker_Compose_Generator {
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
-				'PHP_XDEBUG_ENABLED' => null,
-				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
 			],
 		];
+
+		// Append dev to use PHP image with xdebug if set.
+		if ( $this->args['xdebug'] ?? false ) {
+			// Use the dev image instead.
+			$services['image'] .= '-dev';
+
+			// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
+			$xdebug_remote_host = $this->is_linux() ? '172.17.0.1' : 'host.docker.internal';
+			$services['environment']['PHP_IDE_CONFIG'] = "serverName={$this->hostname}";
+			$services['environment']['XDEBUG_CONFIG'] = "idekey={$this->hostname} remote_host={$xdebug_remote_host}";
+		}
 
 		if ( $this->get_config()['elasticsearch'] ) {
 			$services['depends_on']['elasticsearch'] = [
@@ -318,9 +335,9 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'http.max_content_length=10mb',
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
-					// network.host is set in the default config)
+					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB
+					// Reduce from default of 1GB of memory to 512MB.
 					'ES_JAVA_OPTS=-Xms1g -Xmx1g',
 				],
 			],
@@ -665,5 +682,14 @@ class Docker_Compose_Generator {
 		}
 
 		return 6;
+	}
+
+	/**
+	 * Check if the current host operating system is Linux based.
+	 *
+	 * @return boolean
+	 */
+	protected function is_linux() : bool {
+		return in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true );
 	}
 }
