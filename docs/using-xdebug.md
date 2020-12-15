@@ -45,7 +45,7 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
          "name": "Listen for XDebug",
          "type": "php",
          "request": "launch",
-         "port": 9000
+         "port": 9003
        },
        {
          "name": "Launch currently open script",
@@ -53,7 +53,7 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
          "request": "launch",
          "program": "${file}",
          "cwd": "${fileDirname}",
-         "port": 9000,
+         "port": 9003,
        }
      ]
    }
@@ -67,7 +67,7 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
          "name": "Listen for XDebug",
          "type": "php",
          "request": "launch",
-         "port": 9000,
+         "port": 9003,
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }
@@ -78,7 +78,7 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
          "request": "launch",
          "program": "${file}",
          "cwd": "${fileDirname}",
-         "port": 9000,
+         "port": 9003,
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }

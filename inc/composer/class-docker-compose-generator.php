@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:3.2.0',
+			'image' => 'humanmade/altis-local-server-php:4.0.0-alpha-dev',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -143,15 +143,19 @@ class Docker_Compose_Generator {
 		];
 
 		// Append dev to use PHP image with xdebug if set.
-		if ( $this->args['xdebug'] ?? false ) {
+		// if ( $this->args['xdebug'] ?? false ) {
 			// Use the dev image instead.
-			$services['image'] .= '-dev';
+			// $services['image'] .= '-dev';
 
 			// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
 			$xdebug_remote_host = $this->is_linux() ? '172.17.0.1' : 'host.docker.internal';
+
+			$services['environment']['XDEBUG_CONFIG'] = "client_host={$xdebug_remote_host}";
+
 			$services['environment']['PHP_IDE_CONFIG'] = "serverName={$this->hostname}";
-			$services['environment']['XDEBUG_CONFIG'] = "idekey={$this->hostname} remote_host={$xdebug_remote_host}";
-		}
+			$services['environment']['XDEBUG_SESSION'] = "{$this->hostname} ";
+			$services['environment']['XDEBUG_MODE'] = $this->get_config()['xdebug']['mode'] ?? 'debug';
+		// }
 
 		if ( $this->get_config()['elasticsearch'] ) {
 			$services['depends_on']['elasticsearch'] = [
