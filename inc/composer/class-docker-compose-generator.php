@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.0.0-alpha-dev',
+			'image' => 'humanmade/altis-local-server-php:4.0.0-alpha2-dev',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',

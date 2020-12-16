@@ -108,7 +108,9 @@ EOT
 
 		// Collect args to pass to the docker compose file generator.
 		$docker_compose_args = [];
-		if ( $input->getOption( 'xdebug' ) ) {
+
+		// If Xdebug switch is passed add to docker compose args.
+		if ( $input->hasParameterOption( '--xdebug' ) ) {
 			$docker_compose_args['xdebug'] = $input->getOption( 'xdebug' );
 		}
 
