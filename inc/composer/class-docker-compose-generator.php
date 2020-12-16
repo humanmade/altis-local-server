@@ -329,9 +329,9 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'http.max_content_length=10mb',
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
-					// network.host is set in the default config)
+					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB
+					// Reduce from default of 1GB of memory to 512MB.
 					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
 				],
 			],
