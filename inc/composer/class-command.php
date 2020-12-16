@@ -3,6 +3,9 @@
  * Local Server Composer Command.
  *
  * phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
+ * phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.system_calls_exec
+ * phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.system_calls_shell_exec
+ * phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.system_calls_passthru
  *
  * @package altis/local-server
  */
