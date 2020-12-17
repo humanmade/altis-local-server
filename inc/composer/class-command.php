@@ -70,7 +70,7 @@ Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
-			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with XDebug', 'debug' );
+			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' );
 	}
 
 	/**
