@@ -139,19 +139,14 @@ class Docker_Compose_Generator {
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
+				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
+				'XDEBUG_CONFIG' => sprintf( 'client_host=%s', $this->is_linux() ? '172.17.0.1' : 'host.docker.internal' ),
+				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
+				'XDEBUG_SESSION' => $this->hostname,
+				// Set XDebug mode, fall back to "off" to avoid any performance hits.
+				'XDEBUG_MODE' => $this->args['xdebug'] ?? 'off',
 			],
 		];
-
-		// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
-		$xdebug_remote_host = $this->is_linux() ? '172.17.0.1' : 'host.docker.internal';
-		$services['environment']['XDEBUG_CONFIG'] = "client_host={$xdebug_remote_host}";
-
-		// Configure XDebug connection info.
-		$services['environment']['PHP_IDE_CONFIG'] = "serverName={$this->hostname}";
-		$services['environment']['XDEBUG_SESSION'] = $this->hostname;
-
-		// Set XDebug mode, fall back to "off".
-		$services['environment']['XDEBUG_MODE'] = $this->args['xdebug'] ?? 'off';
 
 		if ( $this->get_config()['elasticsearch'] ) {
 			$services['depends_on']['elasticsearch'] = [
