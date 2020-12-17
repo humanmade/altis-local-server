@@ -1,10 +1,10 @@
-# Using XDebug
+# Using Xdebug
 
-Bugs are an inevitability of writing code and so Local Server provides an easy way to enable [XDebug](https://xdebug.org/) when you need it.
+Bugs are an inevitability of writing code and so Local Server provides an easy way to enable [Xdebug](https://xdebug.org/) when you need it.
 
-XDebug is _not enabled by default_ because it slows PHP down considerably. This could make you less productive depending on the work you're doing.
+Xdebug is _not enabled by default_ because it can slow PHP down considerably. This could make you less productive depending on the work you're doing.
 
-## Activating XDebug
+## Activating Xdebug
 
 When you need to run your debug client you can append the option `--xdebug` to the start command:
 
@@ -14,22 +14,47 @@ composer server --xdebug
 
 **Note**: you do not need to stop the server first to run the above command.
 
-## Deactivating XDebug
+## Deactivating Xdebug
 
-You can start the server again without the `--xdebug` option at any time to deactivate XDebug:
+You can start the server again without the `--xdebug` option at any time to deactivate Xdebug:
 
 ```
 composer server
 ```
 
-## Connecting to XDebug
+## Setting the Xdebug Mode
+
+The Xdebug mode settings allows you to change what Xdebug does for a given session. This defaults to `debug` for step-debugging but can be configured on start up by passing a value to the `--xdebug` flag like so:
+
+```
+composer server --xdebug=trace
+```
+
+The different modes available are:
+
+- `develop`\
+  Enables Development Aids including the overloaded `var_dump()`.
+- `coverage`\
+  Enables Code Coverage Analysis to generate code coverage reports, mainly in combination with PHPUnit.
+- `debug`\
+  Enables Step Debugging. This can be used to step through your code while it is running, and analyse values of variables.
+- `gcstats`\
+  Enables Garbage Collection Statistics to collect statistics about PHP's Garbage Collection Mechanism.
+- `profile`\
+  Enables Profiling, with which you can analyse performance bottlenecks with tools like KCacheGrind.
+- `trace`\
+  Enables the Function Trace feature, which allows you record every function call, including arguments, variable assignment, and return value that is made during a request to a file.
+
+You can enable multiple modes at the same time by comma separating their identifiers as the value of `--xdebug` for example `--xdebug=develop,trace`.
+
+## Connecting to Xdebug
 
 Most modern editors will have a built in debug client. Instructions for the following editors are below:
 
 - [VSCode](#VSCode)
 - [PHPStorm](#PHPStorm)
 
-XDebug is configured to connect to the default port 9000 so there should be a minimum of configuration required in your editor.
+Xdebug is configured to connect to the default port 9003 so there should be a minimum of configuration required in your editor.
 
 ### VSCode
 
@@ -42,10 +67,10 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
      "version": "0.2.0",
      "configurations": [
        {
-         "name": "Listen for XDebug",
+         "name": "Listen for Xdebug",
          "type": "php",
          "request": "launch",
-         "port": 9000
+         "port": 9003
        },
        {
          "name": "Launch currently open script",
@@ -53,7 +78,7 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
          "request": "launch",
          "program": "${file}",
          "cwd": "${fileDirname}",
-         "port": 9000,
+         "port": 9003,
        }
      ]
    }
@@ -64,10 +89,10 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
      "version": "0.2.0",
      "configurations": [
        {
-         "name": "Listen for XDebug",
+         "name": "Listen for Xdebug",
          "type": "php",
          "request": "launch",
-         "port": 9000,
+         "port": 9003,
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }
@@ -78,7 +103,7 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
          "request": "launch",
          "program": "${file}",
          "cwd": "${fileDirname}",
-         "port": 9000,
+         "port": 9003,
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }
@@ -88,7 +113,7 @@ XDebug is configured to connect to the default port 9000 so there should be a mi
    ```
 6. You are done, click the green play button to start the debug client.
 
-For more information on the available configuration options, including XDebug settings, [view the VSCode Debugging documentation here](https://go.microsoft.com/fwlink/?linkid=830387).
+For more information on the available configuration options, including Xdebug settings, [view the VSCode Debugging documentation here](https://go.microsoft.com/fwlink/?linkid=830387).
 
 ### PHPStorm
 
