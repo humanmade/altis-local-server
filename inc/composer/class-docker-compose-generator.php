@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.0.0-alpha2-dev',
+			'image' => 'humanmade/altis-local-server-php:4.0.0-alpha2' . ( $this->is_arm64() ? '-arm64' : '' ),
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -196,7 +196,7 @@ class Docker_Compose_Generator {
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.1.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.1.0' . ( $this->is_arm64() ? '-arm64' : '' ),
 				'networks' => [
 					'proxy',
 					'default',
@@ -246,7 +246,7 @@ class Docker_Compose_Generator {
 	protected function get_service_db() : array {
 		return [
 			'db' => [
-				'image' => 'mysql:5.7',
+				'image' => $this->is_arm64() ? 'mysql/mysql-server:8.0.22-1.1.18' : 'mysql:5.7',
 				'volumes' => [
 					'db-data:/var/lib/mysql',
 				],
@@ -375,7 +375,7 @@ class Docker_Compose_Generator {
 	protected function get_service_s3() : array {
 		return [
 			's3' => [
-				'image' => 'minio/minio:RELEASE.2020-03-19T21-49-00Z',
+				'image' => 'minio/minio:RELEASE.2020-12-29T23-29-29Z',
 				'volumes' => [
 					's3:/data:rw',
 				],
@@ -411,21 +411,21 @@ class Docker_Compose_Generator {
 					"traefik.frontend.rule=HostRegexp:s3-{$this->hostname}",
 				],
 			],
-			's3-sync-to-host' => [
-				'image' => 'minio/mc:RELEASE.2020-03-14T01-23-37Z',
-				'restart' => 'unless-stopped',
-				'depends_on' => [
-					's3',
-				],
-				'volumes' => [
-					"{$this->config_dir}/minio.json:/root/.mc/config.json",
-					"{$this->root_dir}/content/uploads:/content/uploads:delegated",
-				],
-				'links' => [
-					's3',
-				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite local/s3-{$this->project_name} /content\"",
-			],
+			// 's3-sync-to-host' => [
+			// 	'image' => 'minio/mc:RELEASE.2020-12-18T10-53-53Z',
+			// 	'restart' => 'unless-stopped',
+			// 	'depends_on' => [
+			// 		's3',
+			// 	],
+			// 	'volumes' => [
+			// 		"{$this->config_dir}/minio.json:/root/.mc/config.json",
+			// 		"{$this->root_dir}/content/uploads:/content/uploads:delegated",
+			// 	],
+			// 	'links' => [
+			// 		's3',
+			// 	],
+			// 	'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite local/s3-{$this->project_name} /content\"",
+			// ],
 		];
 	}
 
@@ -470,7 +470,7 @@ class Docker_Compose_Generator {
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
-				'image' => 'mailhog/mailhog:latest',
+				'image' => 'cd2team/mailhog:1609460543',
 				'ports' => [
 					'8025',
 					'1025',
@@ -588,7 +588,7 @@ class Docker_Compose_Generator {
 		$services = array_merge(
 			$services,
 			$this->get_service_s3(),
-			$this->get_service_tachyon(),
+			//$this->get_service_tachyon(),
 			$this->get_service_mailhog()
 		);
 
@@ -651,6 +651,15 @@ class Docker_Compose_Generator {
 		];
 
 		return array_merge( $defaults, $config );
+	}
+
+	/**
+	 * Check if the current system is ARM64.
+	 *
+	 * @return bool
+	 */
+	protected function is_arm64() : bool {
+		return strpos( php_uname(), 'aarch64' ) !== false;
 	}
 
 	/**
