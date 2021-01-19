@@ -647,7 +647,7 @@ class Docker_Compose_Generator {
 			'cavalcade' => true,
 			'elasticsearch' => true,
 			'kibana' => true,
-			'xray' => false,
+			'xray' => true,
 		];
 
 		return array_merge( $defaults, $config );
