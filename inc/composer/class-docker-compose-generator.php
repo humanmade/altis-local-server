@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.0.0-alpha2-dev',
+			'image' => 'humanmade/altis-local-server-php:3.2.0',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -121,8 +121,6 @@ class Docker_Compose_Generator {
 				'DB_USER' => 'wordpress',
 				'REDIS_HOST' => 'redis',
 				'REDIS_PORT' => 6379,
-				'WP_DEBUG' => 1,
-				'WP_DEBUG_DISPLAY' => 0,
 				'PAGER' => 'more',
 				'HM_ENV_ARCHITECTURE' => 'local-server',
 				'HM_DEPLOYMENT_REVISION' => 'dev',
