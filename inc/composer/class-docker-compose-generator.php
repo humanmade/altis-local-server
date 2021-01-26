@@ -123,6 +123,7 @@ class Docker_Compose_Generator {
 				'REDIS_PORT' => 6379,
 				'WP_DEBUG' => 1,
 				'WP_DEBUG_DISPLAY' => 0,
+				'WP_DEBUG_LOG' => 0,
 				'PAGER' => 'more',
 				'HM_ENV_ARCHITECTURE' => 'local-server',
 				'HM_DEPLOYMENT_REVISION' => 'dev',
