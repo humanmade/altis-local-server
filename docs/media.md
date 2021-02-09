@@ -1,6 +1,6 @@
 # Local Media
 
-Local Server supports the [Altis Media module](https://www.altis-dxp.com/resources/developer-docs/media/) by replicating the media handling capabilities of a deployed Altis environment. A new Local Server setup will support [Dynamic Images](https://www.altis-dxp.com/resources/developer-docs/media/dynamic-images/) and other media features, and all images you upload will be stored in a local container on your development machine.
+Local Server supports the [Altis Media module](docs://media/) by replicating the media handling capabilities of a deployed Altis environment. A new Local Server setup will support [Dynamic Images](docs://media/dynamic-images/) and other media features, and all images you upload will be stored in a local container on your development machine.
 
 When using Local Server to work on an existing Altis site, you may need to pull down a database backup for local testing. Downloading uploaded media along with this database backup may be prohibitively time consuming, or take too much local disk space. Local Server can be configured to request these images directly from an Altis cloud environment.
 
