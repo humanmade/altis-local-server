@@ -15,7 +15,7 @@ location ~* ^/tachyon.+\.(jpe?g|gif|png|webp).*$ {
 }
 
 location @imageFallback {
-	rewrite ^/tachyon/(.*)$ https://us-east-1.tchyn.io/myproject-development/uploads/$1 break;
+	rewrite ^/tachyon/(.*)$ https://myproject.altis.cloud/tachyon/$1 break;
 }
 </code></pre>
 
