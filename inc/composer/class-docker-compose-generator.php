@@ -222,7 +222,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
-					"traefik.backend=nginx-{$this->hostname}",
+					"traefik.backend=nginx-{$this->project_name}",
 				],
 			],
 		];
@@ -418,7 +418,7 @@ class Docker_Compose_Generator {
 					// Point s3 404s (which probably represent missing files in Tachyon)
 					// to Nginx to allow projects to implement custom fallback behavior.
 					'traefik.frontend.errors.tachyon.status=404',
-					"traefik.frontend.errors.tachyon.backend=nginx-{$this->hostname}",
+					"traefik.frontend.errors.tachyon.backend=nginx-{$this->project_name}",
 				],
 			],
 			's3-sync-to-host' => [
