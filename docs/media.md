@@ -19,9 +19,7 @@ location @imageFallback {
 }
 </code></pre>
 
-Alternatively, for read-only image support you can define the constants `S3_UPLOADS_BUCKET`, `S3_UPLOADS_KEY`, `S3_UPLOADS_BUCKET_URL`, `S3_UPLOADS_REGION`, `S3_UPLOADS_SECRET`, and `TACHYON_URL`, to point your Local Server instance at a remote Tachyon instance. You will not be able to upload or edit images, but your local site should display as expected using the remote image server.
-
-Open a support ticket for assistance in determining the specific values and URLs necessary to configure either of these image fallback options on your site.
+Your production Tachyon URL will be whatever the primary domain name for the stack is plus the path `/tachyon/` so it may not always look like the example above.
 
 ## Refreshing Local Media
 
