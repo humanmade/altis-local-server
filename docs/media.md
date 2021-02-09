@@ -6,7 +6,7 @@ When using Local Server to work on an existing Altis site, you may need to pull 
 
 You can add a file `.config/nginx-additions-media.conf` to your Altis project which instructs Local Server to redirect image requests to a remote server if they were not accessible locally. This preserves your ability to upload and edit local images, while allowing any image file not present in your environment to be loaded from a remote bucket instead.
 
-Assuming that your Altis project uses the name `myproject` and you have confirmed that your environment uses the `us-east-1.tchyn.io` Tachyon URL, your `nginx-additions-media.conf` could look like this:
+Assuming that your Altis project uses the name `myproject` for Local Server and your environment uses the domain name `myproject.altis.cloud`, your `nginx-additions-media.conf` could look like this:
 
 <pre><code>
 # Listen for Tachyon 404s, and try redirecting those requests to the development S3 bucket.
