@@ -104,7 +104,7 @@ class Docker_Compose_Generator {
 				"proxy:s3-{$this->hostname}",
 			],
 			'volumes' => [
-				"{$this->root_dir}:/usr/src/app:delegated",
+				'app:/usr/src/app:delegated',
 				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
 				'socket:/var/run/php-fpm',
 			],
@@ -210,7 +210,7 @@ class Docker_Compose_Generator {
 					'php',
 				],
 				'volumes' => [
-					"{$this->root_dir}:/usr/src/app:delegated",
+					'app:/usr/src/app:delegated',
 					'socket:/var/run/php-fpm',
 				],
 				'ports' => [
@@ -617,6 +617,14 @@ class Docker_Compose_Generator {
 				],
 			],
 			'volumes' => [
+				'app' => [
+					'driver' => 'local',
+					'driver_opts' => [
+						'device' => $this->root_dir,
+						'o' => 'bind',
+						'type' => 'nfs',
+					],
+				],
 				'db-data' => null,
 				'es-data' => null,
 				'tmp' => null,
