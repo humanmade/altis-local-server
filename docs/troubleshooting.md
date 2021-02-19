@@ -52,3 +52,20 @@ sysctl -w vm.max_map_count=262144
 ## Windows 10 Home Edition
 
 Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
+
+
+## File sharing is too slow
+
+When using Windows or MacOS on projects with a lot of files, or a lot of file churn such as frequently changing statically built files, the containers can experience a delay in receiving the updated files. This can make development cumbersome.
+
+To help with this problem Local Server supports [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/) if available. This is a tool that vastly optimises file sharing between the host machine and containers.
+
+To begin you will need to install `docker-sync` for your operating system. Follow the [installation instructions for your operating system here](https://docker-sync.readthedocs.io/en/latest/getting-started/installation.html).
+
+Once `docker-sync` is installed you can restart Local Server with the feature flag like so:
+
+```
+composer server start --docker-sync
+```
+
+The initial set up can take some time while the `docker-sync` container synchronises you project files, but after that development should be much smoother.

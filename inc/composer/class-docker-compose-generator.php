@@ -104,7 +104,7 @@ class Docker_Compose_Generator {
 				"proxy:s3-{$this->hostname}",
 			],
 			'volumes' => [
-				'app:/usr/src/app:delegated',
+				$this->get_app_volume(),
 				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
 				'socket:/var/run/php-fpm',
 			],
@@ -140,7 +140,7 @@ class Docker_Compose_Generator {
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
-				'XDEBUG_CONFIG' => sprintf( 'client_host=%s', $this->is_linux() ? '172.17.0.1' : 'host.docker.internal' ),
+				'XDEBUG_CONFIG' => sprintf( 'client_host=%s', Command::is_linux() ? '172.17.0.1' : 'host.docker.internal' ),
 				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
 				'XDEBUG_SESSION' => $this->hostname,
 				// Set XDebug mode, fall back to "off" to avoid any performance hits.
@@ -210,7 +210,7 @@ class Docker_Compose_Generator {
 					'php',
 				],
 				'volumes' => [
-					'app:/usr/src/app:delegated',
+					$this->get_app_volume(),
 					'socket:/var/run/php-fpm',
 				],
 				'ports' => [
@@ -605,6 +605,22 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
 
+		// Default top level volumes.
+		$volumes = [
+			'db-data' => null,
+			'es-data' => null,
+			'tmp' => null,
+			's3' => null,
+			'socket' => null,
+		];
+
+		// Handle docker-sync volume according to args.
+		if ( $this->args['docker-sync'] ?? false ) {
+			$volumes[ 'app-sync-' . $this->project_name ] = [
+				'external' => true,
+			];
+		}
+
 		return [
 			'version' => '2.3',
 			'services' => $services,
@@ -616,21 +632,7 @@ class Docker_Compose_Generator {
 					],
 				],
 			],
-			'volumes' => [
-				'app' => [
-					'driver' => 'local',
-					'driver_opts' => [
-						'device' => $this->root_dir,
-						'o' => 'bind',
-						'type' => 'nfs',
-					],
-				],
-				'db-data' => null,
-				'es-data' => null,
-				'tmp' => null,
-				's3' => null,
-				'socket' => null,
-			],
+			'volumes' => $volumes,
 		];
 	}
 
@@ -668,11 +670,14 @@ class Docker_Compose_Generator {
 	}
 
 	/**
-	 * Check if the current host operating system is Linux based.
+	 * Get the main application volume adjusted for sharing config options.
 	 *
-	 * @return boolean
+	 * @return string
 	 */
-	protected function is_linux() : bool {
-		return in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true );
+	protected function get_app_volume() : string {
+		if ( $this->args['docker-sync'] ) {
+			return "app-sync-{$this->project_name}:/usr/src/app:delegated";
+		}
+		return "{$this->root_dir}:/usr/src/app:delegated";
 	}
 }

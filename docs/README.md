@@ -12,7 +12,9 @@ Local Server uses Docker for containerization, therefore you must install the Do
 
 Once Docker is installed and running, you are ready to start the Local Server. Local Server uses the command line via the `composer` command.
 
-Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now. See [Creating A New Altis Project](https://www.altis-dxp.com/resources/docs/getting-started/#creating-a-new-altis-project)
+Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now. See [Creating A New Altis Project](https://www.altis-dxp.com/resources/docs/getting-started/#creating-a-new-altis-project).
+
+You can also optionally install [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/) for more performant file sharing between the host machine and the Docker VM.
 
 ## Starting the Local Server
 
@@ -50,8 +52,9 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
-* `composer server start [--xdebug]` - Starts the containers.
+* `composer server start [--xdebug] [--docker-sync]` - Starts the containers.
   * If the `--xdebug` option is passed the PHP container will have XDebug enabled. To switch off XDebug run this command again without the `--xdebug` option.
+  * If the `--docker-sync` flag is set the project files will be shared with the containers using [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/). This can improve file sharing performance for large projects.
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.
