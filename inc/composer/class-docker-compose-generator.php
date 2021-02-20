@@ -605,23 +605,8 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
 
-		// Default top level volumes.
-		$volumes = [
-			'db-data' => null,
-			'es-data' => null,
-			'tmp' => null,
-			's3' => null,
-			'socket' => null,
-		];
-
-		// Handle docker-sync volume according to args.
-		if ( $this->args['docker-sync'] ?? false ) {
-			$volumes[ 'app-sync-' . $this->project_name ] = [
-				'external' => true,
-			];
-		}
-
-		return [
+		// Default compose configuration.
+		$config = [
 			'version' => '2.3',
 			'services' => $services,
 			'networks' => [
@@ -632,8 +617,52 @@ class Docker_Compose_Generator {
 					],
 				],
 			],
-			'volumes' => $volumes,
+			'volumes' => [
+				'db-data' => null,
+				'es-data' => null,
+				'tmp' => null,
+				's3' => null,
+				'socket' => null,
+			],
 		];
+
+		// Handle docker-sync volume according to args.
+		if ( $this->args['docker-sync'] ?? false ) {
+			$config['volumes'][ 'app-sync-' . $this->project_name ] = [
+				'external' => true,
+			];
+		}
+
+		// Handle mutagen volume according to args.
+		if ( $this->args['mutagen'] ?? false ) {
+			$config['volumes']['app'] = null;
+			$config['x-mutagen'] = [
+				'sync' => [
+					'defaults' => [
+						'permissions' => [
+							'defaultOwner' => 'id:82',
+							'defaultGroup' => 'id:82',
+							'defaultFileMode' => '0664',
+							'defaultDirectoryMode' => '0775',
+						],
+					],
+					'app' => [
+						'alpha' => $this->root_dir,
+						'beta' => 'volume://app',
+						'mode' => 'two-way-resolved',
+						'ignore' => [
+							'paths' => [
+								'.DS_Store',
+								'.git',
+								'node_modules',
+							],
+						],
+					],
+				],
+			];
+		}
+
+		return $config;
 	}
 
 	/**
@@ -675,8 +704,11 @@ class Docker_Compose_Generator {
 	 * @return string
 	 */
 	protected function get_app_volume() : string {
+		if ( $this->args['mutagen'] ) {
+			return 'app:/usr/src/app:delegated';
+		}
 		if ( $this->args['docker-sync'] ) {
-			return "app-sync-{$this->project_name}:/usr/src/app:delegated";
+			return "app-sync-{$this->project_name}:/usr/src/app:nocopy";
 		}
 		return "{$this->root_dir}:/usr/src/app:delegated";
 	}

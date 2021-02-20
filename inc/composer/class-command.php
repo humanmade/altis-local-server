@@ -75,7 +75,8 @@ Import files from content/uploads directly to s3:
 EOT
 			)
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
-			->addOption( 'docker-sync', null, InputOption::VALUE_NONE, 'Use docker-sync file sharing.' );
+			->addOption( 'docker-sync', null, InputOption::VALUE_NONE, 'Use docker-sync file sharing.' )
+			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Use mutagen file sharing.' );
 	}
 
 	/**
@@ -114,6 +115,7 @@ EOT
 		// Collect args to pass to the docker compose file generator.
 		$docker_compose_args = [
 			'docker-sync' => false,
+			'mutagen' => false,
 		];
 
 		// If Xdebug switch is passed add to docker compose args.
@@ -124,6 +126,19 @@ EOT
 		// Check docker-sync option or presence of docker-sync.yml.
 		if ( $input->hasParameterOption( '--docker-sync' ) || $this->has_docker_sync_file() ) {
 			$docker_compose_args['docker-sync'] = true;
+		}
+
+		// Use mutagen if available.
+		if ( $input->hasParameterOption( '--mutagen' ) || $this->has_mutagen_file() ) {
+			if ( $this->is_mutagen_installed() ) {
+				// Prevent using both mutagen adn docker-sync - just in case.
+				$docker_compose_args['docker-sync'] = false;
+				$docker_compose_args['mutagen'] = true;
+			} else {
+				$output->writeln( '<error>Mutagen Beta is not installed.</>' );
+				$output->writeln( '<info>For instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
+				return 1;
+			}
 		}
 
 		// Refresh the docker-compose.yml file.
@@ -171,6 +186,7 @@ EOT
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 			'PATH' => getenv( 'PATH' ),
 			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
+			'HOME' => getenv( 'HOME' ),
 		];
 	}
 
@@ -184,7 +200,7 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		if ( $input->hasParameterOption( '--docker-sync' ) ) {
+		if ( $input->hasParameterOption( '--docker-sync' ) || $this->has_docker_sync_file() ) {
 			$sync = new Process( 'docker-sync start', 'vendor' );
 			// Might need to download the docker-sync container so extend this beyond default 60s.
 			$sync->setTimeout( 1200 );
@@ -213,7 +229,7 @@ EOT
 
 		$env = $this->get_env();
 
-		$compose = new Process( 'docker-compose up -d --remove-orphans', 'vendor', $env );
+		$compose = new Process( $this->get_compose_command( 'up -d --remove-orphans' ), 'vendor', $env );
 		$compose->setTty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
@@ -280,7 +296,7 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$compose = new Process( 'docker-compose stop', 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'stop' ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -322,7 +338,7 @@ EOT
 
 		$output->writeln( '<error>Destroying...</>' );
 
-		$compose = new Process( 'docker-compose down -v --remove-orphans', 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'down -v --remove-orphans' ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -338,7 +354,12 @@ EOT
 			$sync->run( function ( $type, $buffer ) {
 				echo $buffer;
 			} );
-			unlink( getcwd() . '/vendor/docker-sync.yml' );
+			unlink( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-sync.yml' );
+		}
+
+		// Remove mutagen file.
+		if ( $this->has_mutagen_file() ) {
+			unlink( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml' );
 		}
 
 		if ( $return_val === 0 ) {
@@ -371,7 +392,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( "docker-compose restart $service", 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( "restart $service" ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -602,10 +623,19 @@ EOT;
 				getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-sync.yml',
 				Yaml::dump( [
 					'version' => '2',
+					'options' => [
+						'verbose' => true,
+					],
 					'syncs' => [
 						$sync_name => [
-							'src' => getcwd(),
-							'sync_excludes' => [ 'node_modules', '.git' ],
+							'src' => '..',
+							'sync_userid' => 82, // www-data.
+							'sync_groupid' => 82,
+							'sync_excludes' => [
+								'.DS_Store',
+								'.git',
+								'node_modules',
+							],
 						],
 					],
 				], 10, 2 )
@@ -748,6 +778,56 @@ EOT;
 	 * @return boolean
 	 */
 	protected function has_docker_sync_file() : bool {
-		return file_exists( getcwd() . '/vendor/docker-sync.yml' );
+		return file_exists( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-sync.yml' );
+	}
+
+	/**
+	 * Check if Mutagen is installed.
+	 *
+	 * @return boolean
+	 */
+	protected function is_mutagen_installed() : bool {
+		static $is_installed;
+		if ( $is_installed !== null ) {
+			return $is_installed;
+		}
+		if ( self::is_linux() || self::is_macos() ) {
+			$is_installed = ! empty( shell_exec( 'which mutagen' ) );
+		} else {
+			$is_installed = ! empty( shell_exec( 'where mutagen' ) );
+		}
+		// Create stub mutagen config file.
+		if ( $is_installed ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
+			file_put_contents(
+				getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml',
+				''
+			);
+		}
+		return $is_installed;
+	}
+
+	/**
+	 * Check if mutagen usage has been activated.
+	 *
+	 * @return boolean
+	 */
+	protected function has_mutagen_file() : bool {
+		return file_exists( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml' );
+	}
+
+	/**
+	 * Get the docker compose command to use.
+	 *
+	 * If Mutagen is active it is used for file sharing by default.
+	 *
+	 * @param string $command The command to append to the root compose command.
+	 * @return string
+	 */
+	protected function get_compose_command( string $command = '' ) : string {
+		return sprintf( '%s %s',
+			$this->has_mutagen_file() ? 'mutagen compose' : 'docker-compose',
+			$command
+		);
 	}
 }
