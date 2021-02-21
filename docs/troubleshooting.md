@@ -58,7 +58,19 @@ Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networ
 
 When using Windows or MacOS on projects with a lot of files, or a lot of file churn such as frequently changing statically built files, the containers can experience a delay in receiving the updated files. This can make development cumbersome.
 
-To help with this problem Local Server supports [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/) if available. This is a tool that vastly optimises file sharing between the host machine and containers.
+### Using Mutagen
+
+[Mutagen](https://mutagen.io/) is a powerful tool for optimising file system mounts (not just for Docker!).
+
+To get started you will need to [install Mutagen Beta](https://mutagen.io/documentation/introduction/installation#development-channels). The beta version has integrated `docker-compose` orchestration support.
+
+On MacOS you can install it using `brew install mutagen-io/mutagen/mutagen-beta`. For all other operating systems check the [beta release assets list for the appropriate build](https://github.com/mutagen-io/mutagen/releases/tag/v0.12.0-beta2).
+
+Once installed bring Local Server up by running `composer server start --mutagen`.
+
+### Using Docker Sync
+
+Local Server supports [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/) if available. This is a tool that can optimise file sharing performance between the host machine and containers.
 
 To begin you will need to install `docker-sync` for your operating system. Follow the [installation instructions for your operating system here](https://docker-sync.readthedocs.io/en/latest/getting-started/installation.html).
 
@@ -69,3 +81,5 @@ composer server start --docker-sync
 ```
 
 The initial set up can take some time while the `docker-sync` container synchronises you project files, but after that development should be much smoother.
+
+**Note:** `docker-sync` may not work for you depending on your combination of Docker Desktop and Operating System version. We reccommend trying Mutagen first.

@@ -638,17 +638,17 @@ class Docker_Compose_Generator {
 			$config['volumes']['app'] = null;
 			$config['x-mutagen'] = [
 				'sync' => [
-					'defaults' => [
-						'permissions' => [
-							'defaultOwner' => 'id:82',
-							'defaultGroup' => 'id:82',
-							'defaultFileMode' => '0664',
-							'defaultDirectoryMode' => '0775',
-						],
-					],
 					'app' => [
 						'alpha' => $this->root_dir,
 						'beta' => 'volume://app',
+						'configurationBeta' => [
+							'permissions' => [
+								'defaultOwner' => 'id:82',
+								'defaultGroup' => 'id:82',
+								'defaultFileMode' => '0664',
+								'defaultDirectoryMode' => '0775',
+							],
+						],
 						'mode' => 'two-way-resolved',
 						'ignore' => [
 							'paths' => [

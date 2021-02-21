@@ -14,7 +14,11 @@ Once Docker is installed and running, you are ready to start the Local Server. L
 
 Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now. See [Creating A New Altis Project](https://www.altis-dxp.com/resources/docs/getting-started/#creating-a-new-altis-project).
 
-You can also optionally install [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/) for more performant file sharing between the host machine and the Docker VM.
+### Experimental Features
+
+You may find that file sharing performance is slow or server response times are slower than you would like especially on Windows or MacOS. Local Server provides two experimental features to work around this, Mutagen and `docker-sync`.
+
+See the [troublshooting guide for detailed instructions on how to install and run these file sharing tools](./troubleshooting.md#file-sharing-is-too-slow).
 
 ## Starting the Local Server
 
@@ -52,9 +56,10 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
-* `composer server start [--xdebug] [--docker-sync]` - Starts the containers.
-  * If the `--xdebug` option is passed the PHP container will have XDebug enabled. To switch off XDebug run this command again without the `--xdebug` option.
-  * If the `--docker-sync` flag is set the project files will be shared with the containers using [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/). This can improve file sharing performance for large projects.
+* `composer server start [--xdebug=<mode>] [--mutagen] [--docker-sync]` - Starts the containers.
+  * `--xdebug` will enable Xdebug. To switch off Xdebug run this command again without the `--xdebug` option.
+  * `--mutagen` will set up file sharing using [Mutagen](https://mutagen.io/) if installed. Note that the Mutagen Beta version is required.
+  * `--docker-sync` will set up file sharing using [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/).
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.
