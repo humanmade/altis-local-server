@@ -75,8 +75,7 @@ Import files from content/uploads directly to s3:
 EOT
 			)
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
-			->addOption( 'docker-sync', null, InputOption::VALUE_NONE, 'Use docker-sync file sharing.' )
-			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Use mutagen file sharing.' );
+			->addOption( 'mutagen', null, InputOption::VALUE_OPTIONAL, 'Toggle mutagen file sharing.', 'on' );
 	}
 
 	/**
@@ -114,7 +113,6 @@ EOT
 
 		// Collect args to pass to the docker compose file generator.
 		$docker_compose_args = [
-			'docker-sync' => false,
 			'mutagen' => false,
 		];
 
@@ -123,21 +121,22 @@ EOT
 			$docker_compose_args['xdebug'] = $input->getOption( 'xdebug' );
 		}
 
-		// Check docker-sync option or presence of docker-sync.yml.
-		if ( $input->hasParameterOption( '--docker-sync' ) || $this->has_docker_sync_file() ) {
-			$docker_compose_args['docker-sync'] = true;
-		}
-
 		// Use mutagen if available.
 		if ( $input->hasParameterOption( '--mutagen' ) || $this->has_mutagen_file() ) {
-			if ( $this->is_mutagen_installed() ) {
-				// Prevent using both mutagen adn docker-sync - just in case.
-				$docker_compose_args['docker-sync'] = false;
-				$docker_compose_args['mutagen'] = true;
+			if ( $input->getOption( 'mutagen' ) === 'off' ) {
+				unlink( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml' );
+				$output->writeln( '<info>Deactivating Mutagen file sharing.</>' );
 			} else {
-				$output->writeln( '<error>Mutagen Beta is not installed.</>' );
-				$output->writeln( '<info>For instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
-				return 1;
+				if ( $this->is_mutagen_installed() ) {
+					$docker_compose_args['mutagen'] = true;
+					// Create stub mutagen config file so we know when to use the mutagen compose command.
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
+					file_put_contents( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml', '' );
+				} else {
+					$output->writeln( '<error>Mutagen Beta is not installed.</>' );
+					$output->writeln( '<info>For installation instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
+					return 1;
+				}
 			}
 		}
 
@@ -199,21 +198,6 @@ EOT
 	 */
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
-
-		if ( $input->hasParameterOption( '--docker-sync' ) || $this->has_docker_sync_file() ) {
-			$sync = new Process( 'docker-sync start', 'vendor' );
-			// Might need to download the docker-sync container so extend this beyond default 60s.
-			$sync->setTimeout( 1200 );
-			$sync->setTty( true );
-			$sync_failed = $sync->run( function ( $type, $buffer ) {
-				echo $buffer;
-			} );
-			if ( $sync_failed ) {
-				$output->writeln( '<error>Could not start docker-sync. Please ensure it is installed and available in your PATH.</>' );
-				$output->writeln( '<info>For installation instructions see https://docker-sync.readthedocs.io/en/latest/getting-started/installation.html.</>' );
-				return $sync_failed;
-			}
-		}
 
 		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
@@ -306,13 +290,6 @@ EOT
 			echo $buffer;
 		} );
 
-		if ( $this->has_docker_sync_file() ) {
-			$sync = new Process( 'docker-sync stop', 'vendor' );
-			$sync->run( function ( $type, $buffer ) {
-				echo $buffer;
-			} );
-		}
-
 		if ( $return_val === 0 ) {
 			$output->writeln( '<info>Stopped.</>' );
 		} else {
@@ -347,15 +324,6 @@ EOT
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
-
-		// Docker sync service.
-		if ( $this->has_docker_sync_file() ) {
-			$sync = new Process( 'docker-sync clean', 'vendor' );
-			$sync->run( function ( $type, $buffer ) {
-				echo $buffer;
-			} );
-			unlink( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-sync.yml' );
-		}
 
 		// Remove mutagen file.
 		if ( $this->has_mutagen_file() ) {
@@ -614,33 +582,6 @@ EOT;
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
 			$docker_compose->get_yaml()
 		);
-
-		// Put docker-sync.yml config in place if requested.
-		if ( $args['docker-sync'] ) {
-			$sync_name = 'app-sync-' . $this->get_project_subdomain();
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
-			file_put_contents(
-				getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-sync.yml',
-				Yaml::dump( [
-					'version' => '2',
-					'options' => [
-						'verbose' => true,
-					],
-					'syncs' => [
-						$sync_name => [
-							'src' => '..',
-							'sync_userid' => 82, // www-data.
-							'sync_groupid' => 82,
-							'sync_excludes' => [
-								'.DS_Store',
-								'.git',
-								'node_modules',
-							],
-						],
-					],
-				], 10, 2 )
-			);
-		}
 	}
 
 	/**
@@ -773,15 +714,6 @@ EOT;
 	}
 
 	/**
-	 * Check for docker-sync file.
-	 *
-	 * @return boolean
-	 */
-	protected function has_docker_sync_file() : bool {
-		return file_exists( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-sync.yml' );
-	}
-
-	/**
 	 * Check if Mutagen is installed.
 	 *
 	 * @return boolean
@@ -795,14 +727,6 @@ EOT;
 			$is_installed = ! empty( shell_exec( 'which mutagen' ) );
 		} else {
 			$is_installed = ! empty( shell_exec( 'where mutagen' ) );
-		}
-		// Create stub mutagen config file.
-		if ( $is_installed ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
-			file_put_contents(
-				getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml',
-				''
-			);
 		}
 		return $is_installed;
 	}

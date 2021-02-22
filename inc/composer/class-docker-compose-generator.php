@@ -626,15 +626,8 @@ class Docker_Compose_Generator {
 			],
 		];
 
-		// Handle docker-sync volume according to args.
-		if ( $this->args['docker-sync'] ?? false ) {
-			$config['volumes'][ 'app-sync-' . $this->project_name ] = [
-				'external' => true,
-			];
-		}
-
 		// Handle mutagen volume according to args.
-		if ( $this->args['mutagen'] ?? false ) {
+		if ( ! empty( $this->args['mutagen'] ) ) {
 			$config['volumes']['app'] = null;
 			$config['x-mutagen'] = [
 				'sync' => [
@@ -650,16 +643,15 @@ class Docker_Compose_Generator {
 							],
 						],
 						'mode' => 'two-way-resolved',
-						'ignore' => [
-							'paths' => [
-								'.DS_Store',
-								'.git',
-								'node_modules',
-							],
-						],
 					],
 				],
 			];
+			// Add ignored paths.
+			if ( ! empty( $this->get_config()['ignore-paths'] ) ) {
+				$config['x-mutagen']['sync']['app']['ignore'] = [
+					'paths' => array_values( (array) $this->get_config()['ignore-paths'] ),
+				];
+			}
 		}
 
 		return $config;
@@ -693,6 +685,7 @@ class Docker_Compose_Generator {
 			'elasticsearch' => true,
 			'kibana' => true,
 			'xray' => true,
+			'ignore-paths' => [],
 		];
 
 		return array_merge( $defaults, $config );
@@ -706,9 +699,6 @@ class Docker_Compose_Generator {
 	protected function get_app_volume() : string {
 		if ( $this->args['mutagen'] ) {
 			return 'app:/usr/src/app:delegated';
-		}
-		if ( $this->args['docker-sync'] ) {
-			return "app-sync-{$this->project_name}:/usr/src/app:nocopy";
 		}
 		return "{$this->root_dir}:/usr/src/app:delegated";
 	}

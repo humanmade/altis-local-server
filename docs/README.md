@@ -16,9 +16,9 @@ Navigate your shell to your project's directory. You should already have install
 
 ### Experimental Features
 
-You may find that file sharing performance is slow or server response times are slower than you would like especially on Windows or MacOS. Local Server provides two experimental features to work around this, Mutagen and `docker-sync`.
+You may find that file sharing performance or server response times are slower than you would like on Windows or MacOS. Local Server provides an experimental integration with [Mutagen](https://mutagen.io/) to resolve this.
 
-See the [troublshooting guide for detailed instructions on how to install and run these file sharing tools](./troubleshooting.md#file-sharing-is-too-slow).
+See the [Mutagen set up guide for detailed instructions on how to install and run it](./mutagen-file-sharing.md).
 
 ## Starting the Local Server
 
@@ -56,10 +56,9 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
-* `composer server start [--xdebug=<mode>] [--mutagen] [--docker-sync]` - Starts the containers.
+* `composer server start [--xdebug=<mode>] [--mutagen=(on|off)] [--docker-sync]` - Starts the containers.
   * `--xdebug` will enable Xdebug. To switch off Xdebug run this command again without the `--xdebug` option.
-  * `--mutagen` will set up file sharing using [Mutagen](https://mutagen.io/) if installed. Note that the Mutagen Beta version is required.
-  * `--docker-sync` will set up file sharing using [`docker-sync`](https://docker-sync.readthedocs.io/en/latest/).
+  * `--mutagen=(on|off)` will toggle file sharing using [Mutagen](https://mutagen.io/) if installed. Note that the Mutagen Beta version is required.
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.
