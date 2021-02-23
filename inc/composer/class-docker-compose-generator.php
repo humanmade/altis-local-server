@@ -627,7 +627,7 @@ class Docker_Compose_Generator {
 		];
 
 		// Handle mutagen volume according to args.
-		if ( ! empty( $this->args['mutagen'] ) ) {
+		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
 			$config['volumes']['app'] = null;
 			$config['x-mutagen'] = [
 				'sync' => [
@@ -697,7 +697,7 @@ class Docker_Compose_Generator {
 	 * @return string
 	 */
 	protected function get_app_volume() : string {
-		if ( $this->args['mutagen'] ) {
+		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
 			return 'app:/usr/src/app:delegated';
 		}
 		return "{$this->root_dir}:/usr/src/app:delegated";

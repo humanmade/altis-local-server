@@ -29,6 +29,19 @@ use Symfony\Component\Process\Process;
 class Command extends BaseCommand {
 
 	/**
+	 * Create settings handler for the command.
+	 */
+	public function __construct() {
+		$this->settings = new Settings( $this->get_project_subdomain(), [
+			'defaults' => [
+				'mutagen' => 'off',
+			],
+		] );
+
+		parent::__construct();
+	}
+
+	/**
 	 * Command configuration.
 	 *
 	 * @return void
@@ -38,7 +51,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, set, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -55,6 +68,10 @@ Restart the local development server:
 	restart [--xdebug=<mode>]     passing --xdebug restarts the server with xdebug enabled
 Destroy the local development server:
 	destroy
+Configure settings for the local development server:
+	set <key> <value>             available options:
+	                              - mutagen on|off
+	                                Setting to `on` enables Mutagen.io based file sharing.
 View status of the local development server:
 	status
 Run WP CLI command:
@@ -73,8 +90,7 @@ Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
-			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
-			->addOption( 'mutagen', null, InputOption::VALUE_OPTIONAL, 'Toggle mutagen file sharing.', 'on' );
+			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' );
 	}
 
 	/**
@@ -111,36 +127,22 @@ EOT
 		$subcommand = $input->getArgument( 'subcommand' );
 
 		// Collect args to pass to the docker compose file generator.
-		$docker_compose_args = [
-			'mutagen' => false,
-		];
+		$settings = $this->settings->get();
 
 		// If Xdebug switch is passed add to docker compose args.
 		if ( $input->hasParameterOption( '--xdebug' ) ) {
-			$docker_compose_args['xdebug'] = $input->getOption( 'xdebug' );
+			$settings['xdebug'] = $input->getOption( 'xdebug' );
 		}
 
 		// Use mutagen if available.
-		if ( $input->hasParameterOption( '--mutagen' ) || $this->has_mutagen_file() ) {
-			if ( $input->getOption( 'mutagen' ) === 'off' ) {
-				unlink( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml' );
-				$output->writeln( '<info>Deactivating Mutagen file sharing.</>' );
-			} else {
-				if ( $this->is_mutagen_installed() ) {
-					$docker_compose_args['mutagen'] = true;
-					// Create stub mutagen config file so we know when to use the mutagen compose command.
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
-					file_put_contents( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml', '' );
-				} else {
-					$output->writeln( '<error>Mutagen Beta is not installed.</>' );
-					$output->writeln( '<info>For installation instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
-					return 1;
-				}
-			}
+		if ( $settings['mutagen'] === 'on' && ! $this->is_mutagen_installed() ) {
+			$output->writeln( '<error>Mutagen Beta is not installed.</>' );
+			$output->writeln( '<info>For installation instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
+			return 1;
 		}
 
 		// Refresh the docker-compose.yml file.
-		$this->generate_docker_compose( $docker_compose_args );
+		$this->generate_docker_compose( $settings );
 
 		if ( $subcommand === 'start' ) {
 			return $this->start( $input, $output );
@@ -164,6 +166,8 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
 			return $this->import_uploads( $input, $output );
+		} elseif ( $subcommand === 'set' ) {
+			return $this->set( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -182,6 +186,8 @@ EOT
 		return [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'DOCKER_CLIENT_TIMEOUT' => 120,
+			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
 			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
 			'HOME' => getenv( 'HOME' ),
@@ -323,11 +329,6 @@ EOT
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
-
-		// Remove mutagen file.
-		if ( $this->has_mutagen_file() ) {
-			unlink( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml' );
-		}
 
 		if ( $return_val === 0 ) {
 			$output->writeln( '<error>Destroyed.</>' );
@@ -647,6 +648,48 @@ EOT;
 	}
 
 	/**
+	 * Control persistent settings.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
+	protected function set( InputInterface $input, OutputInterface $output ) {
+		$key = $input->getArgument( 'options' )[0] ?? null;
+		$value = $input->getArgument( 'options' )[1] ?? null;
+
+		if ( empty( $key ) ) {
+			$output->writeln( '<error>You must provide a key and a value, for example `composer server set mutagen on`</>' );
+			return 1;
+		}
+
+		if ( empty( $value ) ) {
+			$output->writeln( '<error>You must provide a value, for example `composer server set mutagen on`</>' );
+			return 1;
+		}
+
+		// Handle boolean values.
+		if ( in_array( $value, [ 'true', 'false' ], true ) ) {
+			$value = json_decode( $value );
+		}
+
+		// Save the value.
+		$this->settings->set( $key, $value );
+		$output->writeln( '<info>Settings updated!</>' );
+
+		// Prompt to restart.
+		$helper = $this->getHelper( 'question' );
+		$question = new ConfirmationQuestion( 'Would you like to restart the server to apply changes? [y/N] ', false );
+		if ( ! $helper->ask( $input, $output, $question ) ) {
+			return 0;
+		}
+
+		// Regenerate the docker-compose.yml.
+		$this->generate_docker_compose( $this->settings->get() );
+		$this->start( $input, $output );
+	}
+
+	/**
 	 * Pass a command through to the minio client.
 	 *
 	 * @param string $command The command for minio client.
@@ -731,15 +774,6 @@ EOT;
 	}
 
 	/**
-	 * Check if mutagen usage has been activated.
-	 *
-	 * @return boolean
-	 */
-	protected function has_mutagen_file() : bool {
-		return file_exists( getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . '.mutagen.yml' );
-	}
-
-	/**
 	 * Get the docker compose command to use.
 	 *
 	 * If Mutagen is active it is used for file sharing by default.
@@ -749,7 +783,7 @@ EOT;
 	 */
 	protected function get_compose_command( string $command = '' ) : string {
 		return sprintf( '%s %s',
-			$this->has_mutagen_file() ? 'mutagen compose' : 'docker-compose',
+			$this->is_mutagen_installed() ? 'mutagen compose' : 'docker-compose',
 			$command
 		);
 	}
