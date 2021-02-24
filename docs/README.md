@@ -56,12 +56,12 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
-* `composer server start [--xdebug=<mode>]` - Starts the containers.
-  * `--xdebug` will enable Xdebug. To switch off Xdebug run this command again without the `--xdebug` option.
+* `composer server start [--xdebug=<mode>] [--mutagen]` - Starts the containers.
+  * `--xdebug=<mode>` will enable Xdebug. The `mode` is optional and defaults to `debug`. Available values are `off`, `develop`, `debug`, `profile`, `coverage`, `gcstats` and `trace`.
+  * `--mutagen` will enable Mutagen for container file sharing.
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.
-* `composer server set <key> <value>` - Sets an available setting.
 * `composer server status` - Displays the status of all containers.
 * `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server shell` - Logs in to the PHP container.
@@ -73,14 +73,6 @@ The subdomain used for the project can be configured via the `modules.local-serv
   * `composer server db sequel` - Opens a connection to the database in [Sequel Pro](https://sequelpro.com).
 * `composer server import-uploads` - Syncs files from `content/uploads` to the s3 container.
 
-## Settings
-
-Settings are persistent for your project and environment and are controlled using the `composer server set` command.
-
-Available settings are:
-
-- `mutagen on|off`<br />
-   If set to "on" this will enable Mutagen based file sharing which can improve the performance of Local Server on Windows and Mac hosts. See the [Mutagen guide for installation and set up instructions](./mutagen-file-sharing.md).
 ## Configuring the PHP Version
 
 Local Server currently defaults to PHP 7.2. In advance of the PHP 7.4 upgrade coming soon for all Altis sites you can opt-in to using PHP 7.4 for your local environment ahead of time for testing purposes.

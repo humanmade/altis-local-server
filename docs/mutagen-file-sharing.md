@@ -34,16 +34,10 @@ For all other operating systems check the [beta release assets list for the appr
 Once installed you can set Mutagen up by running:
 
 ```
-composer server set mutagen on
-# Answer "y" to the prompt to restart the server.
+composer server start --mutagen
 ```
 
-If you find that there are issues or problems with using Mutagen you can deactivate it by running:
-
-```
-composer server set mutagen off
-# Answer "y" to the prompt to restart the server.
-```
+If you find that there are issues or problems with using Mutagen you can deactivate it by running the `start` command again without the `--mutagen` flag.
 
 ## Configuring Shared Files
 
