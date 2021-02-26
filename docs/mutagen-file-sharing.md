@@ -37,6 +37,8 @@ Once installed you can set Mutagen up by running:
 composer server start --mutagen
 ```
 
+After installing Mutagen and running `composer server start --mutagen` for the first time, the Mutagen container will be built and Mutagen will perform an initial synchronization. This may take several minutes depending on the size of your project.
+
 If you find that there are issues or problems with using Mutagen you can deactivate it by running the `start` command again without the `--mutagen` flag.
 
 ## Configuring Shared Files
@@ -52,10 +54,10 @@ If you have no need for huge `node_modules` directories for example to be shared
 			"modules": {
 				"local-server": {
 					"ignore-paths": [
-                        ".git",
-                        "node_modules",
-                        ".DS_Store"
-                    ]
+						".git",
+						"node_modules",
+						".DS_Store"
+					]
 				}
 			}
 		}
