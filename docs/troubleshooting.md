@@ -52,3 +52,10 @@ sysctl -w vm.max_map_count=262144
 ## Windows 10 Home Edition
 
 Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
+
+
+## File sharing is too slow
+
+When using Windows or MacOS on projects with a lot of files, or a lot of file churn such as frequently changing statically built files, the containers can experience a delay in receiving the updated files. This can make development cumbersome.
+
+See the [Mutagen file sharing set up guide to resolve this issue](./mutagen-file-sharing.md).

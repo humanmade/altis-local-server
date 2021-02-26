@@ -38,7 +38,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, set, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -47,8 +47,11 @@ class Command extends BaseCommand {
 Run the local development server.
 
 Default command - start the local development server:
-	start [--xdebug=<mode>]       passing --xdebug starts the server with xdebug enabled
+	start [--xdebug=<mode>] [--mutagen]
+	                              Passing --xdebug starts the server with xdebug enabled
 	                              optionally set the xdebug mode by assigning a value.
+	                              Passing --mutagen will start the server using Mutagen
+	                              for file sharing.
 Stop the local development server:
 	stop
 Restart the local development server:
@@ -73,7 +76,8 @@ Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
-			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' );
+			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
+			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Start the server with Mutagen file sharing' );
 	}
 
 	/**
@@ -110,15 +114,29 @@ EOT
 		$subcommand = $input->getArgument( 'subcommand' );
 
 		// Collect args to pass to the docker compose file generator.
-		$docker_compose_args = [];
+		$settings = [
+			'xdebug' => 'off',
+			'mutagen' => 'off',
+		];
 
 		// If Xdebug switch is passed add to docker compose args.
 		if ( $input->hasParameterOption( '--xdebug' ) ) {
-			$docker_compose_args['xdebug'] = $input->getOption( 'xdebug' );
+			$settings['xdebug'] = $input->getOption( 'xdebug' );
+		}
+
+		// Use mutagen if available.
+		if ( $input->hasParameterOption( '--mutagen' ) ) {
+			if ( $this->is_mutagen_installed() ) {
+				$settings['mutagen'] = 'on';
+			} else {
+				$output->writeln( '<error>Mutagen Beta is not installed.</>' );
+				$output->writeln( '<info>For installation instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
+				return 1;
+			}
 		}
 
 		// Refresh the docker-compose.yml file.
-		$this->generate_docker_compose( $docker_compose_args );
+		$this->generate_docker_compose( $settings );
 
 		if ( $subcommand === 'start' ) {
 			return $this->start( $input, $output );
@@ -160,8 +178,11 @@ EOT
 		return [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'DOCKER_CLIENT_TIMEOUT' => 120,
+			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
 			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
+			'HOME' => getenv( 'HOME' ),
 		];
 	}
 
@@ -189,7 +210,7 @@ EOT
 
 		$env = $this->get_env();
 
-		$compose = new Process( 'docker-compose up -d --remove-orphans', 'vendor', $env );
+		$compose = new Process( $this->get_compose_command( 'up -d --remove-orphans' ), 'vendor', $env );
 		$compose->setTty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
@@ -256,7 +277,7 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$compose = new Process( 'docker-compose stop', 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'stop' ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -291,7 +312,7 @@ EOT
 
 		$output->writeln( '<error>Destroying...</>' );
 
-		$compose = new Process( 'docker-compose down -v --remove-orphans', 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'down -v --remove-orphans' ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -331,7 +352,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( "docker-compose restart $service", 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( "restart $service" ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -394,7 +415,7 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$has_stdout = ! posix_isatty( STDOUT );
-		if ( $this->is_linux() ) {
+		if ( self::is_linux() ) {
 			$user = posix_getuid();
 		} else {
 			$user = 'www-data';
@@ -671,7 +692,49 @@ EOT;
 	 *
 	 * @return boolean
 	 */
-	protected function is_linux() : bool {
+	public static function is_linux() : bool {
 		return in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true );
+	}
+
+	/**
+	 * Check if the current host operating system is Mac OS.
+	 *
+	 * @return boolean
+	 */
+	public static function is_macos() : bool {
+		return php_uname( 's' ) === 'Darwin';
+	}
+
+	/**
+	 * Check if Mutagen is installed.
+	 *
+	 * @return boolean
+	 */
+	protected function is_mutagen_installed() : bool {
+		static $is_installed;
+		if ( $is_installed !== null ) {
+			return $is_installed;
+		}
+		if ( self::is_linux() || self::is_macos() ) {
+			$is_installed = ! empty( shell_exec( 'which mutagen' ) );
+		} else {
+			$is_installed = ! empty( shell_exec( 'where mutagen' ) );
+		}
+		return $is_installed;
+	}
+
+	/**
+	 * Get the docker compose command to use.
+	 *
+	 * If Mutagen is active it is used for file sharing by default.
+	 *
+	 * @param string $command The command to append to the root compose command.
+	 * @return string
+	 */
+	protected function get_compose_command( string $command = '' ) : string {
+		return sprintf( '%s %s',
+			$this->is_mutagen_installed() ? 'mutagen compose' : 'docker-compose',
+			$command
+		);
 	}
 }
