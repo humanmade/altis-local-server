@@ -523,6 +523,7 @@ EOT
 <info>Port</info>:           ${connection_data['PORT']}
 
 <comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
+<comment>MySQL link</comment>:     mysql://${connection_data['MYSQL_USER']}:${connection_data['MYSQL_PASSWORD']}@${connection_data['HOST']}:${connection_data['PORT']}/${connection_data['MYSQL_DATABASE']}
 
 EOT;
 				$output->write( $db_info );
