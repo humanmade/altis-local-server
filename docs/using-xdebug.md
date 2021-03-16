@@ -2,7 +2,7 @@
 
 Bugs are an inevitability of writing code and so Local Server provides an easy way to enable [Xdebug](https://xdebug.org/) when you need it.
 
-Xdebug is _not enabled by default_ because it can slow PHP down considerably. This could make you less productive depending on the work you're doing.
+Xdebug is installed but _not enabled by default_ because it can slow PHP down considerably. This could make you less productive depending on the work you're doing.
 
 ## Activating Xdebug
 
@@ -21,6 +21,8 @@ You can start the server again without the `--xdebug` option at any time to deac
 ```
 composer server
 ```
+
+Note that the Xdebug extension will still be installed but it will no longer be active.
 
 ## Setting the Xdebug Mode
 
