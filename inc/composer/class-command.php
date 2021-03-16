@@ -70,6 +70,7 @@ Database commands:
 	db                            Log into MySQL on the Database server
 	db sequel                     Generates an SPF file for Sequel Pro
 	db info                       Prints out Database connection details
+	db exec -- "<query>"          Run and output the result of a SQL query.
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 Import files from content/uploads directly to s3:
@@ -549,6 +550,18 @@ EOT;
 					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) installed to use this command</error>' );
 				}
 
+				break;
+			case 'exec':
+				$query = $input->getArgument( 'options' )[1] ?? null;
+				if ( empty( $query ) ) {
+					$output->writeln( '<error>No query specified: pass a query via `db exec -- "sql query..."`</error>' );
+					break;
+				}
+				if ( substr( $query, -1 ) !== ';' ) {
+					$query = "$query;";
+				}
+				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress -e \"$query\"", $return_val );
 				break;
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
