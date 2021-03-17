@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:3.4.0-dev',
+			'image' => 'humanmade/altis-local-server-php:4.0.0-dev',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -147,11 +147,6 @@ class Docker_Compose_Generator {
 				'XDEBUG_MODE' => $this->args['xdebug'] ?? 'off',
 			],
 		];
-
-		// Opt in to PHP 7.4 usage.
-		if ( $this->get_config()['php'] === '7.4' ) {
-			$services['image'] = 'humanmade/altis-local-server-php:4.0.0-alpha2-dev';
-		}
 
 		if ( $this->get_config()['elasticsearch'] ) {
 			$services['depends_on']['elasticsearch'] = [
@@ -679,7 +674,6 @@ class Docker_Compose_Generator {
 
 		$config = ( $composer_json['extra']['altis']['modules'][ $module ] ?? [] );
 		$defaults = [
-			'php' => '7.2',
 			'analytics' => true,
 			'cavalcade' => true,
 			'elasticsearch' => true,

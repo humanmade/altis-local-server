@@ -72,23 +72,3 @@ The subdomain used for the project can be configured via the `modules.local-serv
   * `composer server db info` - Print MySQL connection details.
   * `composer server db sequel` - Opens a connection to the database in [Sequel Pro](https://sequelpro.com).
 * `composer server import-uploads` - Syncs files from `content/uploads` to the s3 container.
-
-## Configuring the PHP Version
-
-Local Server currently defaults to PHP 7.2. In advance of the PHP 7.4 upgrade coming soon for all Altis sites you can opt-in to using PHP 7.4 for your local environment ahead of time for testing purposes.
-
-To do this add the following your configuration:
-
-```json
-{
-	"extra": {
-		"altis": {
-			"modules": {
-				"local-server": {
-					"php": "7.4"
-				}
-			}
-		}
-	}
-}
-```
