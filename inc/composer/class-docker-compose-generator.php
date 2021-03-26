@@ -196,7 +196,7 @@ class Docker_Compose_Generator {
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.1.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.2.1',
 				'networks' => [
 					'proxy',
 					'default',
