@@ -196,7 +196,7 @@ class Docker_Compose_Generator {
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.2.1',
+				'image' => 'humanmade/altis-local-server-nginx:3.3.0',
 				'networks' => [
 					'proxy',
 					'default',
@@ -217,6 +217,12 @@ class Docker_Compose_Generator {
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
+				],
+				'environment' => [
+					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
+					'GZIP_STATUS' => 'on',
+					// Increase read response timeout when debugging.
+					'READ_TIMEOUT' => ( $this->args['xdebug'] ?? 'off' ) !== 'off' ? '9000s' : '60s',
 				],
 			],
 		];
