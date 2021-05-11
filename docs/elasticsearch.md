@@ -39,11 +39,11 @@ The ElasticSearch hostname is not directly exposed however you can find the dyna
 
 You should see output similar to this:
 
-<pre><code>
-project_elasticsearch_1   /elastic-entrypoint.sh ela ...   Up (healthy)   <strong>0.0.0.0:32871</strong>->9200/tcp, 9300/tcp
-</code></pre>
+```
+project_elasticsearch_1   /elastic-entrypoint.sh ela ...   Up (healthy)   0.0.0.0:32871->9200/tcp, 9300/tcp
+```
 
-Copy the mapped IP and port (highlighted in bold above) and use it to query ElasticSearch directly:
+Copy the mapped IP and port (`0.0.0.0:32871` in the example above) and use it to query ElasticSearch directly:
 
 ```
 curl -XGET http://0.0.0.0:32871
