@@ -659,7 +659,7 @@ class Docker_Compose_Generator {
 	 * @return bool
 	 */
 	protected function is_arm64() : bool {
-		return strpos( php_uname(), 'aarch64' ) !== false;
+		return php_uname( 'm' ) === 'aarch64';
 	}
 
 	/**
