@@ -60,7 +60,7 @@ The subdomain used for the project can be configured via the `modules.local-serv
   * `--xdebug=<mode>` will enable Xdebug. The `mode` is optional and defaults to `debug`. Available values are `off`, `develop`, `debug`, `profile`, `coverage`, `gcstats` and `trace`.
   * `--mutagen` will enable Mutagen for container file sharing.
 * `composer server stop` - Stops the containers.
-* `composer server restart` - Restart the containers.
+* `composer server restart [<service>]` - Restart a given container, or all containers if none is provided. Available values are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server destroy` - Stops and destroys all containers.
 * `composer server status` - Displays the status of all containers.
 * `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
