@@ -146,6 +146,7 @@ EOT
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 			'PATH' => getenv( 'PATH' ),
 			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
+			'PHP_IMAGE' => getenv( 'PHP_IMAGE' ) ?: 'humanmade/altis-local-server-php:3.2.0',
 		];
 	}
 
