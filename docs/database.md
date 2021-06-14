@@ -19,6 +19,13 @@ Host:           0.0.0.0
 Port:           32775
 
 Version:        5.7.26-1debian9
+MySQL link:     mysql://wordpress:wordpress@0.0.0.0:32775/wordpress
 ```
 
 Use `composer server db sequel` to open the database in Sequel Pro. This command can only be run under MacOS and requires [Sequel Pro](https://www.sequelpro.com/) to be installed on your computer.
+
+Use `composer server db exec -- "<command>"` to execute and output the results of an arbitrary SQL command:
+
+```sh
+composer server db exec -- 'select id,post_title from wordpress.wp_posts limit 2;'
+```

@@ -50,17 +50,26 @@ class Docker_Compose_Generator {
 	protected $hostname;
 
 	/**
+	 * An array of data passed to
+	 *
+	 * @var array
+	 */
+	protected $args;
+
+	/**
 	 * Create and configure the generator.
 	 *
 	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
-	public function __construct( string $project_name, string $root_dir, string $tld ) {
+	public function __construct( string $project_name, string $root_dir, string $tld, array $args = [] ) {
 		$this->project_name = $project_name;
 		$this->root_dir = $root_dir;
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
 		$this->tld = $tld;
 		$this->hostname = $this->project_name . '.' . $this->tld;
+		$this->args = $args;
 	}
 
 	/**
@@ -69,7 +78,6 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_php_reusable() : array {
-		$image = getenv( 'PHP_IMAGE' ) ?: 'humanmade/altis-local-server-php:3.2.0';
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -83,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => $image,
+			'image' => 'humanmade/altis-local-server-php:4.0.0-dev',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -96,7 +104,7 @@ class Docker_Compose_Generator {
 				"proxy:s3-{$this->hostname}",
 			],
 			'volumes' => [
-				"{$this->root_dir}:/usr/src/app:delegated",
+				$this->get_app_volume(),
 				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
 				'socket:/var/run/php-fpm',
 			],
@@ -121,18 +129,22 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => "https://{$this->tld}/",
+				'S3_UPLOADS_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->tld}/",
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
-				'S3_UPLOADS_BUCKET_URL' => "https://s3-{$this->hostname}",
+				'S3_UPLOADS_BUCKET_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}",
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
-				'TACHYON_URL' => "https://{$this->hostname}/tachyon",
+				'TACHYON_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->hostname}/tachyon",
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
-				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
-				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
-				'PHP_XDEBUG_ENABLED' => null,
+				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://pinpoint-{$this->hostname}",
+				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://cognito-{$this->hostname}",
+				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
+				'XDEBUG_CONFIG' => sprintf( 'client_host=%s', Command::is_linux() ? '172.17.0.1' : 'host.docker.internal' ),
 				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
+				'XDEBUG_SESSION' => $this->hostname,
+				// Set XDebug mode, fall back to "off" to avoid any performance hits.
+				'XDEBUG_MODE' => $this->args['xdebug'] ?? 'off',
 			],
 		];
 
@@ -184,7 +196,7 @@ class Docker_Compose_Generator {
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.1.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.3.0',
 				'networks' => [
 					'proxy',
 					'default',
@@ -193,7 +205,7 @@ class Docker_Compose_Generator {
 					'php',
 				],
 				'volumes' => [
-					"{$this->root_dir}:/usr/src/app:delegated",
+					$this->get_app_volume(),
 					'socket:/var/run/php-fpm',
 				],
 				'ports' => [
@@ -205,6 +217,12 @@ class Docker_Compose_Generator {
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
+				],
+				'environment' => [
+					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
+					'GZIP_STATUS' => 'on',
+					// Increase read response timeout when debugging.
+					'READ_TIMEOUT' => ( $this->args['xdebug'] ?? 'off' ) !== 'off' ? '9000s' : '60s',
 				],
 			],
 		];
@@ -312,9 +330,9 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'http.max_content_length=10mb',
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
-					// network.host is set in the default config)
+					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB
+					// Reduce from default of 1GB of memory to 512MB.
 					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
 				],
 			],
@@ -375,7 +393,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
+					'MINIO_DOMAIN' => 's3.localhost,' . $this->tld . ',s3',
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ACCESS_KEY' => 'admin',
 					'MINIO_SECRET_KEY' => 'password',
@@ -441,7 +459,7 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => "https://{$this->tld}/",
+					'AWS_S3_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->tld}/",
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
@@ -588,7 +606,8 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
 
-		return [
+		// Default compose configuration.
+		$config = [
 			'version' => '2.3',
 			'services' => $services,
 			'networks' => [
@@ -607,6 +626,36 @@ class Docker_Compose_Generator {
 				'socket' => null,
 			],
 		];
+
+		// Handle mutagen volume according to args.
+		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
+			$config['volumes']['app'] = null;
+			$config['x-mutagen'] = [
+				'sync' => [
+					'app' => [
+						'alpha' => $this->root_dir,
+						'beta' => 'volume://app',
+						'configurationBeta' => [
+							'permissions' => [
+								'defaultOwner' => 'id:82',
+								'defaultGroup' => 'id:82',
+								'defaultFileMode' => '0664',
+								'defaultDirectoryMode' => '0775',
+							],
+						],
+						'mode' => 'two-way-resolved',
+					],
+				],
+			];
+			// Add ignored paths.
+			if ( ! empty( $this->get_config()['ignore-paths'] ) ) {
+				$config['x-mutagen']['sync']['app']['ignore'] = [
+					'paths' => array_values( (array) $this->get_config()['ignore-paths'] ),
+				];
+			}
+		}
+
+		return $config;
 	}
 
 	/**
@@ -635,9 +684,22 @@ class Docker_Compose_Generator {
 			'cavalcade' => true,
 			'elasticsearch' => true,
 			'kibana' => true,
-			'xray' => false,
+			'xray' => true,
+			'ignore-paths' => [],
 		];
 
 		return array_merge( $defaults, $config );
+	}
+
+	/**
+	 * Get the main application volume adjusted for sharing config options.
+	 *
+	 * @return string
+	 */
+	protected function get_app_volume() : string {
+		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
+			return 'app:/usr/src/app:delegated';
+		}
+		return "{$this->root_dir}:/usr/src/app:delegated";
 	}
 }
