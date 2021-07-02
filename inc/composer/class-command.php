@@ -3,6 +3,9 @@
  * Local Server Composer Command.
  *
  * phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
+ * phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.system_calls_exec
+ * phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.system_calls_shell_exec
+ * phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.system_calls_passthru
  *
  * @package altis/local-server
  */
@@ -13,7 +16,9 @@ use Composer\Command\BaseCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
 
 /**
@@ -33,7 +38,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, set, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -42,11 +47,15 @@ class Command extends BaseCommand {
 Run the local development server.
 
 Default command - start the local development server:
-	start [--xdebug]              passing --xdebug starts the server with xdebug enabled
+	start [--xdebug=<mode>] [--mutagen]
+	                              Passing --xdebug starts the server with xdebug enabled
+	                              optionally set the xdebug mode by assigning a value.
+	                              Passing --mutagen will start the server using Mutagen
+	                              for file sharing.
 Stop the local development server:
 	stop
 Restart the local development server:
-	restart [--xdebug]            passing --xdebug restarts the server with xdebug enabled
+	restart [--xdebug=<mode>]     passing --xdebug restarts the server with xdebug enabled
 Destroy the local development server:
 	destroy
 View status of the local development server:
@@ -61,13 +70,15 @@ Database commands:
 	db                            Log into MySQL on the Database server
 	db sequel                     Generates an SPF file for Sequel Pro
 	db info                       Prints out Database connection details
+	db exec -- "<query>"          Run and output the result of a SQL query.
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
-			->addOption( 'xdebug' );
+			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
+			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Start the server with Mutagen file sharing' );
 	}
 
 	/**
@@ -80,14 +91,14 @@ EOT
 	}
 
 	/**
-	 * Get the common docker-composer command prefix.
+	 * Get the common docker-compose command prefix.
 	 *
 	 * @return string
 	 */
 	private function get_base_command_prefix() : string {
 		return sprintf(
 			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
-			'vendor/altis/local-server/docker',
+			'vendor',
 			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain()
 		);
@@ -102,6 +113,31 @@ EOT
 	 */
 	protected function execute( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'subcommand' );
+
+		// Collect args to pass to the docker compose file generator.
+		$settings = [
+			'xdebug' => 'off',
+			'mutagen' => 'off',
+		];
+
+		// If Xdebug switch is passed add to docker compose args.
+		if ( $input->hasParameterOption( '--xdebug' ) ) {
+			$settings['xdebug'] = $input->getOption( 'xdebug' );
+		}
+
+		// Use mutagen if available.
+		if ( $input->hasParameterOption( '--mutagen' ) ) {
+			if ( $this->is_mutagen_installed() ) {
+				$settings['mutagen'] = 'on';
+			} else {
+				$output->writeln( '<error>Mutagen Beta is not installed.</>' );
+				$output->writeln( '<info>For installation instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
+				return 1;
+			}
+		}
+
+		// Refresh the docker-compose.yml file.
+		$this->generate_docker_compose( $settings );
 
 		if ( $subcommand === 'start' ) {
 			return $this->start( $input, $output );
@@ -143,8 +179,11 @@ EOT
 		return [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'DOCKER_CLIENT_TIMEOUT' => 120,
+			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
 			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
+			'HOME' => getenv( 'HOME' ),
 		];
 	}
 
@@ -158,7 +197,7 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( true );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
@@ -171,12 +210,8 @@ EOT
 		}
 
 		$env = $this->get_env();
-		if ( $input->getOption( 'xdebug' ) ) {
-			$env['PHP_IMAGE'] = 'humanmade/altis-local-server-php:3.2.0-dev';
-			$env['PHP_XDEBUG_ENABLED'] = true;
-		}
 
-		$compose = new Process( 'docker-compose up -d', 'vendor/altis/local-server/docker', $env );
+		$compose = new Process( $this->get_compose_command( 'up -d --remove-orphans', true ), 'vendor', $env );
 		$compose->setTty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
@@ -243,11 +278,13 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$proxy = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
-		$proxy->run();
-
-		$compose = new Process( 'docker-compose stop', 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'stop', true ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		$proxy = new Process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
+		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
@@ -268,13 +305,21 @@ EOT
 	 * @return int
 	 */
 	protected function destroy( InputInterface $input, OutputInterface $output ) {
+		$helper = $this->getHelper( 'question' );
+		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server? [y/N] ', false );
+		if ( ! $helper->ask( $input, $output, $question ) ) {
+			return false;
+		}
+
 		$output->writeln( '<error>Destroying...</>' );
 
-		$proxy = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
-		$proxy->run();
-
-		$compose = new Process( 'docker-compose down -v', 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'down -v --remove-orphans', true ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
+
+		$proxy = new Process( $this->get_compose_command( '-f proxy.yml down -v' ), 'vendor/altis/local-server/docker' );
+		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
@@ -297,8 +342,10 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = new Process( 'docker-compose restart', 'vendor/altis/local-server/docker', $this->get_env() );
-		$proxy->run();
+		$proxy = new Process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+		$proxy->run( function ( $type, $buffer ) {
+			echo $buffer;
+		} );
 
 		$options = $input->getArgument( 'options' );
 		if ( isset( $options[0] ) ) {
@@ -306,7 +353,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( "docker-compose restart $service", 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( "restart $service", true ), 'vendor', $this->get_env() );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -354,11 +401,16 @@ EOT
 		$lines = exec( 'tput lines' );
 		$has_stdin = ! posix_isatty( STDIN );
 		$has_stdout = ! posix_isatty( STDOUT );
-
+		if ( self::is_linux() ) {
+			$user = posix_getuid();
+		} else {
+			$user = 'www-data';
+		}
 		$command = sprintf(
-			'docker exec -e COLUMNS=%d -e LINES=%d -u www-data %s %s %s %s',
+			'docker exec -e COLUMNS=%d -e LINES=%d -u %s %s %s %s %s',
 			$columns,
 			$lines,
+			$user,
 			( ! $has_stdin && ! $has_stdout ) && $program === 'wp' ? '-ti' : '', // forward wp-cli's isPiped detection.
 			$container_id,
 			$program ?? '',
@@ -378,7 +430,7 @@ EOT
 	 * @return int
 	 */
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'ps' ), 'vendor', $this->get_env() );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -393,7 +445,7 @@ EOT
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor/altis/local-server/docker', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -412,7 +464,8 @@ EOT
 		$lines = exec( 'tput lines' );
 		$command_prefix = $this->get_base_command_prefix();
 		passthru( sprintf(
-			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash",
+			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d php /bin/bash",
+			$this->get_compose_command(),
 			$columns,
 			$lines
 		), $return_val );
@@ -435,7 +488,8 @@ EOT
 		$base_command_prefix = $this->get_base_command_prefix();
 
 		$base_command = sprintf(
-			"$base_command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			"$base_command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
+			$this->get_compose_command(),
 			$columns,
 			$lines
 		);
@@ -457,12 +511,13 @@ EOT
 <info>Port</info>:           ${connection_data['PORT']}
 
 <comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
+<comment>MySQL link</comment>:     mysql://${connection_data['MYSQL_USER']}:${connection_data['MYSQL_PASSWORD']}@${connection_data['HOST']}:${connection_data['PORT']}/${connection_data['MYSQL_DATABASE']}
 
 EOT;
 				$output->write( $db_info );
 				break;
 			case 'sequel':
-				if ( strpos( php_uname(), 'Darwin' ) === false ) {
+				if ( php_uname( 's' ) !== 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
 				}
@@ -483,6 +538,18 @@ EOT;
 				}
 
 				break;
+			case 'exec':
+				$query = $input->getArgument( 'options' )[1] ?? null;
+				if ( empty( $query ) ) {
+					$output->writeln( '<error>No query specified: pass a query via `db exec -- "sql query..."`</error>' );
+					break;
+				}
+				if ( substr( $query, -1 ) !== ';' ) {
+					$query = "$query;";
+				}
+				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress -e \"$query\"", $return_val );
+				break;
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
@@ -496,6 +563,21 @@ EOT;
 	}
 
 	/**
+	 * Generates the docker-compose.yml file.
+	 *
+	 * @param array $args An optional array of arguments to pass through to the generator.
+	 * @return void
+	 */
+	protected function generate_docker_compose( array $args = [] ) : void {
+		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $args );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
+		file_put_contents(
+			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
+			$docker_compose->get_yaml()
+		);
+	}
+
+	/**
 	 * Return the Database connection details.
 	 *
 	 * @return array
@@ -506,7 +588,8 @@ EOT;
 		$lines = exec( 'tput lines' );
 
 		$base_command = sprintf(
-			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
+			$this->get_compose_command(),
 			$columns,
 			$lines
 		);
@@ -531,7 +614,11 @@ EOT;
 			return in_array( $key, $keys, true ) ? $value : false;
 		} );
 
-		$db_container_id = shell_exec( "$command_prefix docker-compose ps -q db" );
+		$db_container_id = shell_exec( sprintf(
+			'%s %s',
+			$command_prefix,
+			$this->get_compose_command( 'ps -q db' )
+		) );
 
 		// Retrieve the forwarded ports using Docker and the container ID.
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
@@ -605,4 +692,62 @@ EOT;
 
 		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
 	}
+
+	/**
+	 * Check if the current host operating system is Linux based.
+	 *
+	 * @return boolean
+	 */
+	public static function is_linux() : bool {
+		return in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true );
+	}
+
+	/**
+	 * Check if the current host operating system is Mac OS.
+	 *
+	 * @return boolean
+	 */
+	public static function is_macos() : bool {
+		return php_uname( 's' ) === 'Darwin';
+	}
+
+	/**
+	 * Check if Mutagen is installed.
+	 *
+	 * @return boolean
+	 */
+	protected function is_mutagen_installed() : bool {
+		static $is_installed;
+		if ( $is_installed !== null ) {
+			return $is_installed;
+		}
+		if ( self::is_linux() || self::is_macos() ) {
+			$is_installed = ! empty( shell_exec( 'which mutagen' ) );
+		} else {
+			$is_installed = ! empty( shell_exec( 'where mutagen' ) );
+		}
+		return $is_installed;
+	}
+
+	/**
+	 * Get the docker compose command to use.
+	 *
+	 * If Mutagen is active it is used for file sharing by default.
+	 *
+	 * @param string $command The command to append to the root compose command.
+	 * @param bool $mutagen Whether to use Mutagen's compose wrapper.
+	 * @return string
+	 */
+	protected function get_compose_command( string $command = '', bool $mutagen = false ) : string {
+		static $default_command;
+		if ( empty( $default_command ) ) {
+			exec( 'docker compose', $output, $ret );
+			$default_command = $ret === 0 ? 'docker compose' : 'docker-compose';
+		}
+		return sprintf( '%s %s',
+			$this->is_mutagen_installed() && $mutagen ? 'mutagen compose' : $default_command,
+			$command
+		);
+	}
+
 }
