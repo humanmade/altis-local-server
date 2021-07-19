@@ -720,6 +720,24 @@ EOT;
 	}
 
 	/**
+	 * Check if the current host is Windows.
+	 *
+	 * @return boolean
+	 */
+	public static function is_windows() : bool {
+		return php_uname( 's' ) === 'Windows';
+	}
+
+	/**
+	 * Check if the current host is WSL.
+	 *
+	 * @return boolean
+	 */
+	public static function is_wsl() : bool {
+		return ! empty( $_ENV['WSL_INTEROP'] );
+	}
+
+	/**
 	 * Check if Mutagen is installed.
 	 *
 	 * @return boolean
