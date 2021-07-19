@@ -734,7 +734,7 @@ EOT;
 	 * @return boolean
 	 */
 	public static function is_wsl() : bool {
-		return ! empty( $_ENV['WSL_INTEROP'] );
+		return getenv( 'WSL_INTEROP' ) !== false;
 	}
 
 	/**
