@@ -58,10 +58,11 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
 
 ### VSCode
 
+1. Install a [PHP Debug extension](https://github.com/xdebug/vscode-php-debug)
 1. Open the debug tab (the bug icon on the menu sidebar).
-2. In the dropdown menu at the top of the left hand side bar choose "Add configuration".
-3. In the popup that appears select "PHP" as your environment.
-4. You will be taken a new file called `.vscode/launch.json` with the default settings:
+1. In the dropdown menu at the top of the left hand side bar choose "Add configuration".
+1. In the popup that appears select "PHP" as your environment.
+1. You will be taken a new file called `.vscode/launch.json` with the default settings:
    ```json
    {
      "version": "0.2.0",
@@ -78,12 +79,12 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
          "request": "launch",
          "program": "${file}",
          "cwd": "${fileDirname}",
-         "port": 9003,
+         "port": 9003
        }
      ]
    }
    ```
-5. Add the following `pathMappings` property to each configuration:
+1. Add the following `hostname` and `pathMappings` property to each configuration:
    ```json
    {
      "version": "0.2.0",
@@ -93,6 +94,7 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
          "type": "php",
          "request": "launch",
          "port": 9003,
+         "hostname": "0.0.0.0",
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }
@@ -104,6 +106,7 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
          "program": "${file}",
          "cwd": "${fileDirname}",
          "port": 9003,
+         "hostname": "0.0.0.0",
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }
@@ -111,7 +114,7 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
      ]
    }
    ```
-6. You are done, click the green play button to start the debug client.
+1. You are done, click the green play button to start the debug client.
 
 For more information on the available configuration options, including Xdebug settings, [view the VSCode Debugging documentation here](https://go.microsoft.com/fwlink/?linkid=830387).
 
