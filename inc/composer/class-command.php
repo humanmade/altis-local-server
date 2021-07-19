@@ -674,4 +674,14 @@ EOT;
 	protected function is_linux() : bool {
 		return in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true );
 	}
+
+	/**
+	 * Check if the current host is WSL.
+	 *
+	 * @return boolean
+	 */
+	public static function is_wsl() : bool {
+		return ! empty( $_ENV['WSL_INTEROP'] );
+	}
+
 }
