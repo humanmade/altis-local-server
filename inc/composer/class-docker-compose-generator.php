@@ -616,9 +616,8 @@ class Docker_Compose_Generator {
 			'networks' => [
 				'default' => null,
 				'proxy' => [
-					'external' => [
-						'name' => 'proxy',
-					],
+					'name' => 'proxy',
+					'external' => true,
 				],
 			],
 			'volumes' => [
