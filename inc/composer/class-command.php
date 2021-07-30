@@ -478,11 +478,19 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		$command_prefix = $this->get_base_command_prefix();
+
+		$php_container_id = shell_exec( sprintf(
+			'%s %s',
+			$command_prefix,
+			$this->get_compose_command( 'ps -q php' )
+		) );
+
 		passthru( sprintf(
-			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d php /bin/bash",
-			$this->get_compose_command(),
+			"$command_prefix %s exec -it -e COLUMNS=%d -e LINES=%d %s /bin/bash",
+			'docker',
 			$columns,
-			$lines
+			$lines,
+			trim( $php_container_id )
 		), $return_val );
 
 		return $return_val;
