@@ -5,7 +5,6 @@
 
 namespace Altis\Local_Server\Composer;
 
-use Exception;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -754,7 +753,9 @@ class Docker_Compose_Generator {
 
 		echo sprintf(
 			"The configured elasticsearch version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
 			$this->get_elasticsearch_version(),
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
 			implode( "\n  - ", $versions )
 		);
 		exit( 1 );
