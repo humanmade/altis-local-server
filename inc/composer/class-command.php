@@ -279,11 +279,15 @@ EOT
 		$output->writeln( '<info>Stopping...</>' );
 
 		$compose = new Process( $this->get_compose_command( 'stop', true ), 'vendor', $this->get_env() );
+		$compose->setTty( true );
+		$compose->setTimeout( 0 );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
 		$proxy = new Process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
+		$proxy->setTimeout( 0 );
+		$proxy->setTty( true );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
