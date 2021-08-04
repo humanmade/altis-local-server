@@ -5,6 +5,7 @@
 
 namespace Altis\Local_Server\Composer;
 
+use Exception;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -296,14 +297,25 @@ class Docker_Compose_Generator {
 	protected function get_service_elasticsearch() : array {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
 
-		$image_tag = '3.0.0';
-		if ( $this->get_elasticsearch_version() === 7 ) {
-			$image_tag = '4.0.0';
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'7' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'6.8' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6.3' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+		];
+
+		if ( ! in_array( $this->get_elasticsearch_version(), array_keys( $version_map ), true ) ) {
+			// phpcs:ignore
+			echo sprintf( 'Configured elasticsearch version %s is not supported', $this->get_elasticsearch_version() );
+			exit;
 		}
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
 
 		return [
 			'elasticsearch' => [
-				'image' => "humanmade/altis-local-server-elasticsearch:{$image_tag}",
+				'image' => $image,
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -355,10 +367,25 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_kibana() : array {
-		$image = 'blacktop/kibana:6.3';
+
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-kibana:1.1.0',
+			'7' => 'humanmade/altis-local-server-kibana:1.1.0',
+			'6.8' => 'blacktop/kibana:6.8',
+			'6' => 'blacktop/kibana:6.8',
+			'6.3' => 'blacktop/kibana:6.3',
+		];
+
+		if ( ! in_array( $this->get_elasticsearch_version(), array_keys( $version_map ), true ) ) {
+			// phpcs:ignore
+			echo sprintf( 'Configured elasticsearch version %s is not supported', $this->get_elasticsearch_version() );
+			exit;
+		}
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
+
 		$yml_file = 'kibana.yml';
-		if ( $this->get_elasticsearch_version() === 7 ) {
-			$image = 'humanmade/altis-local-server-kibana:1.0.0';
+		if ( version_compare( $this->get_elasticsearch_version(), '7', '>=' ) ) {
 			$yml_file = 'kibana-7.yml';
 		}
 
@@ -698,7 +725,7 @@ class Docker_Compose_Generator {
 		$defaults = [
 			'analytics' => true,
 			'cavalcade' => true,
-			'elasticsearch' => 6,
+			'elasticsearch' => '6',
 			'kibana' => true,
 			'xray' => true,
 			'ignore-paths' => [],
@@ -712,12 +739,12 @@ class Docker_Compose_Generator {
 	 *
 	 * @return int
 	 */
-	protected function get_elasticsearch_version() : int {
-		if ( is_int( $this->get_config()['elasticsearch'] ) ) {
-			return $this->get_config()['elasticsearch'];
+	protected function get_elasticsearch_version() : string {
+		if ( ! empty( $this->get_config()['elasticsearch'] ) ) {
+			return (string) $this->get_config()['elasticsearch'];
 		}
 
-		return 6;
+		return '6';
 	}
 
 	/**
