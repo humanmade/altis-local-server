@@ -305,11 +305,7 @@ class Docker_Compose_Generator {
 			'6.3' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
 		];
 
-		if ( ! in_array( $this->get_elasticsearch_version(), array_keys( $version_map ), true ) ) {
-			// phpcs:ignore
-			echo sprintf( 'Configured elasticsearch version %s is not supported', $this->get_elasticsearch_version() );
-			exit;
-		}
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
 
 		$image = $version_map[ $this->get_elasticsearch_version() ];
 
@@ -369,18 +365,14 @@ class Docker_Compose_Generator {
 	protected function get_service_kibana() : array {
 
 		$version_map = [
-			'7.10' => 'humanmade/altis-local-server-kibana:1.1.0',
-			'7' => 'humanmade/altis-local-server-kibana:1.1.0',
+			'7.10' => 'humanmade/altis-local-server-kibana:1.1.1',
+			'7' => 'humanmade/altis-local-server-kibana:1.1.1',
 			'6.8' => 'blacktop/kibana:6.8',
 			'6' => 'blacktop/kibana:6.8',
 			'6.3' => 'blacktop/kibana:6.3',
 		];
 
-		if ( ! in_array( $this->get_elasticsearch_version(), array_keys( $version_map ), true ) ) {
-			// phpcs:ignore
-			echo sprintf( 'Configured elasticsearch version %s is not supported', $this->get_elasticsearch_version() );
-			exit;
-		}
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
 
 		$image = $version_map[ $this->get_elasticsearch_version() ];
 
@@ -745,6 +737,27 @@ class Docker_Compose_Generator {
 		}
 
 		return '6';
+	}
+
+	/**
+	 * Check the configured Elasticsearch version in config.
+	 *
+	 * @param array $versions List of available version numbers.
+	 * @return void
+	 */
+	protected function check_elasticsearch_version( array $versions ) {
+		$versions = array_map( 'strval', $versions );
+		rsort( $versions );
+		if ( in_array( $this->get_elasticsearch_version(), $versions, true ) ) {
+			return;
+		}
+
+		echo sprintf(
+			"The configured elasticsearch version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+			$this->get_elasticsearch_version(),
+			implode( "\n  - ", $versions )
+		);
+		exit( 1 );
 	}
 
 	/**

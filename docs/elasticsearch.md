@@ -2,36 +2,68 @@
 
 ElasticSearch is an integral component of Altis, enabling enhanced search and relevancy as well as powering the analytics data query layer.
 
+## Available Versions
+
+Elasticsearch defaults to version 6.8 however you can change the version in your config:
+
+```json
+{
+	"extra": {
+		"altis": {
+			"modules": {
+				"local-server": {
+					"elasticsearch": "7.10"
+				}
+			}
+		}
+	}
+}
+```
+
+The current available versions are:
+
+- 7.10
+- 6.8 (default)
+- 6.3
+
+You can also use the major version on its own to get the latest minor version, for example "6" will resolve to version "6.8".
+
 ## Kibana
 
 Local Server provides [Kibana](https://www.elastic.co/products/kibana) out of the box, a powerful tool for viewing indexes, creating and debugging queries and more.
 
 Kibana is available at [`/kibana/`](internal://site/kibana/).
 
+The version will always match the current Elasticsearch version.
+
 ### Adding Index Patterns
 
-Before you can get started querying in Kibana you'll need to [add some index patterns at `/kibana/app/kibana#/management/kibana/index/`](internal://site/kibana/app/kibana#/management/kibana/index/).
+Before you can get started querying in Kibana you will need to add some index patterns. This is slightly different depending on your current version.
 
-![Kibana Index Patterns UI](./assets/kibana-index-patterns.png)
+1. Go to the "Management" tab, or "Stack Management" if using Elasticsearch 7.x
+1. Select "Index Patterns"
+1. Click the "Create Index Pattern" button
+1. Enter a pattern to match indexes from the list, you can use asterisks as wildcards
+  - A good first pattern is `analytics*` for viewing your native analytics data
+1. Click "Next Step"
+1. Choose a time field if applicable, or "I don't want to use the time filter" if your data is not time based
+  - For the `analytics*` pattern choose `attributes.date` for the time field
+  - For a posts index you could use `post_date` to see publishing activity over time
 
-Enter an index pattern into the field (available indexes are shown below) using wildcards if you wish to work across multiple indexes at a time. You will then be prompted to choose a date field to use for time series filters, make your selection, for example `post_date`, and save your index pattern to start analysing your data.
-
-You can add additional index patterns from the Kibana Management page in future.
-
-**Note**: When adding an index pattern for the `analytics` index choose "I don't want to use the Time Filter" from the dropdown on the next screen. Analytics event timestamps are stored in milliseconds and Kibana's time filter does not currently work with this by default.
-
+You can add additional index patterns from the Management section at any time.
 ### Developing & Debugging Queries
 
-Use the [Dev Tools tab at `/kibana/app/kibana#/dev_tools/console`](internal://site/kibana/app/kibana#/dev_tools/console) to enter and run queries. This provides useful features including autocomplete based on your data and linting.
+Use the Dev Tools tab to enter and run queries. This provides useful features including linting and autocompletion based on your data.
 
 ![Kibana Dev Tools panel](./assets/kibana-dev-tools.png)
 
 ### Viewing & Understanding Data
 
-The easiest way to view your data is in the [Discover tab at `/kibana/app/kibana#/discover`](internal://site/kibana/app/kibana#/discover). Here you can create basic queries, select and sort by columns as well drill down into the indexed data to see it's structure and data types.
+The easiest way to view your data is in the Discover tab. You will need to create some index patterns first before you can explore your data here.
+
+You can create basic queries, select and sort by columns as well as drill down into the indexed data to see it's structure and data types.
 
 ![Kibana Discover panel](./assets/kibana-discover.png)
-
 
 ## Accessing ElasticSearch Directly
 

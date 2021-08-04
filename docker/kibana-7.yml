@@ -7,3 +7,11 @@ server.rewriteBasePath: true
 
 logging.quiet: true
 logging.verbose: false
+
+newsfeed.enabled: false
+telemetry.optIn: false
+telemetry.enabled: false
+security.showInsecureClusterWarning: false
+# To configure a WMS map server for use with Kibana, see:
+# https://opendistro.github.io/for-elasticsearch-docs/docs/kibana/maptiles/
+map.includeElasticMapsService: false
