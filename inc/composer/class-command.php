@@ -782,8 +782,8 @@ EOT;
 	protected function get_compose_command( string $command = '', bool $mutagen = false ) : string {
 		static $default_command;
 		if ( empty( $default_command ) ) {
-			exec( 'docker compose', $output, $ret );
-			$default_command = $ret === 0 ? 'docker compose' : 'docker-compose';
+			exec( 'docker compose', $output );
+			$default_command = strpos( implode( "\n", $output ), 'Usage:  docker compose' ) !== false ? 'docker compose' : 'docker-compose';
 		}
 		return sprintf( '%s %s',
 			$this->is_mutagen_installed() && $mutagen ? 'mutagen compose' : $default_command,
