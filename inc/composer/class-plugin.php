@@ -41,12 +41,20 @@ class Plugin implements PluginInterface, Capable {
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @param Composer $composer Composer object.
+	 * @param IOInterface $io Composer disk interface.
+	 * @return void
 	 */
 	public function deactivate( Composer $composer, IOInterface $io ) {
 	}
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @param Composer $composer Composer object.
+	 * @param IOInterface $io Composer disk interface.
+	 * @return void
 	 */
 	public function uninstall( Composer $composer, IOInterface $io ) {
 	}

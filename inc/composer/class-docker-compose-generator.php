@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:3.2.0',
+			'image' => 'humanmade/altis-local-server-php:4.0.0-dev',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -104,7 +104,7 @@ class Docker_Compose_Generator {
 				"proxy:s3-{$this->hostname}",
 			],
 			'volumes' => [
-				"{$this->root_dir}:/usr/src/app:delegated",
+				$this->get_app_volume(),
 				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
 				'socket:/var/run/php-fpm',
 			],
@@ -114,6 +114,7 @@ class Docker_Compose_Generator {
 			],
 			'environment' => [
 				'HOST_PATH' => $this->root_dir,
+				'COMPOSE_PROJECT_NAME' => $this->hostname,
 				'DB_HOST' => 'db',
 				'DB_READ_REPLICA_HOST' => 'db-read-replica',
 				'DB_PASSWORD' => 'wordpress',
@@ -139,19 +140,17 @@ class Docker_Compose_Generator {
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
+				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
+				'XDEBUG_CONFIG' => sprintf(
+					'client_host=%s',
+					Command::is_linux() && ! Command::is_wsl() ? '172.17.0.1' : 'host.docker.internal'
+				),
+				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
+				'XDEBUG_SESSION' => $this->hostname,
+				// Set XDebug mode, fall back to "off" to avoid any performance hits.
+				'XDEBUG_MODE' => $this->args['xdebug'] ?? 'off',
 			],
 		];
-
-		// Append dev to use PHP image with xdebug if set.
-		if ( $this->args['xdebug'] ?? false ) {
-			// Use the dev image instead.
-			$services['image'] .= '-dev';
-
-			// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
-			$xdebug_remote_host = $this->is_linux() ? '172.17.0.1' : 'host.docker.internal';
-			$services['environment']['PHP_IDE_CONFIG'] = "serverName={$this->hostname}";
-			$services['environment']['XDEBUG_CONFIG'] = "idekey={$this->hostname} remote_host={$xdebug_remote_host}";
-		}
 
 		if ( $this->get_config()['elasticsearch'] ) {
 			$services['depends_on']['elasticsearch'] = [
@@ -201,7 +200,7 @@ class Docker_Compose_Generator {
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.1.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.3.0',
 				'networks' => [
 					'proxy',
 					'default',
@@ -210,7 +209,7 @@ class Docker_Compose_Generator {
 					'php',
 				],
 				'volumes' => [
-					"{$this->root_dir}:/usr/src/app:delegated",
+					$this->get_app_volume(),
 					'socket:/var/run/php-fpm',
 				],
 				'ports' => [
@@ -222,6 +221,12 @@ class Docker_Compose_Generator {
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
+				],
+				'environment' => [
+					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
+					'GZIP_STATUS' => 'on',
+					// Increase read response timeout when debugging.
+					'READ_TIMEOUT' => ( $this->args['xdebug'] ?? 'off' ) !== 'off' ? '9000s' : '60s',
 				],
 			],
 		];
@@ -338,7 +343,7 @@ class Docker_Compose_Generator {
 					// network.host is set in the default config).
 					'discovery.type=single-node',
 					// Reduce from default of 1GB of memory to 512MB.
-					'ES_JAVA_OPTS=-Xms1g -Xmx1g',
+					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
 				],
 			],
 		];
@@ -618,15 +623,15 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
 
-		return [
+		// Default compose configuration.
+		$config = [
 			'version' => '2.3',
 			'services' => $services,
 			'networks' => [
 				'default' => null,
 				'proxy' => [
-					'external' => [
-						'name' => 'proxy',
-					],
+					'name' => 'proxy',
+					'external' => true,
 				],
 			],
 			'volumes' => [
@@ -637,6 +642,36 @@ class Docker_Compose_Generator {
 				'socket' => null,
 			],
 		];
+
+		// Handle mutagen volume according to args.
+		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
+			$config['volumes']['app'] = null;
+			$config['x-mutagen'] = [
+				'sync' => [
+					'app' => [
+						'alpha' => $this->root_dir,
+						'beta' => 'volume://app',
+						'configurationBeta' => [
+							'permissions' => [
+								'defaultOwner' => 'id:82',
+								'defaultGroup' => 'id:82',
+								'defaultFileMode' => '0664',
+								'defaultDirectoryMode' => '0775',
+							],
+						],
+						'mode' => 'two-way-resolved',
+					],
+				],
+			];
+			// Add ignored paths.
+			if ( ! empty( $this->get_config()['ignore-paths'] ) ) {
+				$config['x-mutagen']['sync']['app']['ignore'] = [
+					'paths' => array_values( (array) $this->get_config()['ignore-paths'] ),
+				];
+			}
+		}
+
+		return $config;
 	}
 
 	/**
@@ -665,7 +700,8 @@ class Docker_Compose_Generator {
 			'cavalcade' => true,
 			'elasticsearch' => 6,
 			'kibana' => true,
-			'xray' => false,
+			'xray' => true,
+			'ignore-paths' => [],
 		];
 
 		return array_merge( $defaults, $config );
@@ -685,11 +721,14 @@ class Docker_Compose_Generator {
 	}
 
 	/**
-	 * Check if the current host operating system is Linux based.
+	 * Get the main application volume adjusted for sharing config options.
 	 *
-	 * @return boolean
+	 * @return string
 	 */
-	protected function is_linux() : bool {
-		return in_array( php_uname( 's' ), [ 'BSD', 'Linux', 'Solaris', 'Unknown' ], true );
+	protected function get_app_volume() : string {
+		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
+			return 'app:/usr/src/app:delegated';
+		}
+		return "{$this->root_dir}:/usr/src/app:delegated";
 	}
 }

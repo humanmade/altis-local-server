@@ -52,3 +52,12 @@ sysctl -w vm.max_map_count=262144
 ## Windows 10 Home Edition
 
 Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
+
+
+## File sharing is too slow
+
+When using Windows or MacOS on projects with a lot of files such as a `node_modules` directory, or a lot of file churn such as frequently changing statically built files, the containers can experience a delay in receiving the updated files. This can make development cumbersome.
+
+The first thing you should try is to switch off the gRPC file sharing option if enabled in the Docker Desktop preferences. If that doesn't help improve the speed then you can try the experimental Mutagen file sharing option.
+
+See the [Mutagen file sharing set up guide for more details](./mutagen-file-sharing.md).

@@ -8,11 +8,19 @@ The Local Server module providers a local development environment for Altis proj
 
 ## Installing
 
+**Windows Users:** Consult the [Windows setup documentation](./windows.md) to set up a WSL environment before using Local Server.
+
 Local Server uses Docker for containerization, therefore you must install the Docker runtime on your computer as a prerequisite. Download and install Docker for your OS at [https://www.docker.com/get-started](https://www.docker.com/get-started).
 
 Once Docker is installed and running, you are ready to start the Local Server. Local Server uses the command line via the `composer` command.
 
-Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now. See [Creating A New Altis Project](https://www.altis-dxp.com/resources/docs/getting-started/#creating-a-new-altis-project)
+Navigate your shell to your project's directory. You should already have installed Altis by running `composer install` or `composer create-project` but if not, do so now. See [Creating A New Altis Project](https://www.altis-dxp.com/resources/docs/getting-started/#creating-a-new-altis-project).
+
+### Experimental Features
+
+You may find that file sharing performance or server response times are slower than you would like on Windows or MacOS. Local Server provides an experimental integration with [Mutagen](https://mutagen.io/) to resolve this.
+
+See the [Mutagen set up guide for detailed instructions on how to install and run it](./mutagen-file-sharing.md).
 
 ## Starting the Local Server
 
@@ -50,10 +58,11 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
-* `composer server start [--xdebug]` - Starts the containers.
-  * If the `--xdebug` option is passed the PHP container will have XDebug enabled. To switch off XDebug run this command again without the `--xdebug` option.
+* `composer server start [--xdebug=<mode>] [--mutagen]` - Starts the containers.
+  * `--xdebug=<mode>` will enable Xdebug. The `mode` is optional and defaults to `debug`. Available values are `off`, `develop`, `debug`, `profile`, `coverage`, `gcstats` and `trace`.
+  * `--mutagen` will enable Mutagen for container file sharing.
 * `composer server stop` - Stops the containers.
-* `composer server restart` - Restart the containers.
+* `composer server restart [<service>]` - Restart a given container, or all containers if none is provided. Available values are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server destroy` - Stops and destroys all containers.
 * `composer server status` - Displays the status of all containers.
 * `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
