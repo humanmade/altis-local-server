@@ -716,7 +716,7 @@ class Docker_Compose_Generator {
 		$defaults = [
 			'analytics' => true,
 			'cavalcade' => true,
-			'elasticsearch' => '6',
+			'elasticsearch' => '7',
 			'kibana' => true,
 			'xray' => true,
 			'ignore-paths' => [],
@@ -735,7 +735,7 @@ class Docker_Compose_Generator {
 			return (string) $this->get_config()['elasticsearch'];
 		}
 
-		return '6';
+		return '7';
 	}
 
 	/**
