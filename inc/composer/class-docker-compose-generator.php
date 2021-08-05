@@ -295,9 +295,22 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_elasticsearch() : array {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
+
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'7' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'6.8' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6.3' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+		];
+
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
+
 		return [
 			'elasticsearch' => [
-				'image' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+				'image' => $image,
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -349,9 +362,27 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_kibana() : array {
+
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-kibana:1.1.1',
+			'7' => 'humanmade/altis-local-server-kibana:1.1.1',
+			'6.8' => 'blacktop/kibana:6.8',
+			'6' => 'blacktop/kibana:6.8',
+			'6.3' => 'blacktop/kibana:6.3',
+		];
+
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
+
+		$yml_file = 'kibana.yml';
+		if ( version_compare( $this->get_elasticsearch_version(), '7', '>=' ) ) {
+			$yml_file = 'kibana-7.yml';
+		}
+
 		return [
 			'kibana' => [
-				'image' => 'blacktop/kibana:6.3',
+				'image' => $image,
 				'networks' => [
 					'proxy',
 					'default',
@@ -371,7 +402,7 @@ class Docker_Compose_Generator {
 					],
 				],
 				'volumes' => [
-					"{$this->config_dir}/kibana.yml:/usr/share/kibana/config/kibana.yml",
+					"{$this->config_dir}/{$yml_file}:/usr/share/kibana/config/kibana.yml",
 				],
 			],
 		];
@@ -535,7 +566,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-pinpoint:1.2.2',
+				'image' => 'humanmade/local-pinpoint:1.2.3',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
@@ -685,13 +716,49 @@ class Docker_Compose_Generator {
 		$defaults = [
 			'analytics' => true,
 			'cavalcade' => true,
-			'elasticsearch' => true,
+			'elasticsearch' => '6',
 			'kibana' => true,
 			'xray' => true,
 			'ignore-paths' => [],
 		];
 
 		return array_merge( $defaults, $config );
+	}
+
+	/**
+	 * Get the configured Elasticsearch version.
+	 *
+	 * @return int
+	 */
+	protected function get_elasticsearch_version() : string {
+		if ( ! empty( $this->get_config()['elasticsearch'] ) ) {
+			return (string) $this->get_config()['elasticsearch'];
+		}
+
+		return '6';
+	}
+
+	/**
+	 * Check the configured Elasticsearch version in config.
+	 *
+	 * @param array $versions List of available version numbers.
+	 * @return void
+	 */
+	protected function check_elasticsearch_version( array $versions ) {
+		$versions = array_map( 'strval', $versions );
+		rsort( $versions );
+		if ( in_array( $this->get_elasticsearch_version(), $versions, true ) ) {
+			return;
+		}
+
+		echo sprintf(
+			"The configured elasticsearch version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+			$this->get_elasticsearch_version(),
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+			implode( "\n  - ", $versions )
+		);
+		exit( 1 );
 	}
 
 	/**
