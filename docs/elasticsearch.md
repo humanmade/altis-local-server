@@ -28,6 +28,8 @@ The current available versions are:
 
 You can also use the major version on its own to get the latest minor version, for example "6" will resolve to version "6.8".
 
+**Note**: If your device has an ARM chip you must use Elasticsearch 7 or higher.
+
 ## Kibana
 
 Local Server provides [Kibana](https://www.elastic.co/products/kibana) out of the box, a powerful tool for viewing indexes, creating and debugging queries and more.
