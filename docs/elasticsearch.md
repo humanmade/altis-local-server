@@ -4,7 +4,7 @@ ElasticSearch is an integral component of Altis, enabling enhanced search and re
 
 ## Available Versions
 
-Elasticsearch defaults to version 6.8 however you can change the version in your config:
+Elasticsearch defaults to version 7.10 however you can change the version in your config if your cloud environments have not yet been updated and you need to match them:
 
 ```json
 {
@@ -12,7 +12,7 @@ Elasticsearch defaults to version 6.8 however you can change the version in your
 		"altis": {
 			"modules": {
 				"local-server": {
-					"elasticsearch": "7.10"
+					"elasticsearch": "6.8"
 				}
 			}
 		}
@@ -22,8 +22,8 @@ Elasticsearch defaults to version 6.8 however you can change the version in your
 
 The current available versions are:
 
-- 7.10
-- 6.8 (default)
+- 7.10 (default)
+- 6.8
 - 6.3
 
 You can also use the major version on its own to get the latest minor version, for example "6" will resolve to version "6.8".
