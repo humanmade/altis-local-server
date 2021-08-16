@@ -199,7 +199,7 @@ EOT
 
 		$proxy = new Process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
-		$proxy->setTty( true );
+		$proxy->setPty( true );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -212,7 +212,7 @@ EOT
 		$env = $this->get_env();
 
 		$compose = new Process( $this->get_compose_command( 'up -d --remove-orphans', true ), 'vendor', $env );
-		$compose->setTty( true );
+		$compose->setPty( true );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -279,7 +279,7 @@ EOT
 		$output->writeln( '<info>Stopping...</>' );
 
 		$compose = new Process( $this->get_compose_command( 'stop', true ), 'vendor', $this->get_env() );
-		$compose->setTty( true );
+		$compose->setPty( true );
 		$compose->setTimeout( 0 );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -287,7 +287,7 @@ EOT
 
 		$proxy = new Process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
-		$proxy->setTty( true );
+		$proxy->setPty( true );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -318,13 +318,13 @@ EOT
 		$output->writeln( '<error>Destroying...</>' );
 
 		$compose = new Process( $this->get_compose_command( 'down -v --remove-orphans', true ), 'vendor', $this->get_env() );
-		$compose->setTty( true );
+		$compose->setPty( true );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
 		$proxy = new Process( $this->get_compose_command( '-f proxy.yml down -v' ), 'vendor/altis/local-server/docker' );
-		$proxy->setTty( true );
+		$proxy->setPty( true );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -349,7 +349,7 @@ EOT
 		$output->writeln( '<info>Restarting...</>' );
 
 		$proxy = new Process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
-		$proxy->setTty( true );
+		$proxy->setPty( true );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -361,7 +361,7 @@ EOT
 			$service = '';
 		}
 		$compose = new Process( $this->get_compose_command( "restart $service", true ), 'vendor', $this->get_env() );
-		$compose->setTty( true );
+		$compose->setPty( true );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -454,7 +454,7 @@ EOT
 	 */
 	protected function status( InputInterface $input, OutputInterface $output ) {
 		$compose = new Process( $this->get_compose_command( 'ps' ), 'vendor', $this->get_env() );
-		$compose->setTty( true );
+		$compose->setPty( true );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -470,7 +470,7 @@ EOT
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
 		$compose = new Process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
-		$compose->setTty( true );
+		$compose->setPty( true );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
