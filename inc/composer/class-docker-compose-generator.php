@@ -69,7 +69,7 @@ class Docker_Compose_Generator {
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
 		$this->root_dir = $root_dir;
 		$this->tld = $tld;
-		$this->hostname = $this->project_name . '.' . $this->tld;
+		$this->hostname = $this->tld ? $this->project_name . '.' . $this->tld : $this->project_name;
 		$this->args = $args;
 	}
 
