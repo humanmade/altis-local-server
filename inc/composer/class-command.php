@@ -690,6 +690,10 @@ EOT;
 	 * @return string
 	 */
 	protected function get_project_url() : string {
+		if ( getenv( 'CODESPACE_NAME' ) ) {
+			return 'https://' . getenv( 'CODESPACE_NAME' ) . '-80.githubpreview.dev/';
+		}
+
 		$is_secure = $this->get_composer_config()['secure'] ?? true;
 		$tld = $this->get_project_tld();
 		$site_url = sprintf(
