@@ -1,6 +1,8 @@
 <?php
 /**
  * Local Server Docker Compose file generator.
+ *
+ * phpcs:disable PEAR, Generic
  */
 
 namespace Altis\Local_Server\Composer;
@@ -481,7 +483,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
+					'MINIO_DOMAIN' => $this->tld ? 's3.localhost,' . $this->tld . ',s3' : 's3.localhost,s3',
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ROOT_USER' => 'admin',
 					'MINIO_ROOT_PASSWORD' => 'password',
