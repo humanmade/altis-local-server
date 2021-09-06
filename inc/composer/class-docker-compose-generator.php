@@ -393,7 +393,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => 's3.localhost,' . $this->tld . ',s3',
+					'MINIO_DOMAIN' => $this->tld ? 's3.localhost,' . $this->tld . ',s3' : 's3.localhost,s3',
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ACCESS_KEY' => 'admin',
 					'MINIO_SECRET_KEY' => 'password',
