@@ -294,7 +294,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_elasticsearch() : array {
-		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
+		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '2g';
 
 		$version_map = [
 			'7.10' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
@@ -350,7 +350,7 @@ class Docker_Compose_Generator {
 					// network.host is set in the default config).
 					'discovery.type=single-node',
 					// Reduce from default of 1GB of memory to 512MB.
-					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
+					'ES_JAVA_OPTS=-Xms1g -Xmx1g',
 				],
 			],
 		];
