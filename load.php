@@ -16,6 +16,7 @@ add_action( 'altis.modules.init', function () {
 		'tachyon' => true,
 		'analytics' => true,
 		'elasticsearch' => '7',
+		'codespaces_integration' => true,
 	];
 	$options = [
 		'defaults' => $default_settings,
