@@ -953,7 +953,8 @@ EOT;
 	 * @return string
 	 */
 	protected function get_project_url() : string {
-		if ( getenv( 'CODESPACE_NAME' ) ) {
+		$config = $this->get_composer_config();
+		if ( $this->is_using_codespaces() ) {
 			return 'https://' . getenv( 'CODESPACE_NAME' ) . '-80.githubpreview.dev/';
 		}
 
@@ -974,6 +975,10 @@ EOT;
 	 * @return string
 	 */
 	protected function get_project_subdomain() : string {
+		if ( $this->is_using_codespaces() ) {
+			return 'localhost';
+		}
+
 		$config = $this->get_composer_config();
 
 		if ( isset( $config['name'] ) ) {
@@ -1009,6 +1014,10 @@ EOT;
 	 * @return string
 	 */
 	protected function get_project_tld() : string {
+		if ( $this->is_using_codespaces() ) {
+			return '';
+		}
+
 		$config = $this->get_composer_config();
 
 		if ( isset( $config['tld'] ) ) {
@@ -1049,6 +1058,11 @@ EOT;
 	 */
 	public static function is_macos() : bool {
 		return php_uname( 's' ) === 'Darwin';
+	}
+
+	public function is_using_codespaces() : bool {
+		$config = $this->get_composer_config();
+		return getenv( 'CODESPACES' ) === 'true' && ( $config['codespaces_integration'] ?? true );
 	}
 
 	/**
