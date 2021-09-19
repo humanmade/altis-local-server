@@ -101,7 +101,7 @@ class Docker_Compose_Generator {
 				"proxy:pinpoint-{$this->hostname}",
 				"proxy:cognito-{$this->hostname}",
 				"proxy:elasticsearch-{$this->hostname}",
-				"proxy:s3-{$this->hostname}",
+				"proxy:s3-{$this->hostname}.localhost",
 			],
 			'volumes' => [
 				$this->get_app_volume(),
@@ -129,7 +129,7 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->tld}/",
+				'S3_UPLOADS_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}.localhost/",
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
 				'S3_UPLOADS_BUCKET_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}",
 				'S3_UPLOADS_KEY' => 'admin',
@@ -393,7 +393,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => $this->tld ? 's3.localhost,' . $this->tld . ',s3' : 's3.localhost,s3',
+					'MINIO_DOMAIN' => $this->tld ? 's3.localhost,' . $this->tld . ',s3' : 's3.localhost,localhost,s3',
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ACCESS_KEY' => 'admin',
 					'MINIO_SECRET_KEY' => 'password',
@@ -414,7 +414,7 @@ class Docker_Compose_Generator {
 					'traefik.port=9000',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:s3-{$this->hostname}",
+					"traefik.frontend.rule=HostRegexp:s3-{$this->hostname}.localhost",
 				],
 			],
 			's3-sync-to-host' => [
