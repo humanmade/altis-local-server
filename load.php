@@ -15,6 +15,7 @@ add_action( 'altis.modules.init', function () {
 		's3' => true,
 		'tachyon' => true,
 		'analytics' => true,
+		'codespaces_integration' => true,
 	];
 
 	Altis\register_module( 'local-server', __DIR__, 'Local Server', $default_settings, __NAMESPACE__ . '\\bootstrap' );
