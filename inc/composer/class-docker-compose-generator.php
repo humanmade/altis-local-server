@@ -349,8 +349,8 @@ class Docker_Compose_Generator {
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
 					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB.
-					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
+					// Use max container memory limit as the max JVM heap allocation value.
+					"ES_JAVA_OPTS=-Xms512m -Xmx{$mem_limit}",
 				],
 			],
 		];
