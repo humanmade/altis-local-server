@@ -294,7 +294,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_elasticsearch() : array {
-		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '2g';
+		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
 
 		$version_map = [
 			'7.10' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
@@ -349,8 +349,8 @@ class Docker_Compose_Generator {
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
 					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB.
-					'ES_JAVA_OPTS=-Xms1g -Xmx1g',
+					// Use max container memory limit as the max JVM heap allocation value.
+					"ES_JAVA_OPTS=-Xms512m -Xmx{$mem_limit}",
 				],
 			],
 		];

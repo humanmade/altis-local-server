@@ -182,7 +182,7 @@ EOT
 			'DOCKER_CLIENT_TIMEOUT' => 120,
 			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
-			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '2g',
+			'ES_MEM_LIMIT' => getenv( 'ES_MEM_LIMIT' ) ?: '1g',
 			'HOME' => getenv( 'HOME' ),
 		];
 	}
