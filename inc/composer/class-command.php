@@ -719,7 +719,7 @@ EOT;
 			foreach ( $objects as $object ) {
 				if ( $object !== '.' && $object !== '..' ) {
 					if ( is_dir( $dir . DIRECTORY_SEPARATOR . $object ) && ! is_link( $dir . '/' . $object ) ) {
-						rrmdir( $dir . DIRECTORY_SEPARATOR . $object );
+						$this->rmdir_recursive( $dir . DIRECTORY_SEPARATOR . $object );
 					} else {
 						unlink( $dir . DIRECTORY_SEPARATOR . $object );
 					}
@@ -770,42 +770,52 @@ EOT;
 	protected function import( InputInterface $input, OutputInterface $output ) {
 		$export_url = $input->getArgument( 'options' )[0];
 		$export_urls_parts = parse_url( $export_url );
-		// Todo: clean up file on sigterm.
-		$download_progress_bar = new ProgressBar( $output, 100 );
 
-		$download_file_path = tempnam( sys_get_temp_dir(), basename( $export_urls_parts['path'] ) );
-		$download_file = fopen( $download_file_path, 'w' );
-		$guzzle_client = new GuzzleHttp\Client();
+		if ( ! empty( $export_urls_parts['host'] ) ) {
+			// Todo: clean up file on sigterm.
+			$download_progress_bar = new ProgressBar( $output, 100 );
 
-		$guzzle_client->request( 'GET', $export_url, [
-			'sink' => $download_file,
-			'on_headers' => function ( GuzzleHttp\Psr7\Response $response ) use ( $download_progress_bar ) {
-				$size = $response->getHeaderLine( 'Content-Length' );
-				$download_progress_bar->setFormat( 'Downloading ' . $this->human_filesize( $size ) . ' [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s%' );
-				$download_progress_bar->start();
+			$tar_file_path = tempnam( sys_get_temp_dir(), basename( $export_urls_parts['path'] ) );
+			$download_file = fopen( $tar_file_path, 'w' );
+			$guzzle_client = new GuzzleHttp\Client();
 
-			},
-			'progress' => function ( int $total_bytes, int $bytes_so_far ) use ( $download_progress_bar ) {
-				if ( ! $total_bytes || ! $bytes_so_far ) {
-					return;
-				}
-				$download_progress_bar->setProgress( $bytes_so_far / $total_bytes * 100 );
-			},
-		] );
+			$guzzle_client->request( 'GET', $export_url, [
+				'sink' => $download_file,
+				'on_headers' => function ( GuzzleHttp\Psr7\Response $response ) use ( $download_progress_bar ) {
+					$size = $response->getHeaderLine( 'Content-Length' );
+					$download_progress_bar->setFormat( 'Downloading ' . $this->human_filesize( $size ) . ' [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s%' );
+					$download_progress_bar->start();
 
-		$download_progress_bar->finish();
-		$output->writeln( 'Complete' );
+				},
+				'progress' => function ( int $total_bytes, int $bytes_so_far ) use ( $download_progress_bar ) {
+					if ( ! $total_bytes || ! $bytes_so_far ) {
+						return;
+					}
+					$download_progress_bar->setProgress( $bytes_so_far / $total_bytes * 100 );
+				},
+			] );
 
+			$download_progress_bar->finish();
+			$output->writeln( 'Complete' );
+		} elseif ( ! empty( $export_urls_parts['path'] ) && file_exists( $export_urls_parts['path'] ) ) {
+			$tar_file_path = $export_urls_parts['path'];
+		} else {
+			$output->writeln( sprintf( '<error>Unable to find file: %s</error>', $export_url ) );
+			return;
+		}
+
+		// Todo: make specific to the export file.
 		$extract_dir = sys_get_temp_dir() . '/export';
 		if ( is_dir( $extract_dir ) ) {
 			$this->rmdir_recursive( $extract_dir );
 		}
 		try {
-			$phar = new PharData( $download_file_path );
+			$phar = new PharData( $tar_file_path );
 			$phar->extractTo( $extract_dir ); // extract all files.
 		} catch ( Exception $e ) {
 			$output->writeln( sprintf( '<error>Unable to extract tar file: %s</error>', $e->getMessage() ) );
-			// To do: cleanup.
+			$this->rmdir_recursive( $extract_dir );
+			unlink( $tar_file_path );
 			return;
 		}
 
@@ -853,6 +863,7 @@ EOT;
 
 			$output->writeln( sprintf( 'Replacing URLs for sites %s.', implode( ', ', $domains ) ) );
 			$replacement_domain = $this->get_project_subdomain() . '.altis.dev';
+			// Todp: handle subdonain -> subdir renaming.
 			foreach ( $domains as $export_domain ) {
 				$cli->run( new ArrayInput( [
 					'subcommand' => 'cli',
@@ -885,6 +896,20 @@ EOT;
 				],
 			] ), $output );
 		}
+
+		// Process uploads from the export file.
+		if ( is_dir( $extract_dir . '/uploads' ) ) {
+			$output->writeln( 'Uploads found in export, importing...' );
+			if ( is_dir( getcwd() . '/content/uploads' ) ) {
+				$this->rmdir_recursive( getcwd() . '/content/uploads' );
+			}
+			rename( $extract_dir . '/uploads', getcwd() . '/content/uploads' );
+			$this->import_uploads( $input, $output );
+			$this->rmdir_recursive( getcwd() . '/content/uploads' );
+		}
+
+		$this->rmdir_recursive( $extract_dir );
+		unlink( $tar_file_path );
 	}
 
 	/**
