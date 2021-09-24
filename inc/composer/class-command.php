@@ -696,13 +696,14 @@ EOT;
 	/**
 	 * Human readable file size formatter.
 	 *
-	 * @param float $size
-	 * @param integer $precision
+	 * @param float $size The size in bytes
+	 * @param integer $precision The decimal places to round to.
 	 * @return integer
 	 */
 	private function human_filesize( float $size, int $precision = 2 ) {
-		for($i = 0; ($size / 1024) > 0.9; $i++, $size /= 1024) {}
-		return round( $size, $precision) . ['B','kB','MB','GB','TB','PB','EB','ZB','YB'][$i];
+		for ( $i = 0; ( $size / 1024 ) > 0.9; $i++, $size /= 1024 ) {
+		}
+		return round( $size, $precision ) . [ 'B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB' ][ $i ];
 	}
 
 	/**
@@ -710,21 +711,21 @@ EOT;
 	 *
 	 * Taken from https://stackoverflow.com/questions/3338123/how-do-i-recursively-delete-a-directory-and-its-entire-contents-files-sub-dir
 	 *
-	 * @param string $dir
+	 * @param string $dir The directory to remove.
 	 */
 	private function rmdir_recursive( string $dir ) {
-		if (is_dir($dir)) {
-			$objects = scandir($dir);
-			foreach ($objects as $object) {
-				if ($object != "." && $object != "..") {
-					if (is_dir($dir. DIRECTORY_SEPARATOR .$object) && !is_link($dir."/".$object)) {
-						rrmdir($dir. DIRECTORY_SEPARATOR .$object);
+		if ( is_dir( $dir ) ) {
+			$objects = scandir( $dir );
+			foreach ( $objects as $object ) {
+				if ( $object !== '.' && $object !== '..' ) {
+					if ( is_dir( $dir . DIRECTORY_SEPARATOR . $object ) && ! is_link( $dir . '/' . $object ) ) {
+						rrmdir( $dir . DIRECTORY_SEPARATOR . $object );
 					} else {
-						unlink($dir. DIRECTORY_SEPARATOR .$object);
+						unlink( $dir . DIRECTORY_SEPARATOR . $object );
 					}
 				}
 			}
-			rmdir($dir);
+			rmdir( $dir );
 		}
 	}
 
@@ -733,35 +734,43 @@ EOT;
 	 *
 	 * Taken from https://stackoverflow.com/questions/3293121/how-can-i-unzip-a-gz-file-with-php
 	 *
-	 * @param string $file_name
+	 * @param string $file_name The location of the gzipped file.
+	 * @param string $out_file_name The location to ungzip the file to.
 	 * @return string Path to unzipped file.
 	 */
 	private function gunzip_file( string $file_name, string $out_file_name ) : string {
-		// Raising this value may increase performance
-		$buffer_size = 4096; // read 4kb at a time
+		// Raising this value may increase performance.
+		$buffer_size = 4096; // read 4kb at a time.
 
-		// Open our files (in binary mode)
+		// Open our files (in binary mode).
 		$file = gzopen( $file_name, 'rb' );
 		$out_file = fopen( $out_file_name, 'wb' );
 
-		// Keep repeating until the end of the input file
-		while( ! gzeof( $file ) ) {
+		// Keep repeating until the end of the input file.
+		while ( ! gzeof( $file ) ) {
 			// Read buffer-size bytes
-			// Both fwrite and gzread and binary-safe
+			// Both fwrite and gzread and binary-safe.
 			fwrite( $out_file, gzread( $file, $buffer_size ) );
 		}
 
-		// Files are done, close files
+		// Files are done, close files.
 		fclose( $out_file );
 		gzclose( $file );
 
 		return $out_file_name;
 	}
 
+	/**
+	 * Import an Altis Dashboard export file.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return void
+	 */
 	protected function import( InputInterface $input, OutputInterface $output ) {
 		$export_url = $input->getArgument( 'options' )[0];
 		$export_urls_parts = parse_url( $export_url );
-		// Todo: clean up file on sigterm
+		// Todo: clean up file on sigterm.
 		$download_progress_bar = new ProgressBar( $output, 100 );
 
 		$download_file_path = tempnam( sys_get_temp_dir(), basename( $export_urls_parts['path'] ) );
@@ -793,10 +802,10 @@ EOT;
 		}
 		try {
 			$phar = new PharData( $download_file_path );
-			$phar->extractTo( $extract_dir ); // extract all files
+			$phar->extractTo( $extract_dir ); // extract all files.
 		} catch ( Exception $e ) {
 			$output->writeln( sprintf( '<error>Unable to extract tar file: %s</error>', $e->getMessage() ) );
-			// To do: cleanup
+			// To do: cleanup.
 			return;
 		}
 
@@ -805,26 +814,25 @@ EOT;
 			$database_file_path = 'database.sql';
 			$sql_file = $this->gunzip_file( $extract_dir . '/database.sql.gz', $database_file_path );
 
-			// Import the file into mysql
+			// Import the file into mysql.
 			$cli = $this->getApplication()->find( 'local-server' );
 			$import = $cli->run( new ArrayInput( [
 				'subcommand' => 'cli',
 				'options' => [
 					'db',
 					'import',
-					$sql_file
+					$sql_file,
 				],
 			] ), $output );
 
-			// Flush cache
+			// Flush cache.
 			$flush_cache = $cli->run( new ArrayInput( [
 				'subcommand' => 'cli',
 				'options' => [
 					'cache',
-					'flush'
+					'flush',
 				],
 			] ), $output );
-
 
 			ob_start();
 			$export_sites = $cli->run( new ArrayInput( [
@@ -832,7 +840,7 @@ EOT;
 				'options' => [
 					'db',
 					'query',
-					'SELECT DISTINCT domain from wp_site'
+					'SELECT DISTINCT domain from wp_site',
 				],
 			] ), $output );
 			$sites_output = ob_get_clean();
@@ -858,12 +866,12 @@ EOT;
 				] ), $output );
 			}
 
-			// Flush cache
+			// Flush cache.
 			$flush_cache = $cli->run( new ArrayInput( [
 				'subcommand' => 'cli',
 				'options' => [
 					'cache',
-					'flush'
+					'flush',
 				],
 			] ), $output );
 
@@ -873,7 +881,7 @@ EOT;
 					'elasticpress',
 					'index',
 					'--setup',
-					'--network-wide'
+					'--network-wide',
 				],
 			] ), $output );
 		}
