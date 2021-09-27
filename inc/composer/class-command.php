@@ -52,10 +52,10 @@ Default command - start the local development server:
 	                              optionally set the xdebug mode by assigning a value.
 	                              Passing --mutagen will start the server using Mutagen
 	                              for file sharing.
-Stop the local development server:
-	stop
+Stop the local development server or specific service:
+	stop [<service>]
 Restart the local development server:
-	restart [--xdebug=<mode>]     passing --xdebug restarts the server with xdebug enabled
+	restart [--xdebug=<mode>] [<service>]     passing --xdebug restarts the server with xdebug enabled
 Destroy the local development server:
 	destroy
 View status of the local development server:
@@ -91,7 +91,7 @@ EOT
 	}
 
 	/**
-	 * Get the common docker-composer command prefix.
+	 * Get the common docker-compose command prefix.
 	 *
 	 * @return string
 	 */
@@ -199,9 +199,9 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml up -d', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
-		$proxy->setTty( true );
+		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -213,8 +213,8 @@ EOT
 
 		$env = $this->get_env();
 
-		$compose = new Process( $this->get_compose_command( 'up -d --remove-orphans' ), 'vendor', $env );
-		$compose->setTty( true );
+		$compose = new Process( $this->get_compose_command( 'up -d --remove-orphans', true ), 'vendor', $env );
+		$compose->setTty( posix_isatty( STDOUT ) );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -280,20 +280,33 @@ EOT
 	protected function stop( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Stopping...</>' );
 
-		$compose = new Process( $this->get_compose_command( 'stop' ), 'vendor', $this->get_env() );
+		$options = $input->getArgument( 'options' );
+		if ( isset( $options[0] ) ) {
+			$service = $options[0];
+		} else {
+			$service = '';
+		}
+
+		$compose = new Process( $this->get_compose_command( "stop $service", true ), 'vendor', $this->get_env() );
+		$compose->setTimeout( 0 );
+		$compose->setTty( posix_isatty( STDOUT ) );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml stop', 'vendor/altis/local-server/docker' );
-		$proxy->run( function ( $type, $buffer ) {
-			echo $buffer;
-		} );
+		if ( $service === '' ) {
+			$proxy = new Process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
+			$proxy->setTimeout( 0 );
+			$proxy->setTty( posix_isatty( STDOUT ) );
+			$proxy->run( function ( $type, $buffer ) {
+				echo $buffer;
+			} );
+		}
 
 		if ( $return_val === 0 ) {
 			$output->writeln( '<info>Stopped.</>' );
 		} else {
-			$output->writeln( '<error>Failed to stop services.</>' );
+			$output->writeln( '<error>Failed to stop service(s).</>' );
 		}
 
 		return $return_val;
@@ -315,12 +328,14 @@ EOT
 
 		$output->writeln( '<error>Destroying...</>' );
 
-		$compose = new Process( $this->get_compose_command( 'down -v --remove-orphans' ), 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'down -v --remove-orphans', true ), 'vendor', $this->get_env() );
+		$compose->setTty( posix_isatty( STDOUT ) );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml down -v', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( $this->get_compose_command( '-f proxy.yml down -v' ), 'vendor/altis/local-server/docker' );
+		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -344,7 +359,8 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml restart', 'vendor/altis/local-server/docker' );
+		$proxy = new Process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -355,7 +371,8 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( $this->get_compose_command( "restart $service" ), 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( "restart $service", true ), 'vendor', $this->get_env() );
+		$compose->setTty( posix_isatty( STDOUT ) );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -447,7 +464,8 @@ EOT
 	 * @return int
 	 */
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( 'docker-compose ps', 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'ps' ), 'vendor', $this->get_env() );
+		$compose->setTty( posix_isatty( STDOUT ) );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
 		} );
@@ -462,7 +480,8 @@ EOT
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		$log = $input->getArgument( 'options' )[0];
-		$compose = new Process( 'docker-compose logs --tail=100 -f ' . $log, 'vendor', $this->get_env() );
+		$compose = new Process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
+		$compose->setTty( posix_isatty( STDOUT ) );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -480,10 +499,19 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		$command_prefix = $this->get_base_command_prefix();
+
+		$php_container_id = shell_exec( sprintf(
+			'%s %s',
+			$command_prefix,
+			$this->get_compose_command( 'ps -q php' )
+		) );
+
 		passthru( sprintf(
-			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d php /bin/bash",
+			"$command_prefix %s exec -it -e COLUMNS=%d -e LINES=%d %s /bin/bash",
+			'docker',
 			$columns,
-			$lines
+			$lines,
+			trim( $php_container_id )
 		), $return_val );
 
 		return $return_val;
@@ -504,7 +532,8 @@ EOT
 		$base_command_prefix = $this->get_base_command_prefix();
 
 		$base_command = sprintf(
-			"$base_command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			"$base_command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
+			$this->get_compose_command(),
 			$columns,
 			$lines
 		);
@@ -603,7 +632,8 @@ EOT;
 		$lines = exec( 'tput lines' );
 
 		$base_command = sprintf(
-			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
+			$this->get_compose_command(),
 			$columns,
 			$lines
 		);
@@ -628,7 +658,11 @@ EOT;
 			return in_array( $key, $keys, true ) ? $value : false;
 		} );
 
-		$db_container_id = shell_exec( "$command_prefix docker-compose ps -q db" );
+		$db_container_id = shell_exec( sprintf(
+			'%s %s',
+			$command_prefix,
+			$this->get_compose_command( 'ps -q db' )
+		) );
 
 		// Retrieve the forwarded ports using Docker and the container ID.
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
@@ -766,6 +800,24 @@ EOT;
 	}
 
 	/**
+	 * Check if the current host is Windows.
+	 *
+	 * @return boolean
+	 */
+	public static function is_windows() : bool {
+		return php_uname( 's' ) === 'Windows';
+	}
+
+	/**
+	 * Check if the current host is WSL.
+	 *
+	 * @return boolean
+	 */
+	public static function is_wsl() : bool {
+		return getenv( 'WSL_INTEROP' ) !== false;
+	}
+
+	/**
 	 * Check if Mutagen is installed.
 	 *
 	 * @return boolean
@@ -789,12 +841,19 @@ EOT;
 	 * If Mutagen is active it is used for file sharing by default.
 	 *
 	 * @param string $command The command to append to the root compose command.
+	 * @param bool $mutagen Whether to use Mutagen's compose wrapper.
 	 * @return string
 	 */
-	protected function get_compose_command( string $command = '' ) : string {
+	protected function get_compose_command( string $command = '', bool $mutagen = false ) : string {
+		static $default_command;
+		if ( empty( $default_command ) ) {
+			exec( 'docker compose', $output );
+			$default_command = strpos( implode( "\n", $output ), 'Usage:  docker compose' ) !== false ? 'docker compose' : 'docker-compose';
+		}
 		return sprintf( '%s %s',
-			$this->is_mutagen_installed() ? 'mutagen compose' : 'docker-compose',
+			$this->is_mutagen_installed() && $mutagen ? 'mutagen compose' : $default_command,
 			$command
 		);
 	}
+
 }

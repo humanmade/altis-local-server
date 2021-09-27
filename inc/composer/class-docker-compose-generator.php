@@ -114,6 +114,7 @@ class Docker_Compose_Generator {
 			],
 			'environment' => [
 				'HOST_PATH' => $this->root_dir,
+				'COMPOSE_PROJECT_NAME' => $this->hostname,
 				'DB_HOST' => 'db',
 				'DB_READ_REPLICA_HOST' => 'db-read-replica',
 				'DB_PASSWORD' => 'wordpress',
@@ -140,7 +141,10 @@ class Docker_Compose_Generator {
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://pinpoint-{$this->hostname}",
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://cognito-{$this->hostname}",
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
-				'XDEBUG_CONFIG' => sprintf( 'client_host=%s', Command::is_linux() ? '172.17.0.1' : 'host.docker.internal' ),
+				'XDEBUG_CONFIG' => sprintf(
+					'client_host=%s',
+					Command::is_linux() && ! Command::is_wsl() ? '172.17.0.1' : 'host.docker.internal'
+				),
 				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
 				'XDEBUG_SESSION' => $this->hostname,
 				// Set XDebug mode, fall back to "off" to avoid any performance hits.
@@ -291,9 +295,22 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_elasticsearch() : array {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
+
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'7' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'6.8' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6.3' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+		];
+
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
+
 		return [
 			'elasticsearch' => [
-				'image' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+				'image' => $image,
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -332,8 +349,8 @@ class Docker_Compose_Generator {
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
 					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB.
-					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
+					// Use max container memory limit as the max JVM heap allocation value.
+					"ES_JAVA_OPTS=-Xms512m -Xmx{$mem_limit}",
 				],
 			],
 		];
@@ -345,9 +362,27 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_kibana() : array {
+
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-kibana:1.1.1',
+			'7' => 'humanmade/altis-local-server-kibana:1.1.1',
+			'6.8' => 'blacktop/kibana:6.8',
+			'6' => 'blacktop/kibana:6.8',
+			'6.3' => 'blacktop/kibana:6.3',
+		];
+
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
+
+		$yml_file = 'kibana.yml';
+		if ( version_compare( $this->get_elasticsearch_version(), '7', '>=' ) ) {
+			$yml_file = 'kibana-7.yml';
+		}
+
 		return [
 			'kibana' => [
-				'image' => 'blacktop/kibana:6.3',
+				'image' => $image,
 				'networks' => [
 					'proxy',
 					'default',
@@ -367,7 +402,7 @@ class Docker_Compose_Generator {
 					],
 				],
 				'volumes' => [
-					"{$this->config_dir}/kibana.yml:/usr/share/kibana/config/kibana.yml",
+					"{$this->config_dir}/{$yml_file}:/usr/share/kibana/config/kibana.yml",
 				],
 			],
 		];
@@ -414,7 +449,9 @@ class Docker_Compose_Generator {
 					'traefik.port=9000',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:s3-{$this->hostname}",
+					"traefik.api.frontend.rule=HostRegexp:s3-{$this->hostname}",
+					'traefik.client.frontend.passHostHeader=false',
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
 				],
 			],
 			's3-sync-to-host' => [
@@ -531,7 +568,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-pinpoint:1.2.2',
+				'image' => 'humanmade/local-pinpoint:1.2.3',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
@@ -613,9 +650,8 @@ class Docker_Compose_Generator {
 			'networks' => [
 				'default' => null,
 				'proxy' => [
-					'external' => [
-						'name' => 'proxy',
-					],
+					'name' => 'proxy',
+					'external' => true,
 				],
 			],
 			'volumes' => [
@@ -682,13 +718,49 @@ class Docker_Compose_Generator {
 		$defaults = [
 			'analytics' => true,
 			'cavalcade' => true,
-			'elasticsearch' => true,
+			'elasticsearch' => '7',
 			'kibana' => true,
 			'xray' => true,
 			'ignore-paths' => [],
 		];
 
 		return array_merge( $defaults, $config );
+	}
+
+	/**
+	 * Get the configured Elasticsearch version.
+	 *
+	 * @return int
+	 */
+	protected function get_elasticsearch_version() : string {
+		if ( ! empty( $this->get_config()['elasticsearch'] ) ) {
+			return (string) $this->get_config()['elasticsearch'];
+		}
+
+		return '7';
+	}
+
+	/**
+	 * Check the configured Elasticsearch version in config.
+	 *
+	 * @param array $versions List of available version numbers.
+	 * @return void
+	 */
+	protected function check_elasticsearch_version( array $versions ) {
+		$versions = array_map( 'strval', $versions );
+		rsort( $versions );
+		if ( in_array( $this->get_elasticsearch_version(), $versions, true ) ) {
+			return;
+		}
+
+		echo sprintf(
+			"The configured elasticsearch version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+			$this->get_elasticsearch_version(),
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+			implode( "\n  - ", $versions )
+		);
+		exit( 1 );
 	}
 
 	/**

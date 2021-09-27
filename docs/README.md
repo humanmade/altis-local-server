@@ -8,6 +8,8 @@ The Local Server module providers a local development environment for Altis proj
 
 ## Installing
 
+**Windows Users:** Consult the [Windows setup documentation](./windows.md) to set up a WSL environment before using Local Server.
+
 Local Server uses Docker for containerization, therefore you must install the Docker runtime on your computer as a prerequisite. Download and install Docker for your OS at [https://www.docker.com/get-started](https://www.docker.com/get-started).
 
 Once Docker is installed and running, you are ready to start the Local Server. Local Server uses the command line via the `composer` command.
@@ -59,7 +61,7 @@ The subdomain used for the project can be configured via the `modules.local-serv
 * `composer server start [--xdebug=<mode>] [--mutagen]` - Starts the containers.
   * `--xdebug=<mode>` will enable Xdebug. The `mode` is optional and defaults to `debug`. Available values are `off`, `develop`, `debug`, `profile`, `coverage`, `gcstats` and `trace`.
   * `--mutagen` will enable Mutagen for container file sharing.
-* `composer server stop` - Stops the containers.
+* `composer server stop [<service>]` - Stops the containers or specified service.
 * `composer server restart [<service>]` - Restart a given container, or all containers if none is provided. Available values are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server destroy` - Stops and destroys all containers.
 * `composer server status` - Displays the status of all containers.
