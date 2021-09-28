@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:edge',
+			'image' => 'humanmade/altis-local-server-php:4.2.0-dev',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -200,7 +200,7 @@ class Docker_Compose_Generator {
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:edge',
+				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
 				'networks' => [
 					'proxy',
 					'default',
@@ -256,7 +256,7 @@ class Docker_Compose_Generator {
 	protected function get_service_db() : array {
 		return [
 			'db' => [
-				'image' => 'mysql/mysql-server:8.0',
+				'image' => 'biarms/mysql:5.7',
 				'volumes' => [
 					'db-data:/var/lib/mysql',
 				],
@@ -416,7 +416,7 @@ class Docker_Compose_Generator {
 	protected function get_service_s3() : array {
 		return [
 			's3' => [
-				'image' => 'minio/minio:latest',
+				'image' => 'minio/minio:RELEASE.2021-09-18T18-09-59Z',
 				'volumes' => [
 					's3:/data:rw',
 				],
@@ -455,7 +455,7 @@ class Docker_Compose_Generator {
 				],
 			],
 			's3-sync-to-host' => [
-				'image' => 'minio/mc:latest',
+				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
 				'restart' => 'unless-stopped',
 				'depends_on' => [
 					's3',
@@ -480,7 +480,7 @@ class Docker_Compose_Generator {
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
-				'image' => 'humanmade/tachyon:edge',
+				'image' => 'humanmade/tachyon:2.4.0',
 				'ports' => [
 					'8080',
 				],
@@ -513,7 +513,7 @@ class Docker_Compose_Generator {
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
-				'image' => 'cd2team/mailhog:latest',
+				'image' => 'cd2team/mailhog:1632011321',
 				'ports' => [
 					'8025',
 					'1025',
@@ -551,7 +551,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-cognito:edge',
+				'image' => 'humanmade/local-cognito:1.1.0',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
@@ -568,7 +568,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-pinpoint:edge',
+				'image' => 'humanmade/local-pinpoint:1.3.0',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
@@ -590,7 +590,7 @@ class Docker_Compose_Generator {
 	protected function get_service_xray() : array {
 		return [
 			'xray' => [
-				'image' => 'amazon/aws-xray-daemon:latest',
+				'image' => 'amazon/aws-xray-daemon:3.3.3',
 				'ports' => [
 					'2000',
 				],
