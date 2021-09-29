@@ -1,5 +1,5 @@
 {
-	"version": "9",
+	"version": "10",
 	"hosts": {
 		"local": {
 			"url": "http://s3:9000",

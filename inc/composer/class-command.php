@@ -703,7 +703,7 @@ EOT;
 				'--volume=%3$s/vendor/altis/local-server/docker/minio.json:/root/.mc/config.json ' .
 				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
 				'--network=%4$s_default ' .
-				'minio/mc:RELEASE.2020-03-14T01-23-37Z %5$s',
+				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
 			$columns,
 			$lines,
 			getcwd(),
