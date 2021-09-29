@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.2.0-dev',
+			'image' => 'humanmade/altis-local-server-php:4.2.0',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -480,7 +480,7 @@ class Docker_Compose_Generator {
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
-				'image' => 'humanmade/tachyon:2.4.0',
+				'image' => 'humanmade/tachyon:v2.4.0',
 				'ports' => [
 					'8080',
 				],
