@@ -311,6 +311,7 @@ class Docker_Compose_Generator {
 		return [
 			'elasticsearch' => [
 				'image' => $image,
+				'restart' => 'unless-stopped',
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
