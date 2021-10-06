@@ -384,9 +384,10 @@ EOT
 			}
 		}
 
-		$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
+		$container_id = exec( sprintf( 'docker ps --filter name=%s-php -q', $this->get_project_subdomain() ) );
 		if ( ! $container_id ) {
 			$output->writeln( '<error>PHP container not found to run command.</>' );
+			$output->writeln( '<info>You may need to run `composer server start` again if you have recently updated Docker.</>' );
 			return 1;
 		}
 
