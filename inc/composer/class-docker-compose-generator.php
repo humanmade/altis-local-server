@@ -168,7 +168,12 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_php() : array {
 		return [
-			'php' => $this->get_php_reusable(),
+			'php' => array_merge(
+				[
+					'container_name' => "{$this->project_name}-php",
+				],
+				$this->get_php_reusable()
+			),
 		];
 	}
 
@@ -181,6 +186,7 @@ class Docker_Compose_Generator {
 		return [
 			'cavalcade' => array_merge(
 				[
+					'container_name' => "{$this->project_name}-cavalcade",
 					'entrypoint' => [
 						'/usr/local/bin/cavalcade',
 					],
@@ -201,6 +207,7 @@ class Docker_Compose_Generator {
 		return [
 			'nginx' => [
 				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
+				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
 					'default',
@@ -241,6 +248,7 @@ class Docker_Compose_Generator {
 		return [
 			'redis' => [
 				'image' => 'redis:3.2-alpine',
+				'container_name' => "{$this->project_name}-redis",
 				'ports' => [
 					'6379',
 				],
@@ -257,6 +265,7 @@ class Docker_Compose_Generator {
 		return [
 			'db' => [
 				'image' => 'biarms/mysql:5.7',
+				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
 				],
@@ -311,6 +320,7 @@ class Docker_Compose_Generator {
 		return [
 			'elasticsearch' => [
 				'image' => $image,
+				'container_name' => "{$this->project_name}-es",
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -383,6 +393,7 @@ class Docker_Compose_Generator {
 		return [
 			'kibana' => [
 				'image' => $image,
+				'container_name' => "{$this->project_name}-kibana",
 				'networks' => [
 					'proxy',
 					'default',
@@ -417,6 +428,7 @@ class Docker_Compose_Generator {
 		return [
 			's3' => [
 				'image' => 'minio/minio:RELEASE.2021-09-18T18-09-59Z',
+				'container_name' => "{$this->project_name}-s3",
 				'volumes' => [
 					's3:/data:rw',
 				],
@@ -456,6 +468,7 @@ class Docker_Compose_Generator {
 			],
 			's3-sync-to-host' => [
 				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'container_name' => "{$this->project_name}-s3-sync",
 				'restart' => 'unless-stopped',
 				'depends_on' => [
 					's3',
@@ -481,6 +494,7 @@ class Docker_Compose_Generator {
 		return [
 			'tachyon' => [
 				'image' => 'humanmade/tachyon:v2.4.0',
+				'container_name' => "{$this->project_name}-tachyon",
 				'ports' => [
 					'8080',
 				],
@@ -514,6 +528,7 @@ class Docker_Compose_Generator {
 		return [
 			'mailhog' => [
 				'image' => 'cd2team/mailhog:1632011321',
+				'container_name' => "{$this->project_name}-mailhog",
 				'ports' => [
 					'8025',
 					'1025',
@@ -543,6 +558,7 @@ class Docker_Compose_Generator {
 	protected function get_service_analytics() : array {
 		return [
 			'cognito' => [
+				'container_name' => "{$this->project_name}-cognito",
 				'ports' => [
 					'3000',
 				],
@@ -560,6 +576,7 @@ class Docker_Compose_Generator {
 				],
 			],
 			'pinpoint' => [
+				'container_name' => "{$this->project_name}-pinpoint",
 				'ports' => [
 					'3000',
 				],
@@ -591,6 +608,7 @@ class Docker_Compose_Generator {
 		return [
 			'xray' => [
 				'image' => 'amazon/aws-xray-daemon:3.3.3',
+				'container_name' => "{$this->project_name}-xray",
 				'ports' => [
 					'2000',
 				],
