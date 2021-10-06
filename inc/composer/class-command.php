@@ -374,10 +374,13 @@ EOT
 			}
 		}
 
-		$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
+		$container_id = exec( sprintf( 'docker ps --filter name=%s-php-1 -q', $this->get_project_subdomain() ) );
 		if ( ! $container_id ) {
-			$output->writeln( '<error>PHP container not found to run command.</>' );
-			return 1;
+			$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
+			if ( ! $container_id ) {
+				$output->writeln( '<error>PHP container not found to run command.</>' );
+				return 1;
+			}
 		}
 
 		$columns = exec( 'tput cols' );
