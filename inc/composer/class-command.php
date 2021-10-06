@@ -701,7 +701,7 @@ EOT;
 		$base_command = sprintf(
 			'docker run ' .
 				'-e COLUMNS=%1%d -e LINES=%2$d ' .
-				'--volume=%3$s/vendor/altis/local-server/docker/minio.json:/root/.mc/config.json ' .
+				'-e MC_HOST_local=http://admin:password@s3:9000 ' .
 				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
 				'--network=%4$s_default ' .
 				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',

@@ -136,6 +136,7 @@ class Docker_Compose_Generator {
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
+				'S3_CONSOLE_URL' => "https://s3-console-{$this->hostname}",
 				'TACHYON_URL' => "https://{$this->hostname}/tachyon",
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
@@ -434,6 +435,7 @@ class Docker_Compose_Generator {
 				],
 				'ports' => [
 					'9000',
+					'9001',
 				],
 				'networks' => [
 					'proxy',
@@ -442,10 +444,10 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
 					'MINIO_REGION_NAME' => 'us-east-1',
-					'MINIO_ACCESS_KEY' => 'admin',
-					'MINIO_SECRET_KEY' => 'password',
+					'MINIO_ROOT_USER' => 'admin',
+					'MINIO_ROOT_PASSWORD' => 'password',
 				],
-				'command' => 'server /data',
+				'command' => 'server /data --console-address ":9001"',
 				'healthcheck' => [
 					'test' => [
 						'CMD',
@@ -462,6 +464,9 @@ class Docker_Compose_Generator {
 					'traefik.api.port=9000',
 					'traefik.api.protocol=http',
 					"traefik.api.frontend.rule=HostRegexp:s3-{$this->hostname}",
+					'traefik.console.port=9001',
+					'traefik.console.protocol=http',
+					"traefik.console.frontend.rule=HostRegexp:s3-console-{$this->hostname}",
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
@@ -475,14 +480,16 @@ class Docker_Compose_Generator {
 				'depends_on' => [
 					's3',
 				],
+				'environment' => [
+					'MC_HOST_local' => 'http://admin:password@s3:9000',
+				],
 				'volumes' => [
-					"{$this->config_dir}/minio.json:/root/.mc/config.json",
 					"{$this->root_dir}/content/uploads:/content/uploads:delegated",
 				],
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite local/s3-{$this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite -a local/s3-{$this->project_name} /content\"",
 			],
 		];
 	}
