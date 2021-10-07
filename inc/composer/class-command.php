@@ -534,7 +534,7 @@ EOT
 <info>Host</info>:           ${connection_data['HOST']}
 <info>Port</info>:           ${connection_data['PORT']}
 
-<comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
+<comment>Version</comment>:        ${connection_data['MYSQL_MAJOR']}
 <comment>MySQL link</comment>:     mysql://${connection_data['MYSQL_USER']}:${connection_data['MYSQL_PASSWORD']}@${connection_data['HOST']}:${connection_data['PORT']}/${connection_data['MYSQL_DATABASE']}
 
 EOT;
@@ -631,7 +631,7 @@ EOT;
 			'MYSQL_PASSWORD',
 			'MYSQL_USER',
 			'MYSQL_DATABASE',
-			'MYSQL_VERSION',
+			'MYSQL_MAJOR',
 		];
 
 		array_walk( $values, function ( $value, $key ) use ( $keys ) {
@@ -646,7 +646,7 @@ EOT;
 
 		// Retrieve the forwarded ports using Docker and the container ID.
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
-		preg_match( '/.*,\s([\d.]+):([\d]+)->.*/', $ports, $ports_matches );
+		preg_match( '/([\d.]+):([\d]+)->.*/', trim( $ports ), $ports_matches );
 
 		return array_merge(
 			array_filter( $values ),
