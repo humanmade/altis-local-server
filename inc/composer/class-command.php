@@ -528,13 +528,12 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 
-		$base_command_prefix = $this->get_base_command_prefix();
-
 		$base_command = sprintf(
-			"$base_command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
-			$this->get_compose_command(),
+			// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+			'docker exec -it -u root -e COLUMNS=%d -e LINES=%d -e MYSQL_PWD=wordpress %s-db',
 			$columns,
-			$lines
+			$lines,
+			$this->get_project_subdomain()
 		);
 
 		$return_val = 0;
@@ -591,11 +590,11 @@ EOT;
 					$query = "$query;";
 				}
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress -e \"$query\"", $return_val );
+				passthru( "$base_command mysql --database=wordpress --user=root -e \"$query\"", $return_val );
 				break;
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
+				passthru( "$base_command mysql --database=wordpress --user=root", $return_val );
 				break;
 			default:
 				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
