@@ -91,7 +91,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.0.0-dev',
+			'image' => 'humanmade/altis-local-server-php:4.2.0',
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -136,6 +136,7 @@ class Docker_Compose_Generator {
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
+				'S3_CONSOLE_URL' => "https://s3-console-{$this->hostname}",
 				'TACHYON_URL' => "https://{$this->hostname}/tachyon",
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
@@ -168,7 +169,12 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_php() : array {
 		return [
-			'php' => $this->get_php_reusable(),
+			'php' => array_merge(
+				[
+					'container_name' => "{$this->project_name}-php",
+				],
+				$this->get_php_reusable()
+			),
 		];
 	}
 
@@ -181,6 +187,7 @@ class Docker_Compose_Generator {
 		return [
 			'cavalcade' => array_merge(
 				[
+					'container_name' => "{$this->project_name}-cavalcade",
 					'entrypoint' => [
 						'/usr/local/bin/cavalcade',
 					],
@@ -200,7 +207,8 @@ class Docker_Compose_Generator {
 	protected function get_service_nginx() : array {
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.3.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
+				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
 					'default',
@@ -241,6 +249,7 @@ class Docker_Compose_Generator {
 		return [
 			'redis' => [
 				'image' => 'redis:3.2-alpine',
+				'container_name' => "{$this->project_name}-redis",
 				'ports' => [
 					'6379',
 				],
@@ -256,7 +265,8 @@ class Docker_Compose_Generator {
 	protected function get_service_db() : array {
 		return [
 			'db' => [
-				'image' => 'mysql:5.7',
+				'image' => 'biarms/mysql:5.7',
+				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
 				],
@@ -312,6 +322,7 @@ class Docker_Compose_Generator {
 			'elasticsearch' => [
 				'image' => $image,
 				'restart' => 'unless-stopped',
+				'container_name' => "{$this->project_name}-es",
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -350,8 +361,8 @@ class Docker_Compose_Generator {
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
 					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB.
-					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
+					// Use max container memory limit as the max JVM heap allocation value.
+					"ES_JAVA_OPTS=-Xms512m -Xmx{$mem_limit}",
 				],
 			],
 		];
@@ -384,6 +395,7 @@ class Docker_Compose_Generator {
 		return [
 			'kibana' => [
 				'image' => $image,
+				'container_name' => "{$this->project_name}-kibana",
 				'networks' => [
 					'proxy',
 					'default',
@@ -417,12 +429,14 @@ class Docker_Compose_Generator {
 	protected function get_service_s3() : array {
 		return [
 			's3' => [
-				'image' => 'minio/minio:RELEASE.2020-03-19T21-49-00Z',
+				'image' => 'minio/minio:RELEASE.2021-09-18T18-09-59Z',
+				'container_name' => "{$this->project_name}-s3",
 				'volumes' => [
 					's3:/data:rw',
 				],
 				'ports' => [
 					'9000',
+					'9001',
 				],
 				'networks' => [
 					'proxy',
@@ -431,10 +445,10 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
 					'MINIO_REGION_NAME' => 'us-east-1',
-					'MINIO_ACCESS_KEY' => 'admin',
-					'MINIO_SECRET_KEY' => 'password',
+					'MINIO_ROOT_USER' => 'admin',
+					'MINIO_ROOT_PASSWORD' => 'password',
 				],
-				'command' => 'server /data',
+				'command' => 'server /data --console-address ":9001"',
 				'healthcheck' => [
 					'test' => [
 						'CMD',
@@ -447,26 +461,36 @@ class Docker_Compose_Generator {
 					'retries' => 3,
 				],
 				'labels' => [
-					'traefik.port=9000',
-					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:s3-{$this->hostname}",
+					'traefik.api.port=9000',
+					'traefik.api.protocol=http',
+					"traefik.api.frontend.rule=HostRegexp:s3-{$this->hostname}",
+					'traefik.console.port=9001',
+					'traefik.console.protocol=http',
+					"traefik.console.frontend.rule=HostRegexp:s3-console-{$this->hostname}",
+					'traefik.client.port=9000',
+					'traefik.client.protocol=http',
+					'traefik.client.frontend.passHostHeader=false',
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
 				],
 			],
 			's3-sync-to-host' => [
-				'image' => 'minio/mc:RELEASE.2020-03-14T01-23-37Z',
+				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'container_name' => "{$this->project_name}-s3-sync",
 				'restart' => 'unless-stopped',
 				'depends_on' => [
 					's3',
 				],
+				'environment' => [
+					'MC_HOST_local' => 'http://admin:password@s3:9000',
+				],
 				'volumes' => [
-					"{$this->config_dir}/minio.json:/root/.mc/config.json",
 					"{$this->root_dir}/content/uploads:/content/uploads:delegated",
 				],
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite local/s3-{$this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite -a local/s3-{$this->project_name} /content\"",
 			],
 		];
 	}
@@ -479,7 +503,8 @@ class Docker_Compose_Generator {
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
-				'image' => 'humanmade/tachyon:2.3.2',
+				'image' => 'humanmade/tachyon:v2.4.0',
+				'container_name' => "{$this->project_name}-tachyon",
 				'ports' => [
 					'8080',
 				],
@@ -512,7 +537,8 @@ class Docker_Compose_Generator {
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
-				'image' => 'mailhog/mailhog:latest',
+				'image' => 'cd2team/mailhog:1632011321',
+				'container_name' => "{$this->project_name}-mailhog",
 				'ports' => [
 					'8025',
 					'1025',
@@ -542,6 +568,7 @@ class Docker_Compose_Generator {
 	protected function get_service_analytics() : array {
 		return [
 			'cognito' => [
+				'container_name' => "{$this->project_name}-cognito",
 				'ports' => [
 					'3000',
 				],
@@ -550,7 +577,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-cognito:1.0.0',
+				'image' => 'humanmade/local-cognito:1.1.0',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
@@ -559,6 +586,7 @@ class Docker_Compose_Generator {
 				],
 			],
 			'pinpoint' => [
+				'container_name' => "{$this->project_name}-pinpoint",
 				'ports' => [
 					'3000',
 				],
@@ -567,7 +595,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-pinpoint:1.2.3',
+				'image' => 'humanmade/local-pinpoint:1.3.0',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
@@ -589,7 +617,8 @@ class Docker_Compose_Generator {
 	protected function get_service_xray() : array {
 		return [
 			'xray' => [
-				'image' => 'amazon/aws-xray-daemon:3.0.1',
+				'image' => 'amazon/aws-xray-daemon:3.3.3',
+				'container_name' => "{$this->project_name}-xray",
 				'ports' => [
 					'2000',
 				],

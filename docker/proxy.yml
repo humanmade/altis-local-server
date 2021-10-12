@@ -4,6 +4,7 @@ services:
     networks:
       - proxy
     image: traefik:1.7
+    container_name: altis-proxy
     volumes:
       - "$PWD/conf/traefik.toml:/etc/traefik/traefik.toml"
       - "$PWD/ssl.cert:/etc/traefik/ssl.cert"

@@ -423,9 +423,10 @@ EOT
 			}
 		}
 
-		$container_id = exec( sprintf( 'docker ps --filter name=%s_php_1 -q', $this->get_project_subdomain() ) );
+		$container_id = exec( sprintf( 'docker ps --filter name=%s-php -q', $this->get_project_subdomain() ) );
 		if ( ! $container_id ) {
 			$output->writeln( '<error>PHP container not found to run command.</>' );
+			$output->writeln( '<info>You may need to run `composer server start` again if you have recently updated Docker.</>' );
 			return 1;
 		}
 
@@ -527,13 +528,12 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 
-		$base_command_prefix = $this->get_base_command_prefix();
-
 		$base_command = sprintf(
-			"$base_command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
-			$this->get_compose_command(),
+			// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+			'docker exec -it -u root -e COLUMNS=%d -e LINES=%d -e MYSQL_PWD=wordpress %s-db',
 			$columns,
-			$lines
+			$lines,
+			$this->get_project_subdomain()
 		);
 
 		$return_val = 0;
@@ -552,7 +552,7 @@ EOT
 <info>Host</info>:           ${connection_data['HOST']}
 <info>Port</info>:           ${connection_data['PORT']}
 
-<comment>Version</comment>:        ${connection_data['MYSQL_VERSION']}
+<comment>Version</comment>:        ${connection_data['MYSQL_MAJOR']}
 <comment>MySQL link</comment>:     mysql://${connection_data['MYSQL_USER']}:${connection_data['MYSQL_PASSWORD']}@${connection_data['HOST']}:${connection_data['PORT']}/${connection_data['MYSQL_DATABASE']}
 
 EOT;
@@ -590,11 +590,11 @@ EOT;
 					$query = "$query;";
 				}
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress -e \"$query\"", $return_val );
+				passthru( "$base_command mysql --database=wordpress --user=root -e \"$query\"", $return_val );
 				break;
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root -pwordpress", $return_val );
+				passthru( "$base_command mysql --database=wordpress --user=root", $return_val );
 				break;
 			default:
 				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
@@ -649,7 +649,7 @@ EOT;
 			'MYSQL_PASSWORD',
 			'MYSQL_USER',
 			'MYSQL_DATABASE',
-			'MYSQL_VERSION',
+			'MYSQL_MAJOR',
 		];
 
 		array_walk( $values, function ( $value, $key ) use ( $keys ) {
@@ -664,7 +664,7 @@ EOT;
 
 		// Retrieve the forwarded ports using Docker and the container ID.
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
-		preg_match( '/.*,\s([\d.]+):([\d]+)->.*/', $ports, $ports_matches );
+		preg_match( '/([\d.]+):([\d]+)->.*/', trim( $ports ), $ports_matches );
 
 		return array_merge(
 			array_filter( $values ),
@@ -700,10 +700,10 @@ EOT;
 		$base_command = sprintf(
 			'docker run ' .
 				'-e COLUMNS=%1%d -e LINES=%2$d ' .
-				'--volume=%3$s/vendor/altis/local-server/docker/minio.json:/root/.mc/config.json ' .
+				'-e MC_HOST_local=http://admin:password@s3:9000 ' .
 				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
 				'--network=%4$s_default ' .
-				'minio/mc:RELEASE.2020-03-14T01-23-37Z %5$s',
+				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
 			$columns,
 			$lines,
 			getcwd(),

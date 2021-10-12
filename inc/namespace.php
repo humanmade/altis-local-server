@@ -118,7 +118,7 @@ function tools_submenus() {
 		],
 		[
 			'label' => 'S3 Browser',
-			'url' => S3_UPLOADS_BUCKET_URL . '/minio',
+			'url' => getenv( 'S3_CONSOLE_URL' ),
 		],
 	];
 
