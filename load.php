@@ -17,6 +17,8 @@ add_action( 'altis.modules.init', function () {
 		'analytics' => true,
 		'elasticsearch' => '7',
 	];
-
-	Altis\register_module( 'local-server', __DIR__, 'Local Server', $default_settings, __NAMESPACE__ . '\\bootstrap' );
+	$options = [
+		'defaults' => $default_settings,
+	];
+	Altis\register_module( 'local-server', __DIR__, 'Local Server', $options, __NAMESPACE__ . '\\bootstrap' );
 } );
