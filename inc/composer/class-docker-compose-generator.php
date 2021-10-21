@@ -61,6 +61,7 @@ class Docker_Compose_Generator {
 	 *
 	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param string $tld The TLD that should be used for local domains.
 	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
 	public function __construct( string $project_name, string $root_dir, string $tld, array $args = [] ) {
