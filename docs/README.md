@@ -56,6 +56,8 @@ The subdomain used for the project can be configured via the `modules.local-serv
 }
 ```
 
+**Multisite Subdomains:** Currently on local-server subdomains aren't supported. Subsites must use subdirectories.
+
 ## Available Commands
 
 * `composer server start [--xdebug=<mode>] [--mutagen]` - Starts the containers.
