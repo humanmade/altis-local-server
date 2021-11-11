@@ -17,6 +17,20 @@ function bootstrap() {
 
 	$config = Altis\get_config()['modules']['local-server'];
 
+	// Detect requests from Codeception/phpunit, primarely to use the test database
+	$is_test_request = (
+		isset( $_SERVER['HTTP_X_TEST_REQUEST'] )
+		|| ( isset( $_SERVER['HTTP_USER_AGENT'] ) && strpos( $_SERVER['HTTP_USER_AGENT'], 'wp-browser' ) !== false )
+		|| getenv( 'WPBROWSER_HOST_REQUEST' )
+	);
+
+	// For acceptance tests, change DB name and Elastic/Redis prefixes
+	if ( $is_test_request ) {
+		define( 'DB_NAME', 'test' );
+		define( 'EP_INDEX_PREFIX', 'tests_' );
+		define( 'WP_CACHE_KEY_SALT', 'codecept' );
+	}
+
 	if ( $config['s3'] ) {
 		define( 'S3_UPLOADS_BUCKET', getenv( 'S3_UPLOADS_BUCKET' ) );
 		define( 'S3_UPLOADS_REGION', getenv( 'S3_UPLOADS_REGION' ) );
@@ -37,10 +51,10 @@ function bootstrap() {
 		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' );
 	}
 
-	define( 'DB_HOST', getenv( 'DB_HOST' ) );
-	define( 'DB_USER', getenv( 'DB_USER' ) );
-	define( 'DB_PASSWORD', getenv( 'DB_PASSWORD' ) );
-	define( 'DB_NAME', getenv( 'DB_NAME' ) );
+	defined( 'DB_HOST' ) or define( 'DB_HOST', getenv( 'DB_HOST' ) );
+	defined( 'DB_USER' ) or define( 'DB_USER', getenv( 'DB_USER' ) );
+	defined( 'DB_PASSWORD' ) or define( 'DB_PASSWORD', getenv( 'DB_PASSWORD' ) );
+	defined( 'DB_NAME' ) or define( 'DB_NAME', getenv( 'DB_NAME' ) );
 
 	define( 'ELASTICSEARCH_HOST', getenv( 'ELASTICSEARCH_HOST' ) );
 	define( 'ELASTICSEARCH_PORT', getenv( 'ELASTICSEARCH_PORT' ) );
