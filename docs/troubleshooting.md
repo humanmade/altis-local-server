@@ -61,3 +61,13 @@ When using Windows or MacOS on projects with a lot of files such as a `node_modu
 The first thing you should try is to switch off the gRPC file sharing option if enabled in the Docker Desktop preferences. If that doesn't help improve the speed then you can try the experimental Mutagen file sharing option.
 
 See the [Mutagen file sharing set up guide for more details](./mutagen-file-sharing.md).
+
+## Server fails to start when using Mutagen
+
+Due to the variability of Docker Desktop, Docker Engine and Mutagen versions, and that Mutagen is still in beta you encounter some problems.
+
+Currently Mutagen file sharing support has the following pre-requisites in order to function:
+
+- You must be using Docker Compose v2, available with Docker Desktop 4.1.0 and up
+  - Check your Docker Desktop preferences as there is a toggle to use Compose v1
+- You must have the latest Mutagen Compose Beta installed, or at least 0.13.0-beta3
