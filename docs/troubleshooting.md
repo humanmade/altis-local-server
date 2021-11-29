@@ -64,7 +64,7 @@ See the [Mutagen file sharing set up guide for more details](./mutagen-file-shar
 
 ## Server fails to start when using Mutagen
 
-Due to the variability of Docker Desktop, Docker Engine and Mutagen versions, and that Mutagen is still in beta you encounter some problems.
+Due to the variability of Docker Desktop, Docker Engine and Mutagen versions, and that Mutagen is still in beta, you may encounter some problems.
 
 Currently Mutagen file sharing support has the following pre-requisites in order to function:
 
