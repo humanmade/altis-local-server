@@ -782,9 +782,9 @@ EOT;
 			return $is_installed;
 		}
 		if ( self::is_linux() || self::is_macos() ) {
-			$is_installed = ! empty( shell_exec( 'which mutagen' ) );
+			$is_installed = ! empty( shell_exec( 'which mutagen-compose' ) );
 		} else {
-			$is_installed = ! empty( shell_exec( 'where mutagen' ) );
+			$is_installed = ! empty( shell_exec( 'where mutagen-compose' ) );
 		}
 		return $is_installed;
 	}
@@ -805,7 +805,7 @@ EOT;
 			$default_command = strpos( implode( "\n", $output ), 'Usage:  docker compose' ) !== false ? 'docker compose' : 'docker-compose';
 		}
 		return sprintf( '%s %s',
-			$this->is_mutagen_installed() && $mutagen ? 'mutagen compose' : $default_command,
+			$this->is_mutagen_installed() && $mutagen ? 'mutagen-compose' : $default_command,
 			$command
 		);
 	}
