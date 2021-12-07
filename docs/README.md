@@ -50,11 +50,22 @@ The subdomain used for the project can be configured via the `modules.local-serv
 
 ## Available Commands
 
+<<<<<<< HEAD
 * `composer server start [--xdebug]` - Starts the containers.
   * If the `--xdebug` option is passed the PHP container will have XDebug enabled. To switch off XDebug run this command again without the `--xdebug` option.
 * `composer server stop` - Stops the containers.
 * `composer server restart` - Restart the containers.
 * `composer server destroy` - Stops and destroys all containers.
+=======
+* `composer server start [--xdebug=<mode>] [--mutagen]` - Starts the containers.
+  * `--xdebug=<mode>` will enable Xdebug. The `mode` is optional and defaults to `debug`. Available values are `off`, `develop`, `debug`, `profile`, `coverage`, `gcstats` and `trace`.
+  * `--mutagen` will enable Mutagen for container file sharing.
+* `composer server stop [<service>] [--clean]` - Stops the containers or specified service.
+  * `--clean` will also stop the proxy container if no service is specified, only use this if you have no other instances of Local Server
+* `composer server restart [<service>]` - Restart a given container, or all containers if none is provided. Available values are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
+* `composer server destroy [--clean]` - Stops and destroys all containers.
+  * `--clean` will also destroy the proxy container, only use this if you have no other instances of Local Server
+>>>>>>> 9fa9a3b (Do not remove or stop proxy unless indicated)
 * `composer server status` - Displays the status of all containers.
 * `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server shell` - Logs in to the PHP container.
