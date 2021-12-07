@@ -50,11 +50,11 @@ Default command - start the local development server:
 	start [--xdebug=<mode>]       passing --xdebug starts the server with xdebug enabled
 	                              optionally set the xdebug mode by assigning a value.
 Stop the local development server:
-	stop
+	stop [--clean]                passing --clean will also stop the proxy container
 Restart the local development server:
 	restart [--xdebug=<mode>]     passing --xdebug restarts the server with xdebug enabled
 Destroy the local development server:
-	destroy
+	destroy [--clean]             passing --clean will also destroy the proxy container
 View status of the local development server:
 	status
 Run WP CLI command:
@@ -73,7 +73,8 @@ Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
-			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' );
+			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
+			->addOption( 'clean', null, InputOption::VALUE_NONE, 'Remove or stop the proxy container when destroying or stopping the server' );
 	}
 
 	/**
@@ -261,10 +262,13 @@ EOT
 			echo $buffer;
 		} );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml stop', 'vendor/altis/local-server/docker' );
-		$proxy->run( function ( $type, $buffer ) {
-			echo $buffer;
-		} );
+		if ( $input->hasParameterOption( '--clean' ) ) {
+			$output->writeln( '<info>Stopping proxy container...</>' );
+			$proxy = new Process( 'docker-compose -f proxy.yml stop', 'vendor/altis/local-server/docker' );
+			$proxy->run( function ( $type, $buffer ) {
+				echo $buffer;
+			} );
+		}
 
 		if ( $return_val === 0 ) {
 			$output->writeln( '<info>Stopped.</>' );
@@ -296,10 +300,22 @@ EOT
 			echo $buffer;
 		} );
 
-		$proxy = new Process( 'docker-compose -f proxy.yml down -v', 'vendor/altis/local-server/docker' );
-		$proxy->run( function ( $type, $buffer ) {
-			echo $buffer;
-		} );
+		// Check whether to remove the proxy container too.
+		$remove_proxy = $input->hasParameterOption( '--clean' );
+		if ( ! $remove_proxy ) {
+			$question = new ConfirmationQuestion( "Do you want to remove the shared proxy container too?\n<comment>Warning:</> Only do this if you have no other instances of Local Server. [y/N] ", false );
+			if ( $helper->ask( $input, $output, $question ) ) {
+				$remove_proxy = true;
+			}
+		}
+
+		if ( $remove_proxy ) {
+			$output->writeln( '<error>Destroying proxy container...</>' );
+			$proxy = new Process( 'docker-compose -f proxy.yml down -v', 'vendor/altis/local-server/docker' );
+			$proxy->run( function ( $type, $buffer ) {
+				echo $buffer;
+			} );
+		}
 
 		if ( $return_val === 0 ) {
 			$output->writeln( '<error>Destroyed.</>' );
