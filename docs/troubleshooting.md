@@ -49,6 +49,18 @@ You can also apply the setting live using the following command:
 sysctl -w vm.max_map_count=262144
 ```
 
+## Port 8080 already in use
+
+Local Server uses [Traefik Proxy](https://doc.traefik.io/traefik/) to listen for requests and map them to the appropriate containers.
+
+The proxy container runs on ports `80`, `8080` and `443` locally. This means if you are already running a service that uses any of those ports such as a built in Apache or nginx server you will need to stop those before you can start Local Server.
+
+On MacOS try running `sudo apachectl stop`. To prevent the built in server from starting automatically when starting the Mac run `sudo launchctl load -w /System/Library/LaunchDaemons/org.apache.httpd.plist`.
+
+Conversely if you are trying to run another service but are encoutnering this problem you may need to stop Local Server fully.
+
+To do this run `composer server stop --clean`, or `composer server destroy --clean`. Note that you should only do this if you have no other running instance of Local Server.
+
 ## Windows 10 Home Edition
 
 Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
