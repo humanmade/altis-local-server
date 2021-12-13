@@ -18,6 +18,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
 
@@ -492,7 +493,29 @@ EOT
 	 * @return int
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
-		$log = $input->getArgument( 'options' )[0];
+		if ( ! isset( $input->getArgument( 'options' )[0] ) ) {
+			$helper = $this->getHelper( 'question' );
+			$question = new ChoiceQuestion(
+				'Please select a service (defaults to php)',
+				[
+					'php',
+					'cavalcade',
+					'db',
+					'elasticsearch',
+					'nginx',
+					'redis',
+					's3',
+					'xray',
+				],
+				0
+			);
+			$question->setErrorMessage( '%s is not a recognised service, please select again!' );
+			$service = $helper->ask( $input, $output, $question );
+			$output->writeln( sprintf( '<comment>Fetching %s logs...</>', $service ) );
+			$log = $service;
+		} else {
+			$log = $input->getArgument( 'options' )[0];
+		}
 		$compose = new Process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$compose->setTimeout( 0 );
