@@ -18,8 +18,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
 
 /**
@@ -493,11 +493,10 @@ EOT
 	 * @return int
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
-		var_dump( 'start' );
-		if( !isset( $input->getArgument( 'options' )[0] ) ){
+		if ( ! isset ( $input->getArgument ( 'options' )[0] ) ) {
 			$helper = $this->getHelper( 'question' );
 			$question = new ChoiceQuestion(
-				'Please select your prefered service (defaults to php)',
+				'Please select a service (defaults to php)',
 				[
 					'php',
 					'cavalcade',
@@ -506,13 +505,14 @@ EOT
 					'nginx',
 					'redis',
 					's3',
+					'tachyon',
 					'xray',
 				],
 				0
 			);
-			$question->setErrorMessage( 'Selected service %s is invalid, please select again!' );
+			$question->setErrorMessage( '%s is not a recognised service, please select again!' );
 			$service = $helper->ask( $input, $output, $question );
-			$output->writeln( 'You have selected: '.$service );
+			$output->writeln( sprintf( '<comment>Fetching %s logs...</>', $service ) );
 			$log = $service;
 		} else {
 			$log = $input->getArgument( 'options' )[0];
