@@ -493,7 +493,7 @@ EOT
 	 * @return int
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
-		if ( ! isset ( $input->getArgument ( 'options' )[0] ) ) {
+		if ( ! isset( $input->getArgument( 'options' )[0] ) ) {
 			$helper = $this->getHelper( 'question' );
 			$question = new ChoiceQuestion(
 				'Please select a service (defaults to php)',
