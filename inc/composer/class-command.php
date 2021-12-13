@@ -497,7 +497,7 @@ EOT
 		if( !isset( $input->getArgument( 'options' )[0] ) ){
 			$helper = $this->getHelper( 'question' );
 			$question = new ChoiceQuestion(
-				'Please select your prefered log type (defaults to php)',
+				'Please select your prefered service (defaults to php)',
 				[
 					'php',
 					'cavalcade',
@@ -510,10 +510,10 @@ EOT
 				],
 				0
 			);
-			$question->setErrorMessage( 'Selected log type %s is invalid, please select again!' );
-			$log_type = $helper->ask( $input, $output, $question );
-			$output->writeln( 'You have selected: '.$log_type );
-			$log = $log_type;
+			$question->setErrorMessage( 'Selected service %s is invalid, please select again!' );
+			$service = $helper->ask( $input, $output, $question );
+			$output->writeln( 'You have selected: '.$service );
+			$log = $service;
 		} else {
 			$log = $input->getArgument( 'options' )[0];
 		}
