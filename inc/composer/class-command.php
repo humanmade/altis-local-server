@@ -19,6 +19,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Process\Process;
 
 /**
@@ -492,7 +493,30 @@ EOT
 	 * @return int
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
-		$log = $input->getArgument( 'options' )[0];
+		var_dump( 'start' );
+		if( !isset( $input->getArgument( 'options' )[0] ) ){
+			$helper = $this->getHelper( 'question' );
+			$question = new ChoiceQuestion(
+				'Please select your prefered log type (defaults to php)',
+				[
+					'php',
+					'cavalcade',
+					'db',
+					'elasticsearch',
+					'nginx',
+					'redis',
+					's3',
+					'xray',
+				],
+				0
+			);
+			$question->setErrorMessage( 'Selected log type %s is invalid, please select again!' );
+			$log_type = $helper->ask( $input, $output, $question );
+			$output->writeln( 'You have selected: '.$log_type );
+			$log = $log_type;
+		} else {
+			$log = $input->getArgument( 'options' )[0];
+		}
 		$compose = new Process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$compose->setTimeout( 0 );
