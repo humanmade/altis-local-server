@@ -505,7 +505,6 @@ EOT
 					'nginx',
 					'redis',
 					's3',
-					'tachyon',
 					'xray',
 				],
 				0
