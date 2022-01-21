@@ -618,7 +618,7 @@ EOT;
 		$lines = exec( 'tput lines' );
 
 		$base_command = sprintf(
-			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d db",
+			"$command_prefix docker-compose exec -e COLUMNS=%d -e LINES=%d -T db",
 			$columns,
 			$lines
 		);
