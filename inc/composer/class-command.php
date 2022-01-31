@@ -667,7 +667,7 @@ EOT;
 		$lines = exec( 'tput lines' );
 
 		$base_command = sprintf(
-			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
+			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d -T db",
 			$this->get_compose_command(),
 			$columns,
 			$lines
