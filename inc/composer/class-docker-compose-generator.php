@@ -168,7 +168,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_php() : array {
-		return [
+		$config = [
 			'php' => array_merge(
 				[
 					'container_name' => "{$this->project_name}-php",
@@ -176,6 +176,8 @@ class Docker_Compose_Generator {
 				$this->get_php_reusable()
 			),
 		];
+		$config['php']['volumes'][] = "{$this->root_dir}/.tmp:/tmp";
+		return $config;
 	}
 
 	/**
