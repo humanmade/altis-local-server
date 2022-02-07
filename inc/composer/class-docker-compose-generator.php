@@ -107,6 +107,7 @@ class Docker_Compose_Generator {
 				$this->get_app_volume(),
 				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
 				'socket:/var/run/php-fpm',
+				'tmp:/tmp',
 			],
 			'networks' => [
 				'proxy',
@@ -175,6 +176,42 @@ class Docker_Compose_Generator {
 				],
 				$this->get_php_reusable()
 			),
+		];
+	}
+
+	/**
+	 * Webgrind service container for viewing Xdebug profiles.
+	 *
+	 * @return array
+	 */
+	protected function get_service_webgrind() : array {
+		return [
+			'webgrind' => [
+				'container_name' => "{$this->project_name}-webgrind",
+				'image' => 'wodby/webgrind:1.9',
+				'networks' => [
+					'proxy',
+					'default',
+				],
+				'depends_on' => [
+					'php',
+				],
+				'ports' => [
+					'8080',
+				],
+				'volumes' => [
+					'tmp:/tmp',
+				],
+				'labels' => [
+					'traefik.port=8080',
+					'traefik.protocol=http',
+					'traefik.docker.network=proxy',
+					"traefik.frontend.rule=Host:{$this->hostname};PathPrefix:/webgrind;PathPrefixStrip:/webgrind",
+				],
+				'environment' => [
+					'WEBGRIND_DEFAULT_TIMEZONE' => 'UTC',
+				],
+			],
 		];
 	}
 
@@ -671,6 +708,10 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
 
+		if ( strpos( $this->args['xdebug'] ?? false, 'profile' ) !== false ) {
+			$services = array_merge( $services, $this->get_service_webgrind() );
+		}
+
 		// Default compose configuration.
 		$config = [
 			'version' => '2.3',
@@ -690,6 +731,17 @@ class Docker_Compose_Generator {
 				'socket' => null,
 			],
 		];
+
+		// Mount tmp volume locally if requested.
+		if ( $this->args['tmp'] ?? false ) {
+			$config['volumes']['tmp'] = [
+				'driver' => 'local',
+				'driver_opts' => [
+					'device' => "{$this->root_dir}/.tmp",
+					'o' => 'bind',
+				],
+			];
+		}
 
 		// Handle mutagen volume according to args.
 		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
