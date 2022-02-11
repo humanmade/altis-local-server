@@ -13,6 +13,9 @@
 namespace Altis\Local_Server\Composer;
 
 use Composer\Command\BaseCommand;
+use GuzzleHttp;
+use PharData;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -78,6 +81,7 @@ View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 Import files from content/uploads directly to s3:
 	import-uploads                Copies files from `content/uploads` to s3
+	import <export-url>           Import database and files from an Altis Cloud export URL.
 EOT
 			)
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
@@ -172,6 +176,8 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
 			return $this->import_uploads( $input, $output );
+		} elseif ( $subcommand === 'import' ) {
+			return $this->import( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -731,6 +737,225 @@ EOT;
 			'mirror --exclude ".*" /content local/s3-%s',
 			$this->get_project_subdomain()
 		) );
+	}
+
+	/**
+	 * Human readable file size formatter.
+	 *
+	 * @param float $size The size in bytes
+	 * @param integer $precision The decimal places to round to.
+	 * @return integer
+	 */
+	private function human_filesize( float $size, int $precision = 2 ) {
+		for ( $i = 0; ( $size / 1024 ) > 0.9; $i++, $size /= 1024 ) {
+		}
+		return round( $size, $precision ) . [ 'B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB' ][ $i ];
+	}
+
+	/**
+	 * Remove a directory with all files
+	 *
+	 * Taken from https://stackoverflow.com/questions/3338123/how-do-i-recursively-delete-a-directory-and-its-entire-contents-files-sub-dir
+	 *
+	 * @param string $dir The directory to remove.
+	 */
+	private function rmdir_recursive( string $dir ) {
+		if ( is_dir( $dir ) ) {
+			$objects = scandir( $dir );
+			foreach ( $objects as $object ) {
+				if ( $object !== '.' && $object !== '..' ) {
+					if ( is_dir( $dir . DIRECTORY_SEPARATOR . $object ) && ! is_link( $dir . '/' . $object ) ) {
+						$this->rmdir_recursive( $dir . DIRECTORY_SEPARATOR . $object );
+					} else {
+						unlink( $dir . DIRECTORY_SEPARATOR . $object );
+					}
+				}
+			}
+			rmdir( $dir );
+		}
+	}
+
+	/**
+	 * Gunzip a file
+	 *
+	 * Taken from https://stackoverflow.com/questions/3293121/how-can-i-unzip-a-gz-file-with-php
+	 *
+	 * @param string $file_name The location of the gzipped file.
+	 * @param string $out_file_name The location to ungzip the file to.
+	 * @return string Path to unzipped file.
+	 */
+	private function gunzip_file( string $file_name, string $out_file_name ) : string {
+		// Raising this value may increase performance.
+		$buffer_size = 4096; // read 4kb at a time.
+
+		// Open our files (in binary mode).
+		$file = gzopen( $file_name, 'rb' );
+		$out_file = fopen( $out_file_name, 'wb' );
+
+		// Keep repeating until the end of the input file.
+		while ( ! gzeof( $file ) ) {
+			// Read buffer-size bytes
+			// Both fwrite and gzread and binary-safe.
+			fwrite( $out_file, gzread( $file, $buffer_size ) );
+		}
+
+		// Files are done, close files.
+		fclose( $out_file );
+		gzclose( $file );
+
+		return $out_file_name;
+	}
+
+	/**
+	 * Import an Altis Dashboard export file.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return void
+	 */
+	protected function import( InputInterface $input, OutputInterface $output ) {
+		$export_url = $input->getArgument( 'options' )[0];
+		$export_urls_parts = parse_url( $export_url );
+
+		if ( ! empty( $export_urls_parts['host'] ) ) {
+			// Todo: clean up file on sigterm.
+			$download_progress_bar = new ProgressBar( $output, 100 );
+
+			$tar_file_path = tempnam( sys_get_temp_dir(), basename( $export_urls_parts['path'] ) );
+			$download_file = fopen( $tar_file_path, 'w' );
+			$guzzle_client = new GuzzleHttp\Client();
+
+			$guzzle_client->request( 'GET', $export_url, [
+				'sink' => $download_file,
+				'on_headers' => function ( GuzzleHttp\Psr7\Response $response ) use ( $download_progress_bar ) {
+					$size = $response->getHeaderLine( 'Content-Length' );
+					$download_progress_bar->setFormat( 'Downloading ' . $this->human_filesize( $size ) . ' [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s%' );
+					$download_progress_bar->start();
+
+				},
+				'progress' => function ( int $total_bytes, int $bytes_so_far ) use ( $download_progress_bar ) {
+					if ( ! $total_bytes || ! $bytes_so_far ) {
+						return;
+					}
+					$download_progress_bar->setProgress( $bytes_so_far / $total_bytes * 100 );
+				},
+			] );
+
+			$download_progress_bar->finish();
+			$output->writeln( 'Complete' );
+		} elseif ( ! empty( $export_urls_parts['path'] ) && file_exists( $export_urls_parts['path'] ) ) {
+			$tar_file_path = $export_urls_parts['path'];
+		} else {
+			$output->writeln( sprintf( '<error>Unable to find file: %s</error>', $export_url ) );
+			return;
+		}
+
+		// Todo: make specific to the export file.
+		$extract_dir = sys_get_temp_dir() . '/export';
+		if ( is_dir( $extract_dir ) ) {
+			$this->rmdir_recursive( $extract_dir );
+		}
+		try {
+			$phar = new PharData( $tar_file_path );
+			$phar->extractTo( $extract_dir ); // extract all files.
+		} catch ( Exception $e ) {
+			$output->writeln( sprintf( '<error>Unable to extract tar file: %s</error>', $e->getMessage() ) );
+			$this->rmdir_recursive( $extract_dir );
+			unlink( $tar_file_path );
+			return;
+		}
+
+		if ( file_exists( $extract_dir . '/database.sql.gz' ) ) {
+			$output->writeln( 'Database found in export, importing...' );
+			$database_file_path = 'database.sql';
+			$sql_file = $this->gunzip_file( $extract_dir . '/database.sql.gz', $database_file_path );
+
+			// Import the file into mysql.
+			$cli = $this->getApplication()->find( 'local-server' );
+			$import = $cli->run( new ArrayInput( [
+				'subcommand' => 'cli',
+				'options' => [
+					'db',
+					'import',
+					$sql_file,
+				],
+			] ), $output );
+
+			// Flush cache.
+			$flush_cache = $cli->run( new ArrayInput( [
+				'subcommand' => 'cli',
+				'options' => [
+					'cache',
+					'flush',
+				],
+			] ), $output );
+
+			ob_start();
+			$export_sites = $cli->run( new ArrayInput( [
+				'subcommand' => 'cli',
+				'options' => [
+					'db',
+					'query',
+					'SELECT DISTINCT domain from wp_site',
+				],
+			] ), $output );
+			$sites_output = ob_get_clean();
+			// Oh lordy! There's no good way to run a query via WP-CLI and get machine readable output.
+			preg_match_all( '/ (\S+) /', $sites_output, $domains, PREG_SET_ORDER );
+			$domains = array_map( function ( array $match ) : string {
+				return $match[1];
+			}, $domains );
+			$domains = array_diff( $domains, [ 'domain' ] );
+
+			$output->writeln( sprintf( 'Replacing URLs for sites %s.', implode( ', ', $domains ) ) );
+			$replacement_domain = $this->get_project_subdomain() . '.altis.dev';
+			// Todp: handle subdonain -> subdir renaming.
+			foreach ( $domains as $export_domain ) {
+				$cli->run( new ArrayInput( [
+					'subcommand' => 'cli',
+					'options' => [
+						'search-replace',
+						$export_domain,
+						$replacement_domain,
+						'--network',
+						'--url=' . $export_domain,
+					],
+				] ), $output );
+			}
+
+			// Flush cache.
+			$flush_cache = $cli->run( new ArrayInput( [
+				'subcommand' => 'cli',
+				'options' => [
+					'cache',
+					'flush',
+				],
+			] ), $output );
+
+			$elasticpress_index = $cli->run( new ArrayInput( [
+				'subcommand' => 'cli',
+				'options' => [
+					'elasticpress',
+					'index',
+					'--setup',
+					'--network-wide',
+				],
+			] ), $output );
+		}
+
+		// Process uploads from the export file.
+		if ( is_dir( $extract_dir . '/uploads' ) ) {
+			$output->writeln( 'Uploads found in export, importing...' );
+			if ( is_dir( getcwd() . '/content/uploads' ) ) {
+				$this->rmdir_recursive( getcwd() . '/content/uploads' );
+			}
+			rename( $extract_dir . '/uploads', getcwd() . '/content/uploads' );
+			$this->import_uploads( $input, $output );
+			$this->rmdir_recursive( getcwd() . '/content/uploads' );
+		}
+
+		$this->rmdir_recursive( $extract_dir );
+		unlink( $tar_file_path );
 	}
 
 	/**
