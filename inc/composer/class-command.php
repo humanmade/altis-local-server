@@ -12,8 +12,8 @@
 
 namespace Altis\Local_Server\Composer;
 
-use Composer\Composer;
 use Composer\Command\BaseCommand;
+use Composer\Composer;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
