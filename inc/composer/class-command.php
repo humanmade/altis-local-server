@@ -12,6 +12,7 @@
 
 namespace Altis\Local_Server\Composer;
 
+use Composer\Composer;
 use Composer\Command\BaseCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
@@ -783,30 +784,11 @@ EOT;
 	 * @return Process
 	 */
 	protected function process( ...$args ) : Process {
-		if ( version_compare( $this->get_composer_version(), '2.3', '>=' ) && ! is_array( $args[0] ) ) {
+		if ( version_compare( Composer::getVersion(), '2.3', '>=' ) && ! is_array( $args[0] ) ) {
 			$args[0] = explode( ' ', $args[0] );
 		}
 
 		return new Process( ...$args );
-	}
-
-	/**
-	 * Get the composer executable version.
-	 *
-	 * @return string|null
-	 */
-	protected function get_composer_version() : ?string {
-		static $version;
-
-		if ( $version ) {
-			return $version;
-		}
-
-		preg_match( '/^Composer ([\d\.-]+)/', exec( 'composer --version' ), $composer_version );
-
-		$version = $composer_version[1] ?? null;
-
-		return $version;
 	}
 
 	/**
