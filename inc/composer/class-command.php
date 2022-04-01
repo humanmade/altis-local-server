@@ -112,9 +112,9 @@ EOT
 	 *
 	 * @param InputInterface $input Command input object.
 	 * @param OutputInterface $output Command output object.
-	 * @return int|null
+	 * @return int
 	 */
-	protected function execute( InputInterface $input, OutputInterface $output ) {
+	protected function execute( InputInterface $input, OutputInterface $output ) : int {
 		$subcommand = $input->getArgument( 'subcommand' );
 
 		// Collect args to pass to the docker compose file generator.
@@ -326,7 +326,7 @@ EOT
 		$helper = $this->getHelper( 'question' );
 		$question = new ConfirmationQuestion( 'Are you sure you want to destroy the server? [y/N] ', false );
 		if ( ! $helper->ask( $input, $output, $question ) ) {
-			return false;
+			return 0;
 		}
 
 		$output->writeln( '<error>Destroying...</>' );
