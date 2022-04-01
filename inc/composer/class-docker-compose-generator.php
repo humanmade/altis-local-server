@@ -734,9 +734,11 @@ class Docker_Compose_Generator {
 
 		// Mount tmp volume locally if requested.
 		if ( $this->args['tmp'] ?? false ) {
+			@mkdir( "{$this->root_dir}/.tmp" );
 			$config['volumes']['tmp'] = [
 				'driver' => 'local',
 				'driver_opts' => [
+					'type' => 'none',
 					'device' => "{$this->root_dir}/.tmp",
 					'o' => 'bind',
 				],
