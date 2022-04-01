@@ -149,7 +149,9 @@ EOT
 		}
 
 		// Refresh the docker-compose.yml file.
-		$this->generate_docker_compose( $settings );
+		if ( in_array( $subcommand, [ null, 'start', 'restart' ], true ) ) {
+			$this->generate_docker_compose( $settings );
+		}
 
 		if ( $subcommand === 'start' ) {
 			return $this->start( $input, $output );
