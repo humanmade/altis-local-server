@@ -750,6 +750,7 @@ EOT;
 	protected function process( ...$args ) : Process {
 		if ( version_compare( Composer::getVersion(), '2.3', '>=' ) && ! is_array( $args[0] ) ) {
 			$args[0] = explode( ' ', $args[0] );
+			$args[0] = array_filter( $args[0] );
 		}
 
 		return new Process( ...$args );
