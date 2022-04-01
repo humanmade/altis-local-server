@@ -1,7 +1,15 @@
 # Import Travis configuration from dev-tools repo
 version: ~> 1.0
 import:
-  - source: humanmade/altis-dev-tools:travis/module.yml@e6b35cd
+  - source: humanmade/altis-dev-tools:travis/module.yml@deaed48
     mode: deep_merge_append
 
 # Add your custom config below, which will merge with the default module config from the section above.
+script:
+  - composer server db info
+  - composer server db exec -- "select * from wp_site;"
+  - composer server status
+  - composer server exec -- ls -al
+  - composer server cli site list
+  - composer server stop --clean
+  - composer server destroy --clean
