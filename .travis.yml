@@ -8,6 +8,17 @@ import:
 before_install:
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
+before_script:
+  # Install Altis and start the local server
+  - composer create-project altis/skeleton:dev-$TRAVIS_BRANCH --stability=dev $HOME/test-root || composer create-project altis/skeleton:dev-master --stability=dev $HOME/test-root || exit 1
+  # Install Altis test theme package
+  - cd $HOME/test-root && composer require altis/test-theme
+  # Mark the test theme as the default
+  - cd $HOME/test-root && cat <<< $(jq '. + {"extra":{"altis":{"modules":{"cms":{"default-theme":"test-theme"}}}}}' composer.json | jq . -) > composer.json
+  # Require the current module and alias the branch to be tested to the target version main branch
+  # Tricks composer to allow installing the branch version if a version constaint exists, by increasing the current patch version
+  - cd $HOME/test-root && composer require -W "$ALTIS_PACKAGE:dev-${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH} as `jq \".packages-dev[] | select (.name==\\\"$ALTIS_PACKAGE\\\") | .version\" composer.lock | sed -e 's/\"//g;/^dev/q;s/\$/9/'`"
+
 script:
   - cd $HOME/test-root && composer server start
   - cd $HOME/test-root && composer server db info
