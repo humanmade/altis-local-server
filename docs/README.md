@@ -65,6 +65,7 @@ The subdomain used for the project can be configured via the `modules.local-serv
   * `--mutagen` will enable Mutagen for container file sharing.
 * `composer server stop [<service>] [--clean]` - Stops the containers or specified service.
   * `--clean` will also stop the proxy container if no service is specified, only use this if you have no other instances of Local Server
+  * `--tmp` will mount the PHP container's `/tmp` directory to `.tmp` in your project root. This is useful for debugging with `--xdebug=profile` as the cachegrind files are easily available
 * `composer server restart [<service>]` - Restart a given container, or all containers if none is provided. Available values are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server destroy [--clean]` - Stops and destroys all containers.
   * `--clean` will also destroy the proxy container, only use this if you have no other instances of Local Server

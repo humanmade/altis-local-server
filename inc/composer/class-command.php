@@ -13,6 +13,7 @@
 namespace Altis\Local_Server\Composer;
 
 use Composer\Command\BaseCommand;
+use Composer\Composer;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -39,7 +40,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, status, db, set, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, set, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -48,11 +49,13 @@ class Command extends BaseCommand {
 Run the local development server.
 
 Default command - start the local development server:
-	start [--xdebug=<mode>] [--mutagen]
-	                              Passing --xdebug starts the server with xdebug enabled
+	start [--xdebug=<mode>] [--mutagen] [--tmp]
+	                              --xdebug starts the server with xdebug enabled
 	                              optionally set the xdebug mode by assigning a value.
-	                              Passing --mutagen will start the server using Mutagen
+	                              --mutagen will start the server using Mutagen
 	                              for file sharing.
+	                              --tmp will mount the PHP container's /tmp directory to
+	                              .tmp in your project directory. Useful with --xdebug=profile
 Stop the local development server or specific service:
 	stop [<service>] [--clean]                passing --clean will also stop the proxy container
 Restart the local development server:
@@ -80,7 +83,8 @@ EOT
 			)
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
 			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Start the server with Mutagen file sharing' )
-			->addOption( 'clean', null, InputOption::VALUE_NONE, 'Remove or stop the proxy container when destroying or stopping the server' );
+			->addOption( 'clean', null, InputOption::VALUE_NONE, 'Remove or stop the proxy container when destroying or stopping the server' )
+			->addOption( 'tmp', null, InputOption::VALUE_NONE, 'Mount the PHP container\'s /tmp directory to `.tmp` for debugging purposes' );
 	}
 
 	/**
@@ -120,11 +124,17 @@ EOT
 		$settings = [
 			'xdebug' => 'off',
 			'mutagen' => 'off',
+			'tmp' => false,
 		];
 
 		// If Xdebug switch is passed add to docker compose args.
 		if ( $input->hasParameterOption( '--xdebug' ) ) {
 			$settings['xdebug'] = $input->getOption( 'xdebug' );
+		}
+
+		// If tmp switch is passed add to docker compose args.
+		if ( $input->hasParameterOption( '--tmp' ) ) {
+			$settings['tmp'] = true;
 		}
 
 		// Use mutagen if available.
@@ -159,7 +169,7 @@ EOT
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
 			return $this->logs( $input, $output );
-		} elseif ( $subcommand === 'shell' ) {
+		} elseif ( in_array( $subcommand, [ 'shell', 'ssh' ], true ) ) {
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
 			return $this->import_uploads( $input, $output );
@@ -199,7 +209,7 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		$proxy = new Process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
+		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
@@ -213,7 +223,7 @@ EOT
 
 		$env = $this->get_env();
 
-		$compose = new Process( $this->get_compose_command( 'up -d --remove-orphans', true ), 'vendor', $env );
+		$compose = $this->process( $this->get_compose_command( 'up -d --remove-orphans', true ), 'vendor', $env );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$compose->setTimeout( 0 );
 		$failed = $compose->run( function ( $type, $buffer ) {
@@ -268,6 +278,7 @@ EOT
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
+		return 0;
 	}
 
 	/**
@@ -287,7 +298,7 @@ EOT
 			$service = '';
 		}
 
-		$compose = new Process( $this->get_compose_command( "stop $service", true ), 'vendor', $this->get_env() );
+		$compose = $this->process( $this->get_compose_command( "stop $service", true ), 'vendor', $this->get_env() );
 		$compose->setTimeout( 0 );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$return_val = $compose->run( function ( $type, $buffer ) {
@@ -296,7 +307,7 @@ EOT
 
 		if ( $service === '' && $input->hasParameterOption( '--clean' ) ) {
 			$output->writeln( '<info>Stopping proxy container...</>' );
-			$proxy = new Process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
+			$proxy = $this->process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
 			$proxy->setTimeout( 0 );
 			$proxy->setTty( posix_isatty( STDOUT ) );
 			$proxy->run( function ( $type, $buffer ) {
@@ -329,7 +340,7 @@ EOT
 
 		$output->writeln( '<error>Destroying...</>' );
 
-		$compose = new Process( $this->get_compose_command( 'down -v --remove-orphans', true ), 'vendor', $this->get_env() );
+		$compose = $this->process( $this->get_compose_command( 'down -v --remove-orphans', true ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -346,7 +357,7 @@ EOT
 
 		if ( $remove_proxy ) {
 			$output->writeln( '<error>Destroying proxy container...</>' );
-			$proxy = new Process( $this->get_compose_command( '-f proxy.yml down -v' ), 'vendor/altis/local-server/docker' );
+			$proxy = $this->process( $this->get_compose_command( '-f proxy.yml down -v' ), 'vendor/altis/local-server/docker' );
 			$proxy->setTty( posix_isatty( STDOUT ) );
 			$proxy->run( function ( $type, $buffer ) {
 				echo $buffer;
@@ -372,7 +383,7 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = new Process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -384,7 +395,7 @@ EOT
 		} else {
 			$service = '';
 		}
-		$compose = new Process( $this->get_compose_command( "restart $service", true ), 'vendor', $this->get_env() );
+		$compose = $this->process( $this->get_compose_command( "restart $service", true ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$return_val = $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -478,7 +489,7 @@ EOT
 	 * @return int
 	 */
 	protected function status( InputInterface $input, OutputInterface $output ) {
-		$compose = new Process( $this->get_compose_command( 'ps' ), 'vendor', $this->get_env() );
+		$compose = $this->process( $this->get_compose_command( 'ps' ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		return $compose->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -516,7 +527,7 @@ EOT
 		} else {
 			$log = $input->getArgument( 'options' )[0];
 		}
-		$compose = new Process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
+		$compose = $this->process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$compose->setTimeout( 0 );
 		return $compose->run( function ( $type, $buffer ) {
@@ -667,7 +678,7 @@ EOT;
 		$lines = exec( 'tput lines' );
 
 		$base_command = sprintf(
-			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d db",
+			"$command_prefix %s exec -e COLUMNS=%d -e LINES=%d -T db",
 			$this->get_compose_command(),
 			$columns,
 			$lines
@@ -770,6 +781,24 @@ EOT;
 		}
 
 		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
+	}
+
+	/**
+	 * Run a prepared process command for various versions of Symfony Console.
+	 *
+	 * Console v5+ requires an array for the command.
+	 * Console v1-3 only supports strings.
+	 *
+	 * @param mixed ...$args Args to pass to Process.
+	 * @return Process
+	 */
+	protected function process( ...$args ) : Process {
+		if ( version_compare( Composer::getVersion(), '2.3', '>=' ) && ! is_array( $args[0] ) ) {
+			$args[0] = explode( ' ', $args[0] );
+			$args[0] = array_filter( $args[0] );
+		}
+
+		return new Process( ...$args );
 	}
 
 	/**

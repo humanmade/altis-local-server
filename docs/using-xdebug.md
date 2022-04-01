@@ -134,3 +134,27 @@ Local Server takes advantage of PHPStorm's [Zero Configuration Debugging](https:
    ![Example PHPStorm Configuration](./assets/phpstorm-config.png)
 3. Set some breakpoints and click the "Listen for Debug Connections" icon<br />
    ![PHPStorm Debug Icon](./assets/phpstorm-start-debug.png)
+
+
+## Accessing Xdebug output
+
+If you are starting Xdebug with any the following modes you will want to access their output in the PHP container's `/tmp` directory.
+
+This is achievable in 2 ways:
+
+1. Use `composer server shell` to access the container and look at the files using `cat`, `less` or other file reader
+2. Pass the `--tmp` flag when starting Local Server to mount the `/tmp` directory to `.tmp` in your project root
+
+The second option using `--tmp` has the advantage of allowing you to easily open the output files in external programs that understand them such as [KCacheGrind](https://kcachegrind.github.io/).
+
+Note that you should add `.tmp` to your project's `.gitignore` file if you use this option.
+
+## Profiling With WebGrind
+
+In most cases the XRay traces in the Query Monitor Dev Tools will give a good indication of any bottlenecks in your code however those traces are not available when running CLI commands or background cron tasks.
+
+If Xdebug is activated in profiling mode using `--xdebug=profile` on start up it will generate cachegrind files in the `/tmp` directory.
+
+You can use the `--tmp` option to mount and view these files in a program like KCacheGrind or QCacheGrind however Local Server provides a web interface for viewing the profiles. This is set up automatically if starting the server with `--xdebug=profile`.
+
+In your browser go to `/webgrind/` on your project domain, for example `https://my-project.altis.dev/webgrind/` to access the UI for viewing
