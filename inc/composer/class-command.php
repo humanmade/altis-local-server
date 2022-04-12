@@ -667,7 +667,7 @@ EOT;
 	 */
 	protected function import_uploads() {
 		return $this->minio_client( sprintf(
-			'mirror --exclude ".*" /content local/s3-%s',
+			'mirror --overwrite --exclude ".*" /content local/s3-%s',
 			$this->get_project_subdomain()
 		) );
 	}
