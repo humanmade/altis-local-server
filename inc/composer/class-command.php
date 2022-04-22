@@ -40,7 +40,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, set, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, ssl, set, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -75,6 +75,11 @@ Database commands:
 	db sequel                     Generates an SPF file for Sequel Pro
 	db info                       Prints out Database connection details
 	db exec -- "<query>"          Run and output the result of a SQL query.
+SSL commands:
+	ssl                           Show status on generated SSL certificates
+	ssl install                   Installs and trusts Root Certificate Authority
+	ssl generate [domains]        Generate SSL certificates for configured domains
+	ssl exec -- "command"         Executes an arbitrary mkcert command
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 Import files from content/uploads directly to s3:
@@ -167,6 +172,8 @@ EOT
 			return $this->exec( $input, $output );
 		} elseif ( $subcommand === 'db' ) {
 			return $this->db( $input, $output );
+		} elseif ( $subcommand === 'ssl' ) {
+			return $this->ssl( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
@@ -652,6 +659,179 @@ EOT;
 		}
 
 		return $return_val;
+	}
+
+	/**
+	 * Generate SSL certificates for development environment.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
+	protected function ssl( InputInterface $input, OutputInterface $output ) {
+		$subcommand = $input->getArgument( 'options' )[0] ?? null;
+
+		switch ( $subcommand ) {
+			case 'install':
+				// Detect platform architecture to attempt automatic installation.
+				$os = php_uname( 's' ); # 'Darwin', 'Linux', 'Windows'
+				$arch = php_uname( 'm' ); # 'arm64' for arm, 'x86_64' or 'amd64' for x64
+				$mkcert_version = 'v1.4.3';
+
+				switch( $os ) {
+					# macOS
+					case 'Darwin':
+						$binary_arch = $arch === 'x86_64' ? 'darwin-amd64' : 'darwin-arm64';
+						break;
+					# Linux
+					case 'Linux':
+						$binary_arch = $arch === 'amd64' ? 'linux-amd64' : 'linux-arm64';
+						break;
+					# Windows
+					case 'Windows':
+						$binary_arch = 'windows-amd64.exe';
+						break;
+					default:
+						$binary_arch = null;
+						break;
+				}
+
+				// If couldn't detect a support architecture, ask the user to install mkcert manually.
+				if ( ! $binary_arch ) {
+					$output->writeln( '<error>This command is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
+					return 1;
+				}
+
+				$binary = "mkcert-$mkcert_version-$binary_arch";
+				$mkcert = "vendor/mkcert";
+
+				// Check if mkcert is installed globally already, bail if so.
+				$version = trim( shell_exec( 'mkcert -version' ) );
+				if ( $version ) {
+					$output->writeln( "<error>mkcert $version is installed globally already</error>" );
+					return 1;
+				}
+
+				// Check if mkcert is installed locally already, bail if so.
+				$version = trim( shell_exec( "$mkcert -version" ) );
+				if ( $version ) {
+					$output->writeln( "<error>mkcert $version is installed locally already</error>" );
+					return 1;
+				}
+
+				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
+				if ( $result ) {
+					$output->writeln( "<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>" );
+					return 1;
+				}
+
+				$output->writeln( "<info>mkcert $mkcert_version was downloaded.</info>" );
+
+				chmod( $mkcert, 0755);
+
+				exec( "$mkcert -version", $dummy, $result );
+				if ( $result ) {
+					$output->writeln( "<error>Could not launch mkcert binary, try manually installing mkcert.</error>" );
+					return 1;
+				}
+				$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
+
+				// Setup and accept the root certificate.
+				exec( "$mkcert -install", $dummy, $result );
+				if ( $result ) {
+					$output->writeln( "<error>Could not setup mkcert properly, try manually installing mkcert.</error>" );
+					return 1;
+				}
+
+				$output->writeln( "<info>mkcert root CA was installed and accepted successfully.</info>" );
+				return 0;
+				break;
+			case 'generate':
+				$mkcert = $this->get_mkcert_binary();
+				if ( ! $mkcert ) {
+					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' or install mkcert manually first.</error>" );
+					return 1;
+				}
+
+				// TODO figure out how to programmatically detect the domains to use
+				$domains = $input->getArgument( 'options' )[1] ?? '*.altis.dev';
+
+				exec( "$mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $domains", $dummy, $result );
+
+				if ( $result ) {
+					$output->writeln( "<error>Could not generate certificates! Try generating them manually using mkcert.</error>" );
+					return 1;
+				}
+
+				$output->writeln( "<info>Generated SSL certificate successfully to vendor/ssl-cert.pem and key to vendor/ssl-key.pem.</info>" );
+				break;
+
+			case 'exec':
+				$mkcert = $this->get_mkcert_binary();
+				if ( ! $mkcert ) {
+					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' or install mkcert manually first.</error>" );
+					return 1;
+				}
+
+				$command = $input->getArgument( 'options' )[1] ?? null;
+				exec( "$mkcert $command", $exec_output, $result );
+
+				if ( $result ) {
+					$output->writeln( "<error>$exec_output</error>" );
+					return 1;
+				} else {
+					$output->writeln( $exec_output );
+				}
+
+				break;
+
+			case '':
+				$mkcert = $this->get_mkcert_binary();
+				if ( ! $mkcert ) {
+					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' or install mkcert manually first.</error>" );
+					return 1;
+				} else {
+					$output->writeln( '<info>mkcert is installed correctly.</info>' );
+				}
+
+				$cert_exists = file_exists( 'vendor/ssl-cert.pem' ) && file_exists( 'vendor/ssl-key.pem' );
+				if ( ! $cert_exists ) {
+					$output->writeln( "<error>Certificate file does not exist. Use 'composer server ssl generate' to generate one. </error>" );
+					return 1;
+				} else {
+					$output->writeln( "<info>Certificate file exists.</info>" );
+				}
+
+				break;
+
+			default:
+				$output->writeln( "<error>The subcommand $subcommand is not recognized</error>" );
+				return 1;
+			}
+			return 0;
+	}
+
+	/**
+	 * Retrieves path to the working copy of mkcert.
+	 *
+	 * @return string|false Path to the mkcert binary or false if not found.
+	 */
+	protected function get_mkcert_binary() : ?string {
+		$mkcert = "vendor/mkcert";
+
+		// Check if mkcert is installed globally already, bail if so.
+		$version = trim( shell_exec( 'mkcert -version' ) );
+		if ( $version ) {
+			return 'mkcert';
+		}
+
+		// Check if mkcert is installed locally already, bail if so.
+		$version = trim( shell_exec( "$mkcert -version" ) );
+		if ( $version ) {
+			return $mkcert;
+		}
+
+		return null;
 	}
 
 	/**
