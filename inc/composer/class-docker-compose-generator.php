@@ -509,7 +509,7 @@ class Docker_Compose_Generator {
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}.localhost",
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
 				],
 			],
 			's3-sync-to-host' => [
