@@ -134,15 +134,15 @@ class Docker_Compose_Generator {
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
 				'S3_UPLOADS_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}.localhost/",
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
-				'S3_UPLOADS_BUCKET_URL' => "https://s3-{$this->hostname}",
+				'S3_UPLOADS_BUCKET_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}",
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
 				'S3_CONSOLE_URL' => "https://s3-console-{$this->hostname}",
-				'TACHYON_URL' => "https://{$this->hostname}/tachyon",
+				'TACHYON_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->hostname}/tachyon",
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
-				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
-				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
+				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://pinpoint-{$this->hostname}",
+				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://cognito-{$this->hostname}",
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
 				'XDEBUG_CONFIG' => sprintf(
 					'client_host=%s',
@@ -558,7 +558,7 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => "https://{$this->tld}/",
+					'AWS_S3_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->tld}/",
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
