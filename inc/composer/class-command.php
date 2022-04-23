@@ -130,6 +130,7 @@ EOT
 			'xdebug' => 'off',
 			'mutagen' => 'off',
 			'tmp' => false,
+			'secure' => $this->get_composer_config()['secure'] ?? true,
 		];
 
 		// If Xdebug switch is passed add to docker compose args.
