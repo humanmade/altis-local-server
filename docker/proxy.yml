@@ -7,9 +7,8 @@ services:
     container_name: altis-proxy
     volumes:
       - "$PWD/conf/traefik.toml:/etc/traefik/traefik.toml"
-      - "$PWD/ssl.cert:/etc/traefik/ssl.cert"
-      - "$PWD/ssl.key:/etc/traefik/ssl.key"
-      - "$PWD/sni:/etc/traefik/sni"
+      - "$PWD/../../../vendor/ssl-cert.pem:/etc/traefik/ssl-cert.pem"
+      - "$PWD/../../../vendor/ssl-key.pem:/etc/traefik/ssl-key.pem"
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - '8080:8080'

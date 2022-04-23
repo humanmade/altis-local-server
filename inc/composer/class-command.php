@@ -218,6 +218,8 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
+		$this->check_ssl_certificate();
+
 		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( posix_isatty( STDOUT ) );
@@ -288,6 +290,43 @@ EOT
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
 		return 0;
+	}
+
+	/**
+	 * Check and generate SSL certificate programmatically if needed.
+	 *
+	 * @return void
+	 */
+	protected function check_ssl_certificate() : void {
+		$tld = $this->get_project_tld();
+		$name = $this->get_project_subdomain();
+		$host = @file_get_contents( 'vendor/host' );
+		$is_new_host = $host !== "$name.$tld";
+
+		// If the SSL certificate does not exist, create one.
+		if ( $is_new_host || ! file_exists( 'vendor/ssl-cert.pem' ) ) {
+			if ( $is_new_host ) {
+				$output->writeln( '<warning>Detected updated host, regenerating SSL certificate.</warning>' );
+			} else {
+				$output->writeln( '<warning>Could not find SSL certificate, generating one based on configured domain.</warning>' );
+			}
+
+			// Create the certificate programmatically.
+			$generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+				'subcommand' => 'ssl',
+				'options' => [
+					'generate',
+					"$name.$tld *.$name.$tld",
+				],
+			] ) );
+
+			file_put_contents( 'vendor/host', "$name.$tld" );
+
+			if ( $generated ) {
+				// An error message would've been output already here.
+				exit( 1 );
+			}
+		}
 	}
 
 	/**
