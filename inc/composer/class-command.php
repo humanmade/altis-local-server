@@ -220,7 +220,7 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		$this->check_ssl_certificate();
+		$this->check_ssl_certificate( $input, $output );
 
 		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
@@ -297,9 +297,12 @@ EOT
 	/**
 	 * Check and generate SSL certificate programmatically if needed.
 	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 *
 	 * @return void
 	 */
-	protected function check_ssl_certificate() : void {
+	protected function check_ssl_certificate( InputInterface $input, OutputInterface $output ) : void {
 		$tld = $this->get_project_tld();
 		$name = $this->get_project_subdomain();
 		$host = @file_get_contents( 'vendor/host' );
