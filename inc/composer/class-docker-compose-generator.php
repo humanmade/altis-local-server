@@ -132,17 +132,17 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}.localhost/",
+				'S3_UPLOADS_ENDPOINT' => $this->set_url_scheme( "http://s3-{$this->hostname}.localhost/" ),
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
-				'S3_UPLOADS_BUCKET_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}",
+				'S3_UPLOADS_BUCKET_URL' => $this->set_url_scheme( "http://s3-{$this->hostname}" ),
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
-				'S3_CONSOLE_URL' => "https://s3-console-{$this->hostname}",
-				'TACHYON_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->hostname}/tachyon",
+				'S3_CONSOLE_URL' => $this->set_url_scheme( "http://s3-console-{$this->hostname}" ),
+				'TACHYON_URL' => $this->set_url_scheme( "http://{$this->hostname}/tachyon" ),
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
-				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://pinpoint-{$this->hostname}",
-				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://cognito-{$this->hostname}",
+				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => $this->set_url_scheme( "http://pinpoint-{$this->hostname}" ),
+				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => $this->set_url_scheme( "http://cognito-{$this->hostname}" ),
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
 				'XDEBUG_CONFIG' => sprintf(
 					'client_host=%s',
@@ -558,7 +558,7 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->tld}/",
+					'AWS_S3_ENDPOINT' => $this->set_url_scheme( "http://{$this->tld}/" ),
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
@@ -856,5 +856,16 @@ class Docker_Compose_Generator {
 			return 'app:/usr/src/app:delegated';
 		}
 		return "{$this->root_dir}:/usr/src/app:delegated";
+	}
+
+	/**
+	 * Set correct URL scheme as per configuration.
+	 *
+	 * @param string $url URL to fix.
+	 *
+	 * @return string
+	 */
+	protected function set_url_scheme( $url ) {
+		return preg_replace( '/^https?:/', $this->args['secure'] ? 'https' : 'http', $url );
 	}
 }
