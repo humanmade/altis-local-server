@@ -1061,6 +1061,11 @@ EOT;
 		return php_uname( 's' ) === 'Darwin';
 	}
 
+	/**
+	 * Check if within Codespaces environment, and if Codespaces integration is enabled.
+	 *
+	 * @return boolean
+	 */
 	public function is_using_codespaces() : bool {
 		$config = $this->get_composer_config();
 		return getenv( 'CODESPACES' ) === 'true' && ( $config['codespaces_integration'] ?? true );
