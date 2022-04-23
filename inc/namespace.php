@@ -96,6 +96,7 @@ function bootstrap() {
 	if ( $config['codespaces_integration'] ?? null && $_SERVER['HTTP_HOST'] === 'localhost' ) {
 		// Use forwarded host if we can.
 		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_HOST'] ) ) {
+			/* phpcs:ignore */
 			$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_X_FORWARDED_HOST'];
 		}
 	}
