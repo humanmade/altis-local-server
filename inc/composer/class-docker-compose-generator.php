@@ -1,8 +1,6 @@
 <?php
 /**
  * Local Server Docker Compose file generator.
- *
- * phpcs:disable PEAR, Generic
  */
 
 namespace Altis\Local_Server\Composer;
