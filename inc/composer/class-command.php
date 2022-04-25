@@ -699,6 +699,7 @@ EOT;
 				// If couldn't detect a support architecture, ask the user to install mkcert manually.
 				if ( ! $binary_arch ) {
 					$output->writeln( '<error>This command is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
+					$output->writeln( '<error>Download and install `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 
@@ -732,6 +733,7 @@ EOT;
 				exec( "$mkcert -version", $dummy, $result );
 				if ( $result ) {
 					$output->writeln( "<error>Could not launch mkcert binary, try manually installing mkcert.</error>" );
+					$output->writeln( '<error>Download and install `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 				$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
@@ -740,6 +742,7 @@ EOT;
 				exec( "$mkcert -install", $dummy, $result );
 				if ( $result ) {
 					$output->writeln( "<error>Could not setup mkcert properly, try manually installing mkcert.</error>" );
+					$output->writeln( '<error>Download and install `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 
