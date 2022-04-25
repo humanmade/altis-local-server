@@ -129,7 +129,7 @@ EOT
 
 		// If Xdebug switch is passed add to docker compose args.
 		if ( $input->hasParameterOption( '--xdebug' ) ) {
-			$settings['xdebug'] = $input->getOption( 'xdebug' );
+			$settings['xdebug'] = $input->getOption( 'xdebug' ) ?? 'debug';
 		}
 
 		// If tmp switch is passed add to docker compose args.
