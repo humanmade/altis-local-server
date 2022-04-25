@@ -747,7 +747,6 @@ EOT;
 				}
 
 				$output->writeln( "<info>mkcert root CA was installed and accepted successfully.</info>" );
-				return 0;
 				break;
 			case 'generate':
 				$mkcert = $this->get_mkcert_binary();
