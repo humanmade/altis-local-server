@@ -124,7 +124,7 @@ EOT
 
 		// If Xdebug switch is passed add to docker compose args.
 		if ( $input->hasParameterOption( '--xdebug' ) ) {
-			$settings['xdebug'] = $input->getOption( 'xdebug' );
+			$settings['xdebug'] = $input->getOption( 'xdebug' ) ?? 'debug';
 		}
 
 		// Use mutagen if available.
