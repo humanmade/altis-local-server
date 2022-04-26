@@ -805,7 +805,7 @@ EOT;
 	/**
 	 * Retrieves path to the working copy of mkcert.
 	 *
-	 * @return string|false Path to the mkcert binary or false if not found.
+	 * @return string|null Path to the mkcert binary or false if not found.
 	 */
 	protected function get_mkcert_binary() : ?string {
 		$mkcert = "vendor/mkcert";
