@@ -767,7 +767,7 @@ EOT;
 					return 1;
 				}
 
-				$output->writeln( "<info>Generated SSL certificate successfully to vendor/ssl-cert.pem and key to vendor/ssl-key.pem.</info>" );
+				$output->writeln( "<info>Generated SSL certificate successfully.</info>" );
 				break;
 
 			case 'exec':
