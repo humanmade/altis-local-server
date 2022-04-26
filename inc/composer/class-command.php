@@ -681,20 +681,17 @@ EOT;
 		switch ( $subcommand ) {
 			case 'install':
 				// Detect platform architecture to attempt automatic installation.
-				$os = php_uname( 's' ); # 'Darwin', 'Linux', 'Windows'
-				$arch = php_uname( 'm' ); # 'arm64' for arm, 'x86_64' or 'amd64' for x64
+				$os = php_uname( 's' ); // 'Darwin', 'Linux', 'Windows'
+				$arch = php_uname( 'm' ); // 'arm64' for arm, 'x86_64' or 'amd64' for x64
 				$mkcert_version = 'v1.4.3';
 
-				switch( $os ) {
-					# macOS
+				switch ( $os ) {
 					case 'Darwin':
-						$binary_arch = $arch === 'x86_64' ? 'darwin-amd64' : 'darwin-arm64';
+						$binary_arch = ( $arch === 'x86_64' ) ? 'darwin-amd64' : 'darwin-arm64';
 						break;
-					# Linux
 					case 'Linux':
-						$binary_arch = $arch === 'amd64' ? 'linux-amd64' : 'linux-arm64';
+						$binary_arch = ( $arch === 'amd64' ) ? 'linux-amd64' : 'linux-arm64';
 						break;
-					# Windows
 					case 'Windows':
 						$binary_arch = 'windows-amd64.exe';
 						break;
@@ -711,7 +708,7 @@ EOT;
 				}
 
 				$binary = "mkcert-$mkcert_version-$binary_arch";
-				$mkcert = "vendor/mkcert";
+				$mkcert = 'vendor/mkcert';
 
 				// Check if mkcert is installed globally already, bail if so.
 				$version = trim( shell_exec( 'mkcert -version' ) );
@@ -729,18 +726,18 @@ EOT;
 
 				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
 				if ( $result ) {
-					$output->writeln( "<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>" );
+					$output->writeln( '<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>' );
 					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 
 				$output->writeln( "<info>mkcert $mkcert_version was downloaded.</info>" );
 
-				chmod( $mkcert, 0755);
+				chmod( $mkcert, 0755 );
 
 				exec( "$mkcert -version", $dummy, $result );
 				if ( $result ) {
-					$output->writeln( "<error>Could not launch mkcert binary, try manually installing mkcert.</error>" );
+					$output->writeln( '<error>Could not launch mkcert binary, try manually installing mkcert.</error>' );
 					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
@@ -754,10 +751,10 @@ EOT;
 					return 1;
 				}
 
-				$output->writeln( "<info>mkcert root CA was installed and accepted successfully.</info>" );
+				$output->writeln( '<info>mkcert root CA was installed and accepted successfully.</info>' );
 				break;
 			case 'generate':
-				// TODO figure out how to programmatically detect the domains to use
+				// TODO figure out how to programmatically detect the domains to use.
 				$domains = $input->getArgument( 'options' )[1] ?? '*.altis.dev';
 
 				exec( "$mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $domains", $dummy, $result );
@@ -768,7 +765,7 @@ EOT;
 					return 1;
 				}
 
-				$output->writeln( "<info>Generated SSL certificate successfully.</info>" );
+				$output->writeln( '<info>Generated SSL certificate successfully.</info>' );
 				break;
 
 			case 'exec':
@@ -790,7 +787,7 @@ EOT;
 					$output->writeln( "<error>Certificate file does not exist. Use 'composer server ssl generate' to generate one. </error>" );
 					return 1;
 				} else {
-					$output->writeln( "<info>Certificate file exists.</info>" );
+					$output->writeln( '<info>Certificate file exists.</info>' );
 				}
 
 				break;
@@ -798,8 +795,8 @@ EOT;
 			default:
 				$output->writeln( "<error>The subcommand $subcommand is not recognized</error>" );
 				return 1;
-			}
-			return 0;
+		}
+		return 0;
 	}
 
 	/**
@@ -808,7 +805,7 @@ EOT;
 	 * @return string|null Path to the mkcert binary or false if not found.
 	 */
 	protected function get_mkcert_binary() : ?string {
-		$mkcert = "vendor/mkcert";
+		$mkcert = 'vendor/mkcert';
 
 		// Check if mkcert is installed globally already, bail if so.
 		$version = trim( shell_exec( 'mkcert -version' ) );
