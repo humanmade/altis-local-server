@@ -699,7 +699,7 @@ EOT;
 				// If couldn't detect a support architecture, ask the user to install mkcert manually.
 				if ( ! $binary_arch ) {
 					$output->writeln( '<error>This command is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
-					$output->writeln( '<error>Download and install `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 
@@ -723,6 +723,7 @@ EOT;
 				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
 				if ( $result ) {
 					$output->writeln( "<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>" );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 
@@ -733,7 +734,7 @@ EOT;
 				exec( "$mkcert -version", $dummy, $result );
 				if ( $result ) {
 					$output->writeln( "<error>Could not launch mkcert binary, try manually installing mkcert.</error>" );
-					$output->writeln( '<error>Download and install `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 				$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
@@ -741,8 +742,8 @@ EOT;
 				// Setup and accept the root certificate.
 				exec( "$mkcert -install", $dummy, $result );
 				if ( $result ) {
-					$output->writeln( "<error>Could not setup mkcert properly, try manually installing mkcert.</error>" );
-					$output->writeln( '<error>Download and install `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+					$output->writeln( '<error>Could not setup `mkcert` properly, try manually installing it.</error>' );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
 
@@ -751,7 +752,7 @@ EOT;
 			case 'generate':
 				$mkcert = $this->get_mkcert_binary();
 				if ( ! $mkcert ) {
-					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' or install mkcert manually first.</error>" );
+					$output->writeln( '<error>mkcert is not installed, run `composer server ssl install` to install and set it up.</error>' );
 					return 1;
 				}
 
@@ -761,7 +762,8 @@ EOT;
 				exec( "$mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $domains", $dummy, $result );
 
 				if ( $result ) {
-					$output->writeln( "<error>Could not generate certificates! Try generating them manually using mkcert.</error>" );
+					$output->writeln( '<error>Could not generate certificates! Try generating them manually using `mkcert`.</error>' );
+					$output->writeln( "<error>Command should be: 'mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $domains'</error>" );
 					return 1;
 				}
 
@@ -771,7 +773,7 @@ EOT;
 			case 'exec':
 				$mkcert = $this->get_mkcert_binary();
 				if ( ! $mkcert ) {
-					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' or install mkcert manually first.</error>" );
+					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
 					return 1;
 				}
 
@@ -790,7 +792,7 @@ EOT;
 			case '':
 				$mkcert = $this->get_mkcert_binary();
 				if ( ! $mkcert ) {
-					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' or install mkcert manually first.</error>" );
+					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
 					return 1;
 				} else {
 					$output->writeln( '<info>mkcert is installed correctly.</info>' );
