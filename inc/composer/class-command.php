@@ -671,6 +671,13 @@ EOT;
 	protected function ssl( InputInterface $input, OutputInterface $output ) {
 		$subcommand = $input->getArgument( 'options' )[0] ?? null;
 
+		$mkcert = $this->get_mkcert_binary();
+
+		if ( $subcommand !== 'install' && ! $mkcert ) {
+			$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
+			return 1;
+		}
+
 		switch ( $subcommand ) {
 			case 'install':
 				// Detect platform architecture to attempt automatic installation.
@@ -750,12 +757,6 @@ EOT;
 				$output->writeln( "<info>mkcert root CA was installed and accepted successfully.</info>" );
 				break;
 			case 'generate':
-				$mkcert = $this->get_mkcert_binary();
-				if ( ! $mkcert ) {
-					$output->writeln( '<error>mkcert is not installed, run `composer server ssl install` to install and set it up.</error>' );
-					return 1;
-				}
-
 				// TODO figure out how to programmatically detect the domains to use
 				$domains = $input->getArgument( 'options' )[1] ?? '*.altis.dev';
 
@@ -771,12 +772,6 @@ EOT;
 				break;
 
 			case 'exec':
-				$mkcert = $this->get_mkcert_binary();
-				if ( ! $mkcert ) {
-					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
-					return 1;
-				}
-
 				$command = $input->getArgument( 'options' )[1] ?? null;
 				exec( "$mkcert $command", $exec_output, $result );
 
@@ -790,14 +785,6 @@ EOT;
 				break;
 
 			case '':
-				$mkcert = $this->get_mkcert_binary();
-				if ( ! $mkcert ) {
-					$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
-					return 1;
-				} else {
-					$output->writeln( '<info>mkcert is installed correctly.</info>' );
-				}
-
 				$cert_exists = file_exists( 'vendor/ssl-cert.pem' ) && file_exists( 'vendor/ssl-key.pem' );
 				if ( ! $cert_exists ) {
 					$output->writeln( "<error>Certificate file does not exist. Use 'composer server ssl generate' to generate one. </error>" );
