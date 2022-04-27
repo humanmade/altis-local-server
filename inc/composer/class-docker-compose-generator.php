@@ -132,7 +132,7 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => "https://{$this->tld}/",
+				'S3_UPLOADS_ENDPOINT' => "https://s3-{$this->hostname}",
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
 				'S3_UPLOADS_BUCKET_URL' => "https://s3-{$this->hostname}",
 				'S3_UPLOADS_KEY' => 'admin',
@@ -481,7 +481,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
+					'MINIO_DOMAIN' => "s3.localhost,{$this->hostname},s3-{$this->hostname},s3",
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ROOT_USER' => 'admin',
 					'MINIO_ROOT_PASSWORD' => 'password',
