@@ -323,7 +323,7 @@ EOT
 					'generate',
 					"$name.$tld *.$name.$tld",
 				],
-			] ) );
+			] ), $output );
 
 			file_put_contents( 'vendor/host', "$name.$tld" );
 
