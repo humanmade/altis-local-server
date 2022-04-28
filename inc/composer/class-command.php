@@ -736,7 +736,7 @@ EOT;
 					case 'Linux':
 						$binary_arch = ( $arch === 'amd64' ) ? 'linux-amd64' : 'linux-arm64';
 						break;
-					case 'Windows':
+					case self::is_wsl():
 						$binary_arch = 'windows-amd64.exe';
 						break;
 					default:
