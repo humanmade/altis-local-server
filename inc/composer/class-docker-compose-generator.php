@@ -97,7 +97,7 @@ class Docker_Compose_Generator {
 			exit( 1 );
 		}
 
-		$image = $version_map[ $version ?? '8.0' ];
+		$image = $version_map[ $version ];
 
 		$services = [
 			'init' => true,
@@ -825,6 +825,7 @@ class Docker_Compose_Generator {
 			'kibana' => true,
 			'xray' => true,
 			'ignore-paths' => [],
+			'php' => '8.0',
 		];
 
 		return array_merge( $defaults, $config );
