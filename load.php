@@ -16,6 +16,7 @@ add_action( 'altis.modules.init', function () {
 		'tachyon' => true,
 		'analytics' => true,
 		'elasticsearch' => '7',
+		'php' => '8.0',
 	];
 	$options = [
 		'defaults' => $default_settings,
