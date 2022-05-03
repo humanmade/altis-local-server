@@ -233,7 +233,7 @@ EOT
 		}
 
 		// Generate SSL certificate if not found.
-		if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
+		if ( ! ( $this->get_composer_config()['secure'] ?? true ) && ! file_exists( 'vendor/ssl-cert.pem' ) ) {
 			// Create the certificate programmatically.
 			$generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
 				'subcommand' => 'ssl',
