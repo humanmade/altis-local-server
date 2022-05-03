@@ -220,7 +220,36 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		$this->check_ssl_certificate( $input, $output );
+		// Check for changed project name
+		$tld = $this->get_project_tld();
+		$name = $this->get_project_subdomain();
+		$host = @file_get_contents( 'vendor/host' );
+		$is_new_host = $host && ( $host !== "$name.$tld" );
+
+		// Halt if the project name is changed, to avoid orphan containers.
+		if ( $is_new_host ) {
+			$output->writeln( '<error>Detected changed domain, proceeding will result in orphan container. Please revert the name change and destroy older container before moving on.</error>' );
+			exit( 1 );
+		}
+
+		// Generate SSL certificate if not found.
+		if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
+			// Create the certificate programmatically.
+			$generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+				'subcommand' => 'ssl',
+				'options' => [
+					'generate',
+					'altis.dev', // default domain, configured names will be automatically added
+				],
+			] ), $output );
+
+			if ( $generated ) {
+				exit( 1 );
+			}
+		}
+
+		// Save a reference to the host for later runs.
+		file_put_contents( 'vendor/host', "$name.$tld" );
 
 		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
 		$proxy->setTimeout( 0 );
@@ -292,46 +321,6 @@ EOT
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
 		return 0;
-	}
-
-	/**
-	 * Check and generate SSL certificate programmatically if needed.
-	 *
-	 * @param InputInterface $input Command input object.
-	 * @param OutputInterface $output Command output object.
-	 *
-	 * @return void
-	 */
-	protected function check_ssl_certificate( InputInterface $input, OutputInterface $output ) : void {
-		$tld = $this->get_project_tld();
-		$name = $this->get_project_subdomain();
-		$host = @file_get_contents( 'vendor/host' );
-		$is_new_host = $host !== "$name.$tld";
-
-		// If the SSL certificate does not exist, create one.
-		if ( $is_new_host || ! file_exists( 'vendor/ssl-cert.pem' ) ) {
-			if ( $is_new_host ) {
-				$output->writeln( '<warning>Detected updated host, regenerating SSL certificate.</warning>' );
-			} else {
-				$output->writeln( '<warning>Could not find SSL certificate, generating one based on configured domain.</warning>' );
-			}
-
-			// Create the certificate programmatically.
-			$generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
-				'subcommand' => 'ssl',
-				'options' => [
-					'generate',
-					"$name.$tld *.$name.$tld",
-				],
-			] ), $output );
-
-			file_put_contents( 'vendor/host', "$name.$tld" );
-
-			if ( $generated ) {
-				// An error message would've been output already here.
-				exit( 1 );
-			}
-		}
 	}
 
 	/**
@@ -416,6 +405,11 @@ EOT
 				echo $buffer;
 			} );
 		}
+
+		// Remove the host reference file, and SSL certificate and key.
+		@unlink( 'vendor/host' );
+		@unlink( 'vendor/ssl-cert.pem' );
+		@unlink( 'vendor/ssl-key.pem' );
 
 		if ( $return_val === 0 ) {
 			$output->writeln( '<error>Destroyed.</>' );
