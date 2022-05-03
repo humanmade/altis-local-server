@@ -762,6 +762,7 @@ EOT;
 					return 1;
 				}
 
+				$output->writeln( "Detected system architecture to be $os $arch" );
 				$output->writeln( "Downloading https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary to $mkcert ..." );
 				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
 				if ( $result ) {
