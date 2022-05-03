@@ -28,6 +28,7 @@ script:
   - cd $HOME/test-root && composer server exec -- ls -al
   - cd $HOME/test-root && composer server cli site list
   - cd $HOME/test-root && composer server start --xdebug=debug,profile
+  - curl https://test-root.altis.dev/
   - cd $HOME/test-root && composer server exec printenv | grep XDEBUG_MODE=debug,profile
   - curl -XGET https://test-root.altis.dev/webgrind/ | grep '<title>webgrind</title>'
   - cd $HOME/test-root && composer server stop --clean
