@@ -762,6 +762,7 @@ EOT;
 					return 1;
 				}
 
+				$output->writeln( "Downloading https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary to $mkcert ..." );
 				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
 				if ( $result ) {
 					$output->writeln( '<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>' );
