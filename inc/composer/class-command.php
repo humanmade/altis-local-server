@@ -810,6 +810,14 @@ EOT;
 				}
 
 				$output->writeln( '<info>Generated SSL certificate successfully.</info>' );
+				$output->writeln( '<info>Restarting proxy server to activate the new certificate..</info>' );
+
+				$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+				$proxy->setTty( posix_isatty( STDOUT ) );
+				$proxy->run( function ( $type, $buffer ) {
+					echo $buffer;
+				} );
+
 				break;
 
 			case 'exec':
