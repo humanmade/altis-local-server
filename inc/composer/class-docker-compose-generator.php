@@ -79,6 +79,27 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_php_reusable() : array {
+		$version_map = [
+			'8.0' => 'humanmade/altis-local-server-php:pull-request-107',
+			'7.4' => 'humanmade/altis-local-server-php:4.2.0',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['php'];
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured PHP version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -92,7 +113,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.2.0',
+			'image' => $image,
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -809,6 +830,7 @@ class Docker_Compose_Generator {
 			'kibana' => true,
 			'xray' => true,
 			'ignore-paths' => [],
+			'php' => '8.0',
 		];
 
 		return array_merge( $defaults, $config );

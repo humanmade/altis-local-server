@@ -1,7 +1,7 @@
 # Import Travis configuration from dev-tools repo
 version: ~> 1.0
 import:
-  - source: humanmade/altis-dev-tools:travis/module.yml@deaed48
+  - source: humanmade/altis-dev-tools:travis/module.yml@c7a250c
     mode: merge
 
 # Add your custom config below, which will merge with the default module config from the section above.
@@ -27,5 +27,8 @@ script:
   - cd $HOME/test-root && composer server status
   - cd $HOME/test-root && composer server exec -- ls -al
   - cd $HOME/test-root && composer server cli site list
+  - cd $HOME/test-root && composer server start --xdebug=debug,profile
+  - cd $HOME/test-root && composer server exec printenv | grep XDEBUG_MODE=debug,profile
+  - curl -XGET https://test-root.altis.dev/webgrind/ | grep '<title>webgrind</title>'
   - cd $HOME/test-root && composer server stop --clean
   - cd $HOME/test-root && composer server destroy --clean
