@@ -243,6 +243,10 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_nginx() : array {
+		$config = $this->get_config();
+		$domains = $config['domains'] ?? [];
+		$domains = $domains ? ',' . implode( ',', $domains ) : '';
+
 		return [
 			'nginx' => [
 				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
@@ -266,7 +270,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
 				],
 				'environment' => [
 					// Gzip compression now defaults to off to support Brotli compression via CloudFront.

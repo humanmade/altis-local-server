@@ -798,10 +798,21 @@ EOT;
 				$output->writeln( '<info>mkcert root CA was installed and accepted successfully.</info>' );
 				break;
 			case 'generate':
-				// TODO figure out how to programmatically detect the domains to use.
-				$domains = $input->getArgument( 'options' )[1] ?? '*.altis.dev';
+				$config = $this->get_composer_config();
 
-				exec( "$mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $domains", $dummy, $result );
+				$domain = ( $config['name'] ?: 'altis' ) . '.' . ( $config['tld'] ?: 'dev' );
+				$domains = explode( ' ', $input->getArgument( 'options' )[1] ?? '' );
+				$extra_domains = $config['domains'] ?: [];
+
+				$domains[] = $domain;
+				$domains[] = "*.$domain";
+				$domains[] = "altis.dev";
+				$domains[] = "*.altis.dev";
+				$domains = array_merge( $domains, $extra_domains );
+
+				$cert_domains = implode( ' ', array_unique( $domains ) );
+
+				exec( "$mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $cert_domains", $dummy, $result );
 
 				if ( $result ) {
 					$output->writeln( '<error>Could not generate certificates! Try generating them manually using `mkcert`.</error>' );
