@@ -220,7 +220,7 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		// Check for changed project name
+		// Check for changed project name.
 		$tld = $this->get_project_tld();
 		$name = $this->get_project_subdomain();
 		$host = @file_get_contents( 'vendor/host' );
@@ -239,7 +239,7 @@ EOT
 				'subcommand' => 'ssl',
 				'options' => [
 					'generate',
-					'altis.dev', // default domain, configured names will be automatically added
+					'altis.dev', // default domain, configured names will be automatically added.
 				],
 			] ), $output );
 
@@ -800,8 +800,8 @@ EOT;
 
 				$domains[] = $domain;
 				$domains[] = "*.$domain";
-				$domains[] = "altis.dev";
-				$domains[] = "*.altis.dev";
+				$domains[] = 'altis.dev';
+				$domains[] = '*.altis.dev';
 				$domains = array_merge( $domains, $extra_domains );
 
 				$cert_domains = implode( ' ', array_unique( $domains ) );
@@ -816,8 +816,8 @@ EOT;
 
 				$output->writeln( '<info>Generated SSL certificate successfully.</info>' );
 
-				// Restart proxy container if running
-				exec( "docker ps | grep altis-proxy", $result );
+				// Restart proxy container if running.
+				exec( 'docker ps | grep altis-proxy', $result );
 				if ( $result ) {
 					$output->writeln( '<info>Restarting proxy server to activate the new certificate...</info>' );
 					$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
