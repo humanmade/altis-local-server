@@ -796,7 +796,7 @@ EOT;
 			case 'generate':
 				$config = $this->get_composer_config();
 
-				$domain = ( $config['name'] ?: 'altis' ) . '.' . ( $config['tld'] ?: 'dev' );
+				$domain = ( $config['name'] ?? 'altis' ) . '.' . ( $config['tld'] ?? 'dev' );
 				$domains = explode( ' ', $input->getArgument( 'options' )[1] ?? '' );
 				$extra_domains = $config['domains'] ?: [];
 
