@@ -798,7 +798,7 @@ EOT;
 
 				$domain = ( $config['name'] ?? 'altis' ) . '.' . ( $config['tld'] ?? 'dev' );
 				$domains = explode( ' ', $input->getArgument( 'options' )[1] ?? '' );
-				$extra_domains = $config['domains'] ?: [];
+				$extra_domains = $config['domains'] ?? [];
 
 				$domains[] = $domain;
 				$domains[] = "*.$domain";
