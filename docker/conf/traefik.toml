@@ -37,7 +37,7 @@ insecureSkipVerify = true
     address = ":80"
   [entryPoints.https]
     address = ":443"
-      [entryPoints.https.tls]
+    [entryPoints.https.tls]
       [entryPoints.https.tls.defaultCertificate]
         certFile = "/etc/traefik/ssl-cert.pem"
         keyFile  = "/etc/traefik/ssl-key.pem"
