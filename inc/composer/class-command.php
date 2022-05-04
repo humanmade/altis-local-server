@@ -798,7 +798,7 @@ EOT;
 			case 'generate':
 				$config = $this->get_composer_config();
 
-				$domain = ( $config['name'] ?? 'altis' ) . '.' . ( $config['tld'] ?? 'dev' );
+				$domain = ( $config['name'] ?? $this->get_project_subdomain() ) . '.' . ( $config['tld'] ?? $this->get_project_tld() );
 				$domains = explode( ' ', $input->getArgument( 'options' )[1] ?? '' );
 				$extra_domains = $config['domains'] ?? [];
 
@@ -809,7 +809,6 @@ EOT;
 				$domains[] = "cognito-$domain";
 				$domains[] = "pinpoint-$domain";
 				$domains[] = "elasticsearch-$domain";
-				$domains[] = 'altis.dev';
 				$domains[] = '*.altis.dev';
 				$domains = array_merge( $domains, $extra_domains );
 
