@@ -320,6 +320,8 @@ EOT
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
+		$this->check_host_entries( $input, $output );
+
 		return 0;
 	}
 
@@ -888,6 +890,44 @@ EOT;
 		}
 
 		return null;
+	}
+
+	/**
+	 * Check and notify about required /etc/hosts entries.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 */
+	protected function check_host_entries( InputInterface $input, OutputInterface $output ) : void {
+		$config = $this->get_composer_config();
+
+		$hostname = ( $config['name'] ?? 'altis' ) . '.' . ( $config['tld'] ?? 'dev' );
+		$extra_domains = $config['domains'] ?? [];
+
+		$domains = array_merge( [
+			$hostname,
+			"s3-$hostname",
+			"s3-console-$hostname",
+			"cognito-$hostname",
+			"pinpoint-$hostname",
+			"elasticsearch-$hostname",
+		], $extra_domains );
+
+		$failed = [];
+		foreach ( $domains as $domain ) {
+			$ip = gethostbyname( $domain );
+			if ( $ip === $domain ) {
+				$failed[] = $domain;
+			}
+		}
+
+		if ( ! $failed ) {
+			return;
+		}
+
+		$output->writeln( sprintf( '<error>Missing hosts entries for: %s</error>', implode( ', ', $failed ) ) );
+		$output->writeln( 'Add the following line to your /etc/hosts file:' . "\n" );
+		$output->writeln( sprintf( '127.0.0.1 %s # altis:%s', implode( ' ', $domains ), $hostname ) );
 	}
 
 	/**
