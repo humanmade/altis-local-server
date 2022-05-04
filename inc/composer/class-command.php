@@ -798,21 +798,28 @@ EOT;
 			case 'generate':
 				$config = $this->get_composer_config();
 
-				$domain = ( $config['name'] ?? $this->get_project_subdomain() ) . '.' . ( $config['tld'] ?? $this->get_project_tld() );
+				$tld = $this->get_project_tld();
+				$subdomain = $this->get_project_subdomain();
+				$hostname = $subdomain . '.' . $tld;
 				$domains = explode( ' ', $input->getArgument( 'options' )[1] ?? '' );
 				$extra_domains = $config['domains'] ?? [];
 
-				$domains[] = $domain;
-				$domains[] = "*.$domain";
-				$domains[] = "s3-$domain";
-				$domains[] = "s3-console-$domain";
-				$domains[] = "cognito-$domain";
-				$domains[] = "pinpoint-$domain";
-				$domains[] = "elasticsearch-$domain";
-				$domains[] = '*.altis.dev';
-				$domains = array_merge( $domains, $extra_domains );
+				if ( false !== strpos( $tld, '.' ) ) {
+					$domains[] = '*.' . $tld;
+					$domains[] = '*.' . $hostname;
+				} else {
+					$domains[] = $hostname;
+					$domains[] = "*.$hostname";
+					$domains[] = "s3-$hostname";
+					$domains[] = "s3-console-$hostname";
+					$domains[] = "cognito-$hostname";
+					$domains[] = "pinpoint-$hostname";
+					$domains[] = "elasticsearch-$hostname";
+				}
 
-				$cert_domains = implode( ' ', array_unique( $domains ) );
+				$domains = array_merge( [ '*.altis.dev' ], $domains, $extra_domains );
+
+				$cert_domains = implode( ' ', array_filter( array_unique( $domains ) ) );
 
 				exec( "$mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $cert_domains", $dummy, $result );
 
