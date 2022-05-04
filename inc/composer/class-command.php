@@ -251,7 +251,7 @@ EOT
 		// Save a reference to the host for later runs.
 		file_put_contents( 'vendor/host', "$name.$tld" );
 
-		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
+		$proxy = $this->process( $this->get_compose_command( '-f altis/local-server/docker/proxy.yml up -d' ), 'vendor' );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
