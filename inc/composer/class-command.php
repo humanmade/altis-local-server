@@ -802,6 +802,11 @@ EOT;
 
 				$domains[] = $domain;
 				$domains[] = "*.$domain";
+				$domains[] = "s3-$domain";
+				$domains[] = "s3-console-$domain";
+				$domains[] = "cognito-$domain";
+				$domains[] = "pinpoint-$domain";
+				$domains[] = "elasticsearch-$domain";
 				$domains[] = 'altis.dev';
 				$domains[] = '*.altis.dev';
 				$domains = array_merge( $domains, $extra_domains );
