@@ -901,7 +901,7 @@ EOT;
 	protected function check_host_entries( InputInterface $input, OutputInterface $output ) : void {
 		$config = $this->get_composer_config();
 
-		$hostname = ( $config['name'] ?? 'altis' ) . '.' . ( $config['tld'] ?? 'dev' );
+		$hostname = ( $config['name'] ?? $this->get_project_subdomain() ) . '.' . ( $config['tld'] ?? $this->get_project_tld() );
 		$extra_domains = $config['domains'] ?? [];
 
 		$domains = array_merge( [
