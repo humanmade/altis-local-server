@@ -153,7 +153,7 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => "https://s3-{$this->hostname}",
+				'S3_UPLOADS_ENDPOINT' => "https://s3-{$this->hostname}/s3-{$this->project_name}/",
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
 				'S3_UPLOADS_BUCKET_URL' => "https://s3-{$this->hostname}",
 				'S3_UPLOADS_KEY' => 'admin',
@@ -583,7 +583,8 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => "https://{$this->tld}/",
+					'AWS_S3_ENDPOINT' => "https://{$this->tld}/s3-{$this->project_name}/",
+					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
