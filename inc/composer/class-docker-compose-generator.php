@@ -292,6 +292,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
+					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
 				],
 				'environment' => [
 					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
@@ -418,6 +419,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:elasticsearch-{$this->hostname}",
+					"traefik.domain=elasticsearch-{$this->hostname}",
 				],
 				'environment' => [
 					'http.max_content_length=10mb',
@@ -535,6 +537,7 @@ class Docker_Compose_Generator {
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
 					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
+					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
 			's3-sync-to-host' => [
@@ -647,6 +650,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:cognito-{$this->hostname}",
+					"traefik.domain=cognito-{$this->hostname}",
 				],
 			],
 			'pinpoint' => [
@@ -665,6 +669,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:pinpoint-{$this->hostname}",
+					"traefik.domain=pinpoint-{$this->hostname}",
 				],
 				'environment' => [
 					'INDEX_ROTATION' => 'OneDay',
