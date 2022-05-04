@@ -239,7 +239,7 @@ EOT
 				'subcommand' => 'ssl',
 				'options' => [
 					'generate',
-					'altis.dev', // default domain, configured names will be automatically added.
+					'*.altis.dev', // default domain, configured names will be automatically added.
 				],
 			] ), $output );
 
