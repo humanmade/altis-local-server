@@ -229,7 +229,7 @@ EOT
 		// Halt if the project name is changed, to avoid orphan containers.
 		if ( $is_new_host ) {
 			$output->writeln( '<error>Detected changed domain, proceeding will result in orphan containers. Please revert the name change and destroy older containers before moving on.</error>' );
-			exit( 1 );
+			return 1;
 		}
 
 		// Generate SSL certificate if not found.
@@ -244,7 +244,7 @@ EOT
 			] ), $output );
 
 			if ( $generated ) {
-				exit( 1 );
+				return 1;
 			}
 		}
 
