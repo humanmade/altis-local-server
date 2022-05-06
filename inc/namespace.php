@@ -41,10 +41,10 @@ function bootstrap() {
 		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.' . getenv( 'COMPOSE_PROJECT_TLD' );
 	}
 
-	define( 'DB_HOST', getenv( 'DB_HOST' ) );
-	define( 'DB_USER', getenv( 'DB_USER' ) );
-	define( 'DB_PASSWORD', getenv( 'DB_PASSWORD' ) );
-	define( 'DB_NAME', getenv( 'DB_NAME' ) );
+	defined( 'DB_HOST' ) or define( 'DB_HOST', getenv( 'DB_HOST' ) );
+	defined( 'DB_USER' ) or define( 'DB_USER', getenv( 'DB_USER' ) );
+	defined( 'DB_PASSWORD' ) or define( 'DB_PASSWORD', getenv( 'DB_PASSWORD' ) );
+	defined( 'DB_NAME' ) or define( 'DB_NAME', getenv( 'DB_NAME' ) );
 
 	define( 'ELASTICSEARCH_HOST', getenv( 'ELASTICSEARCH_HOST' ) );
 	define( 'ELASTICSEARCH_PORT', getenv( 'ELASTICSEARCH_PORT' ) );
@@ -130,7 +130,7 @@ function tools_submenus() {
 		],
 		[
 			'label' => 'S3 Browser',
-			'url' => S3_UPLOADS_BUCKET_URL . '/minio',
+			'url' => getenv( 'S3_CONSOLE_URL' ),
 		],
 	];
 

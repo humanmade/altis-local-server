@@ -1,0 +1,17 @@
+elasticsearch.hosts: http://elasticsearch:9200
+
+server.name: kibana
+server.host: 0.0.0.0
+server.basePath: /kibana
+server.rewriteBasePath: true
+
+logging.quiet: true
+logging.verbose: false
+
+newsfeed.enabled: false
+telemetry.optIn: false
+telemetry.enabled: false
+security.showInsecureClusterWarning: false
+# To configure a WMS map server for use with Kibana, see:
+# https://opendistro.github.io/for-elasticsearch-docs/docs/kibana/maptiles/
+map.includeElasticMapsService: false

@@ -2,32 +2,37 @@
 
 [Mutagen](https://mutagen.io/) is a powerful tool for optimising file system mounts among other things (not just for Docker!).
 
-Local Server provides an experimental integration with Mutagen to improve the performance of your development environment. This is unlikely to provide much benefit if you use Linux as your operating system.
+Local Server provides an _experimental_ integration with Mutagen to improve the performance of your development environment. This is unlikely to provide much benefit if you use Linux as your operating system.
 
 ## Installation
 
-To get started you will need to [install Mutagen Beta](https://mutagen.io/documentation/introduction/installation#development-channels). The beta version has integrated `docker-compose` orchestration support through the `mutagen compose` command.
+To get started you will need to [install the Mutagen Compose Beta](https://github.com/mutagen-io/mutagen-compose). The beta version has integrated `docker compose` orchestration support through the `mutagen-compose` command.
+
+In order to work you must be using Docker Compose v2, it is recommended to update Docker Desktop or Docker Engine to the latest version to get this.
 
 ### MacOS
 
 The easiest way to install Mutagen on Mac is using [HomeBrew](https://brew.sh/).
 
-- With HomeBrew: `brew install mutagen-io/mutagen/mutagen-beta`
-- [Mac build](https://github.com/mutagen-io/mutagen/releases/download/v0.12.0-beta2/mutagen_darwin_amd64_v0.12.0-beta2.tar.gz)
+```sh
+brew install mutagen-io/mutagen/mutagen-beta mutagen-io/mutagen/mutagen-compose-beta
+```
 
-If using the download directly open the zipped file and copy the `mutagen` file to your `/usr/local/bin` directory. The `mutagen` command should now be available in your terminal.
+For all available builds see the [releases page](https://github.com/mutagen-io/mutagen-compose/releases) for the latest release and open the assets section.
 
-### Windows
+If using the download directly open the zipped file and copy the `mutagen-compose` file to your `/usr/local/bin` directory. The `mutagen-compose` command should now be available in your terminal.
 
-- [32-bit build](https://github.com/mutagen-io/mutagen/releases/download/v0.12.0-beta2/mutagen_windows_386_v0.12.0-beta2.zip)
-- [64-bit build](https://github.com/mutagen-io/mutagen/releases/download/v0.12.0-beta2/mutagen_windows_amd64_v0.12.0-beta2.zip)
-- [ARM build](https://github.com/mutagen-io/mutagen/releases/download/v0.12.0-beta2/mutagen_windows_arm_v0.12.0-beta2.zip)
+### Other OSes
 
-Once downloaded open the zip file and run `mutagen.exe` then follow the prompts on screen.
+For all other available binaries including Windows see the [releases page](https://github.com/mutagen-io/mutagen-compose/releases) for the latest release and open the assets section.
 
-### Other Operating Systems
+For Windows once downloaded unzip file and move `mutagen-compose.exe` to somewhere referenced in your `$PATH` environment variable.
 
-For all other operating systems check the [beta release assets list for the appropriate build](https://github.com/mutagen-io/mutagen/releases/tag/v0.12.0-beta2).
+Although not recommended for Linux you may wish to use Mutagen with WSL, in which case you can use the appropriate Linux binary:
+
+- 386 for 32-Bit systems
+- AMD64 for 64-Bit systems
+- ARM or ARM64 for ARM systems
 
 ## Activating Mutagen
 

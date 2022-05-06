@@ -61,12 +61,13 @@ class Docker_Compose_Generator {
 	 *
 	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param string $tld The primary top level domain for the server.
 	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
 	public function __construct( string $project_name, string $root_dir, string $tld, array $args = [] ) {
 		$this->project_name = $project_name;
-		$this->root_dir = $root_dir;
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
+		$this->root_dir = $root_dir;
 		$this->tld = $tld;
 		$this->hostname = $this->tld ? $this->project_name . '.' . $this->tld : $this->project_name;
 		$this->args = $args;
@@ -78,6 +79,27 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_php_reusable() : array {
+		$version_map = [
+			'8.0' => 'humanmade/altis-local-server-php:5.0.0-beta.1',
+			'7.4' => 'humanmade/altis-local-server-php:4.2.0',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['php'];
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured PHP version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -91,7 +113,7 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.0.0-dev',
+			'image' => $image,
 			'links' => [
 				'db:db-read-replica',
 				's3:s3.localhost',
@@ -107,6 +129,7 @@ class Docker_Compose_Generator {
 				$this->get_app_volume(),
 				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
 				'socket:/var/run/php-fpm',
+				'tmp:/tmp',
 			],
 			'networks' => [
 				'proxy',
@@ -114,6 +137,7 @@ class Docker_Compose_Generator {
 			],
 			'environment' => [
 				'HOST_PATH' => $this->root_dir,
+				'COMPOSE_PROJECT_NAME' => $this->hostname,
 				'DB_HOST' => 'db',
 				'DB_READ_REPLICA_HOST' => 'db-read-replica',
 				'DB_PASSWORD' => 'wordpress',
@@ -129,18 +153,22 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}.localhost/",
+				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/s3-{$this->project_name}/" ), // TODO .localhost.
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
-				'S3_UPLOADS_BUCKET_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://s3-{$this->hostname}",
+				'S3_UPLOADS_BUCKET_URL' => Command::set_url_scheme( "https://s3-{$this->hostname}" ),
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
-				'TACHYON_URL' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->hostname}/tachyon",
+				'S3_CONSOLE_URL' => Command::set_url_scheme( "https://s3-console-{$this->hostname}" ),
+				'TACHYON_URL' => Command::set_url_scheme( "https://{$this->hostname}/tachyon" ),
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
-				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://pinpoint-{$this->hostname}",
-				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://cognito-{$this->hostname}",
+				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => Command::set_url_scheme( "https://pinpoint-{$this->hostname}" ),
+				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => Command::set_url_scheme( "https://cognito-{$this->hostname}" ),
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
-				'XDEBUG_CONFIG' => sprintf( 'client_host=%s', Command::is_linux() ? '172.17.0.1' : 'host.docker.internal' ),
+				'XDEBUG_CONFIG' => sprintf(
+					'client_host=%s',
+					Command::is_linux() && ! Command::is_wsl() ? '172.17.0.1' : 'host.docker.internal'
+				),
 				'PHP_IDE_CONFIG' => "serverName={$this->hostname}",
 				'XDEBUG_SESSION' => $this->hostname,
 				// Set XDebug mode, fall back to "off" to avoid any performance hits.
@@ -164,7 +192,48 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_php() : array {
 		return [
-			'php' => $this->get_php_reusable(),
+			'php' => array_merge(
+				[
+					'container_name' => "{$this->project_name}-php",
+				],
+				$this->get_php_reusable()
+			),
+		];
+	}
+
+	/**
+	 * Webgrind service container for viewing Xdebug profiles.
+	 *
+	 * @return array
+	 */
+	protected function get_service_webgrind() : array {
+		return [
+			'webgrind' => [
+				'container_name' => "{$this->project_name}-webgrind",
+				'image' => 'wodby/webgrind:1.9',
+				'networks' => [
+					'proxy',
+					'default',
+				],
+				'depends_on' => [
+					'php',
+				],
+				'ports' => [
+					'8080',
+				],
+				'volumes' => [
+					'tmp:/tmp',
+				],
+				'labels' => [
+					'traefik.port=8080',
+					'traefik.protocol=http',
+					'traefik.docker.network=proxy',
+					"traefik.frontend.rule=Host:{$this->hostname};PathPrefix:/webgrind;PathPrefixStrip:/webgrind",
+				],
+				'environment' => [
+					'WEBGRIND_DEFAULT_TIMEZONE' => 'UTC',
+				],
+			],
 		];
 	}
 
@@ -177,6 +246,7 @@ class Docker_Compose_Generator {
 		return [
 			'cavalcade' => array_merge(
 				[
+					'container_name' => "{$this->project_name}-cavalcade",
 					'entrypoint' => [
 						'/usr/local/bin/cavalcade',
 					],
@@ -194,9 +264,14 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_nginx() : array {
+		$config = $this->get_config();
+		$domains = $config['domains'] ?? [];
+		$domains = $domains ? ',' . implode( ',', $domains ) : '';
+
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.3.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
+				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
 					'default',
@@ -216,7 +291,8 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
+					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
 				],
 				'environment' => [
 					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
@@ -237,6 +313,7 @@ class Docker_Compose_Generator {
 		return [
 			'redis' => [
 				'image' => 'redis:3.2-alpine',
+				'container_name' => "{$this->project_name}-redis",
 				'ports' => [
 					'6379',
 				],
@@ -252,7 +329,8 @@ class Docker_Compose_Generator {
 	protected function get_service_db() : array {
 		return [
 			'db' => [
-				'image' => 'mysql:5.7',
+				'image' => 'biarms/mysql:5.7',
+				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
 				],
@@ -291,9 +369,24 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_elasticsearch() : array {
 		$mem_limit = getenv( 'ES_MEM_LIMIT' ) ?: '1g';
+
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'7' => 'humanmade/altis-local-server-elasticsearch:4.1.0',
+			'6.8' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6' => 'humanmade/altis-local-server-elasticsearch:3.1.0',
+			'6.3' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+		];
+
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
+
 		return [
 			'elasticsearch' => [
-				'image' => 'humanmade/altis-local-server-elasticsearch:3.0.0',
+				'image' => $image,
+				'restart' => 'unless-stopped',
+				'container_name' => "{$this->project_name}-es",
 				'ulimits' => [
 					'memlock' => [
 						'soft' => -1,
@@ -326,14 +419,15 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:elasticsearch-{$this->hostname}",
+					"traefik.domain=elasticsearch-{$this->hostname}",
 				],
 				'environment' => [
 					'http.max_content_length=10mb',
 					// Force ES into single-node mode (otherwise defaults to zen discovery as
 					// network.host is set in the default config).
 					'discovery.type=single-node',
-					// Reduce from default of 1GB of memory to 512MB.
-					'ES_JAVA_OPTS=-Xms512m -Xmx512m',
+					// Use max container memory limit as the max JVM heap allocation value.
+					"ES_JAVA_OPTS=-Xms512m -Xmx{$mem_limit}",
 				],
 			],
 		];
@@ -345,9 +439,28 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_kibana() : array {
+
+		$version_map = [
+			'7.10' => 'humanmade/altis-local-server-kibana:1.1.1',
+			'7' => 'humanmade/altis-local-server-kibana:1.1.1',
+			'6.8' => 'blacktop/kibana:6.8',
+			'6' => 'blacktop/kibana:6.8',
+			'6.3' => 'blacktop/kibana:6.3',
+		];
+
+		$this->check_elasticsearch_version( array_keys( $version_map ) );
+
+		$image = $version_map[ $this->get_elasticsearch_version() ];
+
+		$yml_file = 'kibana.yml';
+		if ( version_compare( $this->get_elasticsearch_version(), '7', '>=' ) ) {
+			$yml_file = 'kibana-7.yml';
+		}
+
 		return [
 			'kibana' => [
-				'image' => 'blacktop/kibana:6.3',
+				'image' => $image,
+				'container_name' => "{$this->project_name}-kibana",
 				'networks' => [
 					'proxy',
 					'default',
@@ -367,7 +480,7 @@ class Docker_Compose_Generator {
 					],
 				],
 				'volumes' => [
-					"{$this->config_dir}/kibana.yml:/usr/share/kibana/config/kibana.yml",
+					"{$this->config_dir}/{$yml_file}:/usr/share/kibana/config/kibana.yml",
 				],
 			],
 		];
@@ -381,24 +494,26 @@ class Docker_Compose_Generator {
 	protected function get_service_s3() : array {
 		return [
 			's3' => [
-				'image' => 'minio/minio:RELEASE.2020-03-19T21-49-00Z',
+				'image' => 'minio/minio:RELEASE.2021-09-18T18-09-59Z',
+				'container_name' => "{$this->project_name}-s3",
 				'volumes' => [
 					's3:/data:rw',
 				],
 				'ports' => [
 					'9000',
+					'9001',
 				],
 				'networks' => [
 					'proxy',
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => $this->tld ? 's3.localhost,' . $this->tld . ',s3' : 's3.localhost,localhost,s3',
+					'MINIO_DOMAIN' => "s3.localhost,{$this->hostname},{$this->tld},s3-{$this->hostname},localhost,s3",
 					'MINIO_REGION_NAME' => 'us-east-1',
-					'MINIO_ACCESS_KEY' => 'admin',
-					'MINIO_SECRET_KEY' => 'password',
+					'MINIO_ROOT_USER' => 'admin',
+					'MINIO_ROOT_PASSWORD' => 'password',
 				],
-				'command' => 'server /data',
+				'command' => 'server /data --console-address ":9001"',
 				'healthcheck' => [
 					'test' => [
 						'CMD',
@@ -411,26 +526,37 @@ class Docker_Compose_Generator {
 					'retries' => 3,
 				],
 				'labels' => [
-					'traefik.port=9000',
-					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:s3-{$this->hostname}.localhost",
+					'traefik.api.port=9000',
+					'traefik.api.protocol=http',
+					"traefik.api.frontend.rule=HostRegexp:s3-{$this->hostname}",
+					'traefik.console.port=9001',
+					'traefik.console.protocol=http',
+					"traefik.console.frontend.rule=HostRegexp:s3-console-{$this->hostname}",
+					'traefik.client.port=9000',
+					'traefik.client.protocol=http',
+					'traefik.client.frontend.passHostHeader=false',
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname}.localhost;PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
+					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname},s3.localhost",
 				],
 			],
 			's3-sync-to-host' => [
-				'image' => 'minio/mc:RELEASE.2020-03-14T01-23-37Z',
+				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'container_name' => "{$this->project_name}-s3-sync",
 				'restart' => 'unless-stopped',
 				'depends_on' => [
 					's3',
 				],
+				'environment' => [
+					'MC_HOST_local' => 'http://admin:password@s3:9000',
+				],
 				'volumes' => [
-					"{$this->config_dir}/minio.json:/root/.mc/config.json",
 					"{$this->root_dir}/content/uploads:/content/uploads:delegated",
 				],
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite local/s3-{$this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite -a local/s3-{$this->project_name} /content\"",
 			],
 		];
 	}
@@ -443,7 +569,8 @@ class Docker_Compose_Generator {
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
-				'image' => 'humanmade/tachyon:2.3.2',
+				'image' => 'humanmade/tachyon:v2.4.0',
+				'container_name' => "{$this->project_name}-tachyon",
 				'ports' => [
 					'8080',
 				],
@@ -459,7 +586,8 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => 'http' . ( $this->args['secure'] ? 's' : '' ) . "://{$this->tld}/",
+					'AWS_S3_ENDPOINT' => "https://{$this->tld}/s3-{$this->project_name}/", // TODO set_url_scheme.
+					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
@@ -476,7 +604,8 @@ class Docker_Compose_Generator {
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
-				'image' => 'mailhog/mailhog:latest',
+				'image' => 'cd2team/mailhog:1632011321',
+				'container_name' => "{$this->project_name}-mailhog",
 				'ports' => [
 					'8025',
 					'1025',
@@ -506,6 +635,7 @@ class Docker_Compose_Generator {
 	protected function get_service_analytics() : array {
 		return [
 			'cognito' => [
+				'container_name' => "{$this->project_name}-cognito",
 				'ports' => [
 					'3000',
 				],
@@ -514,15 +644,17 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-cognito:1.0.0',
+				'image' => 'humanmade/local-cognito:1.1.0',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:cognito-{$this->hostname}",
+					"traefik.domain=cognito-{$this->hostname}",
 				],
 			],
 			'pinpoint' => [
+				'container_name' => "{$this->project_name}-pinpoint",
 				'ports' => [
 					'3000',
 				],
@@ -531,12 +663,13 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-pinpoint:1.2.2',
+				'image' => 'humanmade/local-pinpoint:1.3.0',
 				'labels' => [
 					'traefik.port=3000',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:pinpoint-{$this->hostname}",
+					"traefik.domain=pinpoint-{$this->hostname}",
 				],
 				'environment' => [
 					'INDEX_ROTATION' => 'OneDay',
@@ -553,7 +686,8 @@ class Docker_Compose_Generator {
 	protected function get_service_xray() : array {
 		return [
 			'xray' => [
-				'image' => 'amazon/aws-xray-daemon:3.0.1',
+				'image' => 'amazon/aws-xray-daemon:3.3.3',
+				'container_name' => "{$this->project_name}-xray",
 				'ports' => [
 					'2000',
 				],
@@ -606,6 +740,10 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_kibana() );
 		}
 
+		if ( strpos( $this->args['xdebug'] ?? false, 'profile' ) !== false ) {
+			$services = array_merge( $services, $this->get_service_webgrind() );
+		}
+
 		// Default compose configuration.
 		$config = [
 			'version' => '2.3',
@@ -613,9 +751,8 @@ class Docker_Compose_Generator {
 			'networks' => [
 				'default' => null,
 				'proxy' => [
-					'external' => [
-						'name' => 'proxy',
-					],
+					'name' => 'proxy',
+					'external' => true,
 				],
 			],
 			'volumes' => [
@@ -626,6 +763,19 @@ class Docker_Compose_Generator {
 				'socket' => null,
 			],
 		];
+
+		// Mount tmp volume locally if requested.
+		if ( $this->args['tmp'] ?? false ) {
+			@mkdir( "{$this->root_dir}/.tmp" );
+			$config['volumes']['tmp'] = [
+				'driver' => 'local',
+				'driver_opts' => [
+					'type' => 'none',
+					'device' => "{$this->root_dir}/.tmp",
+					'o' => 'bind',
+				],
+			];
+		}
 
 		// Handle mutagen volume according to args.
 		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
@@ -682,13 +832,50 @@ class Docker_Compose_Generator {
 		$defaults = [
 			'analytics' => true,
 			'cavalcade' => true,
-			'elasticsearch' => true,
+			'elasticsearch' => '7',
 			'kibana' => true,
 			'xray' => true,
 			'ignore-paths' => [],
+			'php' => '8.0',
 		];
 
 		return array_merge( $defaults, $config );
+	}
+
+	/**
+	 * Get the configured Elasticsearch version.
+	 *
+	 * @return int
+	 */
+	protected function get_elasticsearch_version() : string {
+		if ( ! empty( $this->get_config()['elasticsearch'] ) ) {
+			return (string) $this->get_config()['elasticsearch'];
+		}
+
+		return '7';
+	}
+
+	/**
+	 * Check the configured Elasticsearch version in config.
+	 *
+	 * @param array $versions List of available version numbers.
+	 * @return void
+	 */
+	protected function check_elasticsearch_version( array $versions ) {
+		$versions = array_map( 'strval', $versions );
+		rsort( $versions );
+		if ( in_array( $this->get_elasticsearch_version(), $versions, true ) ) {
+			return;
+		}
+
+		echo sprintf(
+			"The configured elasticsearch version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+			$this->get_elasticsearch_version(),
+			// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+			implode( "\n  - ", $versions )
+		);
+		exit( 1 );
 	}
 
 	/**

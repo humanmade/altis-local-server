@@ -60,10 +60,11 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
 
 ### VSCode
 
+1. Install a [PHP Debug extension](https://github.com/xdebug/vscode-php-debug)
 1. Open the debug tab (the bug icon on the menu sidebar).
-2. In the dropdown menu at the top of the left hand side bar choose "Add configuration".
-3. In the popup that appears select "PHP" as your environment.
-4. You will be taken a new file called `.vscode/launch.json` with the default settings:
+1. In the dropdown menu at the top of the left hand side bar choose "Add configuration".
+1. In the popup that appears select "PHP" as your environment.
+1. You will be taken a new file called `.vscode/launch.json` with the default settings:
    ```json
    {
      "version": "0.2.0",
@@ -80,12 +81,12 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
          "request": "launch",
          "program": "${file}",
          "cwd": "${fileDirname}",
-         "port": 9003,
+         "port": 9003
        }
      ]
    }
    ```
-5. Add the following `pathMappings` property to each configuration:
+1. Add the following `hostname` and `pathMappings` property to each configuration:
    ```json
    {
      "version": "0.2.0",
@@ -95,6 +96,7 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
          "type": "php",
          "request": "launch",
          "port": 9003,
+         "hostname": "0.0.0.0",
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }
@@ -106,6 +108,7 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
          "program": "${file}",
          "cwd": "${fileDirname}",
          "port": 9003,
+         "hostname": "0.0.0.0",
          "pathMappings": {
            "/usr/src/app": "${workspaceRoot}"
          }
@@ -113,7 +116,7 @@ Xdebug is configured to connect to the default port 9003 so there should be a mi
      ]
    }
    ```
-6. You are done, click the green play button to start the debug client.
+1. You are done, click the green play button to start the debug client.
 
 For more information on the available configuration options, including Xdebug settings, [view the VSCode Debugging documentation here](https://go.microsoft.com/fwlink/?linkid=830387).
 
@@ -131,3 +134,27 @@ Local Server takes advantage of PHPStorm's [Zero Configuration Debugging](https:
    ![Example PHPStorm Configuration](./assets/phpstorm-config.png)
 3. Set some breakpoints and click the "Listen for Debug Connections" icon<br />
    ![PHPStorm Debug Icon](./assets/phpstorm-start-debug.png)
+
+
+## Accessing Xdebug output
+
+If you are starting Xdebug with any the following modes you will want to access their output in the PHP container's `/tmp` directory.
+
+This is achievable in 2 ways:
+
+1. Use `composer server shell` to access the container and look at the files using `cat`, `less` or other file reader
+2. Pass the `--tmp` flag when starting Local Server to mount the `/tmp` directory to `.tmp` in your project root
+
+The second option using `--tmp` has the advantage of allowing you to easily open the output files in external programs that understand them such as [KCacheGrind](https://kcachegrind.github.io/).
+
+Note that you should add `.tmp` to your project's `.gitignore` file if you use this option.
+
+## Profiling With WebGrind
+
+In most cases the XRay traces in the Query Monitor Dev Tools will give a good indication of any bottlenecks in your code however those traces are not available when running CLI commands or background cron tasks.
+
+If Xdebug is activated in profiling mode using `--xdebug=profile` on start up it will generate cachegrind files in the `/tmp` directory.
+
+You can use the `--tmp` option to mount and view these files in a program like KCacheGrind or QCacheGrind however Local Server provides a web interface for viewing the profiles. This is set up automatically if starting the server with `--xdebug=profile`.
+
+In your browser go to `/webgrind/` on your project domain, for example `https://my-project.altis.dev/webgrind/` to access the UI for viewing
