@@ -57,12 +57,6 @@ Note: Altis does not manage the host entries for subdomains or custom domains, y
 
 Note: Before *updating* the custom domain configuration parameters, ensure that you've destroyed existing containers first before applying your changes, otherwise you'll be leaving orphan containers from the previous configuration.
 
-#### SSL generation
-
-In order to support custom (sub)domains, Altis is using [`mkcert`](https://github.com/FiloSottile/mkcert) to generate SSL certificates based on a custom generated Root Certificate Authority that is uniquely-generated and trusted on the host machine upon installation. This allows Altis local-server to generate local SSL certificates that is automatically trusted, which provides a convenient and seamless local development experience.
-
-Note: Altis local-server automatically collects domains names to issue the SSL certificate for, based on Altis configuration in `composer.json`, namely the `altis.modules.local-server` tree, specifically the `name`, `tld`, and `domains` config parameteres.
-
 ## Starting the Local Server
 
 To start the Local Server, run `composer server`. The first time you run this it will download all the necessary Docker images.
@@ -81,7 +75,11 @@ Visiting your site's URL should now work. Visit `/wp-admin/` and login with the 
 
 > [If the server does not start for any reason take a look at the troubleshooting guide](./troubleshooting.md)
 
-**Multisite Subdomains:** Altis v12 introduced experimental support for multisite subdomains.
+### Multisite Subdomains / Custom domains support
+
+Altis v12 introduced experimental support for multisite subdomains and custom domains. In order to support custom (sub)domains, Altis is using [`mkcert`](https://github.com/FiloSottile/mkcert) to generate SSL certificates based on a custom generated Root Certificate Authority that is uniquely-generated and trusted on the host machine upon installation. This allows Altis local-server to generate local SSL certificates that is automatically trusted, which provides a convenient and seamless local development experience.
+
+Note: Altis local-server automatically collects domains names to issue the SSL certificate for, based on Altis configuration in `composer.json`, namely the `altis.modules.local-server` tree, specifically the `name`, `tld`, and `domains` config parameteres.
 
 ## Available Commands
 
