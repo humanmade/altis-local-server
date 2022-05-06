@@ -20,6 +20,7 @@ before_script:
   - cd $HOME/test-root && composer require -W "$ALTIS_PACKAGE:dev-${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH} as `jq \".\\\"packages-dev\\\"[] | select (.name==\\\"$ALTIS_PACKAGE\\\") | .version\" composer.lock | sed -e 's/\"//g;/^dev/q;s/\$/9/'`"
 
 script:
+  - cd $HOME/test-root && composer server ssl install
   - cd $HOME/test-root && composer server start
   - cd $HOME/test-root && composer server db info
   - cd $HOME/test-root && composer server db exec -- "select * from wp_site;"
@@ -27,6 +28,7 @@ script:
   - cd $HOME/test-root && composer server exec -- ls -al
   - cd $HOME/test-root && composer server cli site list
   - cd $HOME/test-root && composer server start --xdebug=debug,profile
+  - curl https://test-root.altis.dev/ | grep '<title>'
   - cd $HOME/test-root && composer server exec printenv | grep XDEBUG_MODE=debug,profile
   - curl -XGET https://test-root.altis.dev/webgrind/ | grep '<title>webgrind</title>'
   - cd $HOME/test-root && composer server stop --clean

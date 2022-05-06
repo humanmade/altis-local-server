@@ -61,14 +61,15 @@ class Docker_Compose_Generator {
 	 *
 	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param string $tld The primary top level domain for the server.
 	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
-	public function __construct( string $project_name, string $root_dir, array $args = [] ) {
+	public function __construct( string $project_name, string $root_dir, string $tld, array $args = [] ) {
 		$this->project_name = $project_name;
-		$this->root_dir = $root_dir;
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
-		$this->tld = 'altis.dev';
-		$this->hostname = $this->project_name . '.' . $this->tld;
+		$this->root_dir = $root_dir;
+		$this->tld = $tld;
+		$this->hostname = $this->tld ? $this->project_name . '.' . $this->tld : $this->project_name;
 		$this->args = $args;
 	}
 
@@ -152,7 +153,7 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => "https://{$this->tld}/",
+				'S3_UPLOADS_ENDPOINT' => "https://s3-{$this->hostname}/s3-{$this->project_name}/",
 				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
 				'S3_UPLOADS_BUCKET_URL' => "https://s3-{$this->hostname}",
 				'S3_UPLOADS_KEY' => 'admin',
@@ -263,6 +264,10 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_nginx() : array {
+		$config = $this->get_config();
+		$domains = $config['domains'] ?? [];
+		$domains = $domains ? ',' . implode( ',', $domains ) : '';
+
 		return [
 			'nginx' => [
 				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
@@ -286,7 +291,8 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
+					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
 				],
 				'environment' => [
 					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
@@ -413,6 +419,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:elasticsearch-{$this->hostname}",
+					"traefik.domain=elasticsearch-{$this->hostname}",
 				],
 				'environment' => [
 					'http.max_content_length=10mb',
@@ -501,7 +508,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
+					'MINIO_DOMAIN' => "s3.localhost,{$this->hostname},s3-{$this->hostname},s3",
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ROOT_USER' => 'admin',
 					'MINIO_ROOT_PASSWORD' => 'password',
@@ -530,6 +537,7 @@ class Docker_Compose_Generator {
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
 					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
+					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
 			's3-sync-to-host' => [
@@ -578,7 +586,8 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => "https://{$this->tld}/",
+					'AWS_S3_ENDPOINT' => "https://{$this->tld}/s3-{$this->project_name}/",
+					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
@@ -641,6 +650,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:cognito-{$this->hostname}",
+					"traefik.domain=cognito-{$this->hostname}",
 				],
 			],
 			'pinpoint' => [
@@ -659,6 +669,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:pinpoint-{$this->hostname}",
+					"traefik.domain=pinpoint-{$this->hostname}",
 				],
 				'environment' => [
 					'INDEX_ROTATION' => 'OneDay',

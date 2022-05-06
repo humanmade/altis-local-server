@@ -38,9 +38,9 @@ insecureSkipVerify = true
   [entryPoints.https]
     address = ":443"
     [entryPoints.https.tls]
-      [[entryPoints.https.tls.certificates]]
-      certFile = "/etc/traefik/sni/cert/altis.pem"
-      keyFile = "/etc/traefik/sni/key/altis.pem"
+      [entryPoints.https.tls.defaultCertificate]
+        certFile = "/etc/traefik/ssl-cert.pem"
+        keyFile  = "/etc/traefik/ssl-key.pem"
 
 [web]
 address = ":8080"

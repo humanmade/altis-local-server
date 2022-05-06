@@ -28,13 +28,17 @@ function bootstrap() {
 		add_filter( 's3_uploads_s3_client_params', function ( $params ) {
 			if ( defined( 'S3_UPLOADS_ENDPOINT' ) && S3_UPLOADS_ENDPOINT ) {
 				$params['endpoint'] = S3_UPLOADS_ENDPOINT;
+				$params['bucket_endpoint'] = true;
+				$params['http'] = [
+					'verify' => false,
+				];
 			}
 			return $params;
 		}, 5, 1 );
 	}
 
 	if ( empty( $_SERVER['HTTP_HOST'] ) ) {
-		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' );
+		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.' . getenv( 'COMPOSE_PROJECT_TLD' );
 	}
 
 	defined( 'DB_HOST' ) or define( 'DB_HOST', getenv( 'DB_HOST' ) );

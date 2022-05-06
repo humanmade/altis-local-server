@@ -40,7 +40,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, set, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, ssl, set, logs.' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -75,6 +75,11 @@ Database commands:
 	db sequel                     Generates an SPF file for Sequel Pro
 	db info                       Prints out Database connection details
 	db exec -- "<query>"          Run and output the result of a SQL query.
+SSL commands:
+	ssl                           Show status on generated SSL certificates
+	ssl install                   Installs and trusts Root Certificate Authority
+	ssl generate [domains]        Generate SSL certificates for configured domains
+	ssl exec -- "command"         Executes an arbitrary mkcert command
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 Import files from content/uploads directly to s3:
@@ -125,6 +130,7 @@ EOT
 			'xdebug' => 'off',
 			'mutagen' => 'off',
 			'tmp' => false,
+			'secure' => $this->get_composer_config()['secure'] ?? true,
 		];
 
 		// If Xdebug switch is passed add to docker compose args.
@@ -167,6 +173,8 @@ EOT
 			return $this->exec( $input, $output );
 		} elseif ( $subcommand === 'db' ) {
 			return $this->db( $input, $output );
+		} elseif ( $subcommand === 'ssl' ) {
+			return $this->ssl( $input, $output );
 		} elseif ( $subcommand === 'status' ) {
 			return $this->status( $input, $output );
 		} elseif ( $subcommand === 'logs' ) {
@@ -193,6 +201,7 @@ EOT
 		return [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
+			'COMPOSE_PROJECT_TLD' => $this->get_project_tld(),
 			'DOCKER_CLIENT_TIMEOUT' => 120,
 			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
@@ -211,7 +220,38 @@ EOT
 	protected function start( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Starting...</>' );
 
-		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml up -d' ), 'vendor/altis/local-server/docker' );
+		// Check for changed project name.
+		$tld = $this->get_project_tld();
+		$name = $this->get_project_subdomain();
+		$host = @file_get_contents( 'vendor/host' );
+		$is_new_host = $host && ( $host !== "$name.$tld" );
+
+		// Halt if the project name is changed, to avoid orphan containers.
+		if ( $is_new_host ) {
+			$output->writeln( '<error>Detected changed domain, proceeding will result in orphan containers. Please revert the name change and destroy older containers before moving on.</error>' );
+			return 1;
+		}
+
+		// Generate SSL certificate if not found.
+		if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
+			// Create the certificate programmatically.
+			$generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+				'subcommand' => 'ssl',
+				'options' => [
+					'generate',
+					'*.altis.dev', // default domain, configured names will be automatically added.
+				],
+			] ), $output );
+
+			if ( $generated ) {
+				return 1;
+			}
+		}
+
+		// Save a reference to the host for later runs.
+		file_put_contents( 'vendor/host', "$name.$tld" );
+
+		$proxy = $this->process( $this->get_compose_command( '-f altis/local-server/docker/proxy.yml up -d' ), 'vendor' );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
@@ -276,9 +316,11 @@ EOT
 			$output->writeln( '<info>WP Password:</>	<comment>password</>' );
 		}
 
-		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
+		$site_url = $this->get_project_url();
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
+
+		$this->check_host_entries( $input, $output );
 
 		return 0;
 	}
@@ -366,6 +408,11 @@ EOT
 			} );
 		}
 
+		// Remove the host reference file, and SSL certificate and key.
+		@unlink( 'vendor/host' );
+		@unlink( 'vendor/ssl-cert.pem' );
+		@unlink( 'vendor/ssl-key.pem' );
+
 		if ( $return_val === 0 ) {
 			$output->writeln( '<error>Destroyed.</>' );
 		} else {
@@ -421,7 +468,7 @@ EOT
 	 * @return int
 	 */
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
-		$site_url = 'https://' . $this->get_project_subdomain() . '.altis.dev/';
+		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
 
 		$passed_url = false;
@@ -655,13 +702,248 @@ EOT;
 	}
 
 	/**
+	 * Generate SSL certificates for development environment.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
+	protected function ssl( InputInterface $input, OutputInterface $output ) {
+		$subcommand = $input->getArgument( 'options' )[0] ?? null;
+
+		$mkcert = $this->get_mkcert_binary();
+
+		if ( $subcommand !== 'install' && ! $mkcert ) {
+			$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
+			return 1;
+		}
+
+		switch ( $subcommand ) {
+			case 'install':
+				// Detect platform architecture to attempt automatic installation.
+				$os = php_uname( 's' ); // 'Darwin', 'Linux', 'Windows'
+				$arch = php_uname( 'm' ); // 'arm64' for arm, 'x86_64' or 'amd64' for x64
+				$mkcert_version = 'v1.4.3';
+
+				switch ( $os ) {
+					case 'Darwin':
+						$binary_arch = ( $arch === 'x86_64' ) ? 'darwin-amd64' : 'darwin-arm64';
+						break;
+					case 'Linux':
+						$binary_arch = ( $arch === 'amd64' || $arch === 'x86_64' ) ? 'linux-amd64' : 'linux-arm64';
+						break;
+					case self::is_wsl():
+						$binary_arch = 'windows-amd64.exe';
+						break;
+					default:
+						$binary_arch = null;
+						break;
+				}
+
+				// If couldn't detect a support architecture, ask the user to install mkcert manually.
+				if ( ! $binary_arch ) {
+					$output->writeln( '<error>This command is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+					return 1;
+				}
+
+				$binary = "mkcert-$mkcert_version-$binary_arch";
+				$mkcert = 'vendor/mkcert';
+
+				// Check if mkcert is installed globally already, bail if so.
+				$version = trim( shell_exec( 'mkcert -version' ) );
+				if ( $version ) {
+					$output->writeln( "<error>mkcert $version is installed globally already</error>" );
+					return 1;
+				}
+
+				// Check if mkcert is installed locally already, bail if so.
+				$version = trim( shell_exec( "$mkcert -version" ) );
+				if ( $version ) {
+					$output->writeln( "<error>mkcert $version is installed locally already</error>" );
+					return 1;
+				}
+
+				$output->writeln( "Detected system architecture to be $os $arch" );
+				$output->writeln( "Downloading https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary to $mkcert ..." );
+				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
+				if ( $result ) {
+					$output->writeln( '<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>' );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+					return 1;
+				}
+
+				$output->writeln( "<info>mkcert $mkcert_version was downloaded.</info>" );
+
+				chmod( $mkcert, 0755 );
+
+				exec( "$mkcert -version", $dummy, $result );
+				if ( $result ) {
+					$output->writeln( '<error>Could not launch mkcert binary, try manually installing mkcert.</error>' );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+					return 1;
+				}
+				$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
+
+				// Setup and accept the root certificate.
+				exec( "$mkcert -install", $dummy, $result );
+				if ( $result ) {
+					$output->writeln( '<error>Could not setup `mkcert` properly, try manually installing it.</error>' );
+					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+					return 1;
+				}
+
+				$output->writeln( '<info>mkcert root CA was installed and accepted successfully.</info>' );
+				break;
+			case 'generate':
+				$config = $this->get_composer_config();
+
+				$tld = $this->get_project_tld();
+				$subdomain = $this->get_project_subdomain();
+				$hostname = $subdomain . '.' . $tld;
+				$domains = explode( ' ', $input->getArgument( 'options' )[1] ?? '' );
+				$extra_domains = $config['domains'] ?? [];
+
+				if ( false !== strpos( $tld, '.' ) ) {
+					$domains[] = '*.' . $tld;
+					$domains[] = '*.' . $hostname;
+				} else {
+					$domains[] = $hostname;
+					$domains[] = "*.$hostname";
+					$domains[] = "s3-$hostname";
+					$domains[] = "s3-console-$hostname";
+					$domains[] = "cognito-$hostname";
+					$domains[] = "pinpoint-$hostname";
+					$domains[] = "elasticsearch-$hostname";
+				}
+
+				$domains = array_merge( [ '*.altis.dev' ], $domains, $extra_domains );
+
+				$cert_domains = implode( ' ', array_filter( array_unique( $domains ) ) );
+
+				exec( "$mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $cert_domains", $dummy, $result );
+
+				if ( $result ) {
+					$output->writeln( '<error>Could not generate certificates! Try generating them manually using `mkcert`.</error>' );
+					$output->writeln( "<error>Command should be: 'mkcert -cert-file vendor/ssl-cert.pem -key-file vendor/ssl-key.pem $domains'</error>" );
+					return 1;
+				}
+
+				$output->writeln( '<info>Generated SSL certificate successfully.</info>' );
+
+				// Restart proxy container if running.
+				exec( 'docker ps | grep altis-proxy', $result );
+				if ( $result ) {
+					$output->writeln( '<info>Restarting proxy server to activate the new certificate...</info>' );
+					$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+					$proxy->setTty( posix_isatty( STDOUT ) );
+					$proxy->run( function ( $type, $buffer ) {
+						echo $buffer;
+					} );
+				}
+
+				break;
+
+			case 'exec':
+				$command = $input->getArgument( 'options' )[1] ?? null;
+				exec( "$mkcert $command", $exec_output, $result );
+
+				if ( $result ) {
+					$output->writeln( "<error>$exec_output</error>" );
+					return 1;
+				} else {
+					$output->writeln( $exec_output );
+				}
+
+				break;
+
+			case '':
+				$cert_exists = file_exists( 'vendor/ssl-cert.pem' ) && file_exists( 'vendor/ssl-key.pem' );
+				if ( ! $cert_exists ) {
+					$output->writeln( "<error>Certificate file does not exist. Use 'composer server ssl generate' to generate one. </error>" );
+					return 1;
+				} else {
+					$output->writeln( '<info>Certificate file exists.</info>' );
+				}
+
+				break;
+
+			default:
+				$output->writeln( "<error>The subcommand $subcommand is not recognized</error>" );
+				return 1;
+		}
+		return 0;
+	}
+
+	/**
+	 * Retrieves path to the working copy of mkcert.
+	 *
+	 * @return string|null Path to the mkcert binary or false if not found.
+	 */
+	protected function get_mkcert_binary() : ?string {
+		$mkcert = 'vendor/mkcert';
+
+		// Check if mkcert is installed globally already, bail if so.
+		$version = trim( shell_exec( 'mkcert -version' ) );
+		if ( $version ) {
+			return 'mkcert';
+		}
+
+		// Check if mkcert is installed locally already, bail if so.
+		$version = trim( shell_exec( "$mkcert -version" ) );
+		if ( $version ) {
+			return $mkcert;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Check and notify about required /etc/hosts entries.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 */
+	protected function check_host_entries( InputInterface $input, OutputInterface $output ) : void {
+		$config = $this->get_composer_config();
+
+		$hostname = ( $config['name'] ?? $this->get_project_subdomain() ) . '.' . ( $config['tld'] ?? $this->get_project_tld() );
+		$extra_domains = $config['domains'] ?? [];
+
+		$domains = array_merge( [
+			$hostname,
+			"s3-$hostname",
+			"s3-console-$hostname",
+			"cognito-$hostname",
+			"pinpoint-$hostname",
+			"elasticsearch-$hostname",
+		], $extra_domains );
+
+		$failed = [];
+		foreach ( $domains as $domain ) {
+			$ip = gethostbyname( $domain );
+			if ( $ip === $domain ) {
+				$failed[] = $domain;
+			}
+		}
+
+		if ( ! $failed ) {
+			return;
+		}
+
+		$output->writeln( sprintf( '<error>Missing hosts entries for: %s</error>', implode( ', ', $failed ) ) );
+		$output->writeln( 'Add the following line to your /etc/hosts file:' . "\n" );
+		$output->writeln( sprintf( '127.0.0.1 %s # altis:%s', implode( ' ', $domains ), $hostname ) );
+	}
+
+	/**
 	 * Generates the docker-compose.yml file.
 	 *
 	 * @param array $args An optional array of arguments to pass through to the generator.
 	 * @return void
 	 */
 	protected function generate_docker_compose( array $args = [] ) : void {
-		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $args );
+		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $this->get_project_tld(), $args );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 		file_put_contents(
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
@@ -767,22 +1049,67 @@ EOT;
 	}
 
 	/**
+	 * Get the config from the composer.json project file.
+	 *
+	 * @return array
+	 */
+	protected function get_composer_config() : array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$composer_json = json_decode( file_get_contents( getcwd() . '/composer.json' ), true );
+		$config = $composer_json['extra']['altis']['modules']['local-server'] ?? [];
+
+		return $config;
+	}
+
+	/**
+	 * Get the root name to use for the project.
+	 *
+	 * @return string
+	 */
+	protected function get_project_tld() : string {
+		$config = $this->get_composer_config();
+
+		if ( isset( $config['tld'] ) ) {
+			$project_name = $config['tld'];
+		} else {
+			$project_name = 'altis.dev';
+		}
+
+		return $project_name;
+	}
+
+	/**
 	 * Get the name of the project for the local subdomain
 	 *
 	 * @return string
 	 */
 	protected function get_project_subdomain() : string {
+		$config = $this->get_composer_config();
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$composer_json = json_decode( file_get_contents( getcwd() . '/composer.json' ), true );
-
-		if ( isset( $composer_json['extra']['altis']['modules']['local-server']['name'] ) ) {
-			$project_name = $composer_json['extra']['altis']['modules']['local-server']['name'];
+		if ( isset( $config['name'] ) ) {
+			$project_name = $config['name'];
 		} else {
 			$project_name = basename( getcwd() );
 		}
 
 		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
+	}
+
+	/**
+	 * Get the name of the project for the local subdomain
+	 *
+	 * @return string
+	 */
+	protected function get_project_url() : string {
+		$is_secure = $this->get_composer_config()['secure'] ?? true;
+		$tld = $this->get_project_tld();
+		$site_url = sprintf(
+			'http%s://%s%s/',
+			$is_secure ? 's' : '',
+			$this->get_project_subdomain(),
+			$tld ? '.' . $tld : ''
+		);
+		return $site_url;
 	}
 
 	/**
