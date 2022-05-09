@@ -91,6 +91,9 @@ function bootstrap() {
 	// Filter ES package IDs for local.
 	add_filter( 'altis.search.packages_dir', __NAMESPACE__ . '\\set_search_packages_dir' );
 	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 3 );
+
+	// Disable HTTPS validation for local URLs.
+	add_filter( 'https_ssl_verify', __NAMESPACE__ . '\\disable_self_ssl_verification', 10, 2 );
 }
 
 /**
@@ -153,4 +156,65 @@ function set_search_packages_dir() : string {
 function set_search_package_id( $id, string $slug, string $file ) : ?string {
 	$id = sprintf( 'packages/%s', basename( $file ) );
 	return $id;
+}
+
+/**
+ * Disables SSL verification for local HTTP calls.
+ *
+ * @param boolean $verify Whether to verify SSL certificates for local calls.
+ * @param string $url URL being requested.
+ *
+ * @return boolean
+ */
+function disable_self_ssl_verification( bool $verify, string $url ) : bool {
+	$domains = get_config_domains( true );
+	$request_domain = parse_url( $url, PHP_URL_HOST );
+
+	if (
+		in_array( $request_domain, $domains, true )
+		||
+		false !== strpos( $request_domain, $domains[0] ) // Support subdomains of primary domain.
+	) {
+		$verify = false;
+	}
+
+	return $verify;
+}
+
+/**
+ * Get domains configured in Altis config.
+ *
+ * @param bool $include_aux_services Add domains for auxiliary services like S3.
+ *
+ * @return array
+ */
+function get_config_domains( bool $include_aux_services = false ) : array {
+	static $domains = [];
+
+	if ( ! $domains ) {
+		$config = Altis\get_config()['modules']['local-server'];
+
+		$project_name = preg_replace( '/[^A-Za-z0-9\-\_]/', '', $config['name'] ?? basename( getcwd() ) );
+		$project_tld = $config['tld'] ?? 'altis.dev';
+		$domains[] = $project_name . '.' . $project_tld;
+
+		$domains = array_merge( $domains, $config['domains'] ?? [] );
+		$domains[] = 'altis.dev';
+	}
+
+	if ( $include_aux_services ) {
+		$aux_services = [
+			'elasticsearch',
+			'pinpoint',
+			'cognito',
+			's3',
+			's3-console',
+		];
+
+		foreach ( $aux_services as $aux_service ) {
+			$domains[] = "{$aux_service}-{$domains[0]}";
+		}
+	}
+
+	return $domains;
 }
