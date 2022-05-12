@@ -722,7 +722,9 @@ EOT;
 				],
 			] ), $output );
 
-			if ( $not_installed ) {
+			$mkcert = $this->get_mkcert_binary();
+
+			if ( $not_installed || ! $mkcert ) {
 				$output->writeln( "<error>mkcert could not be installed automatically, trying running 'composer server ssl install' manually to install and set it up.</error>" );
 				return $not_installed;
 			}
