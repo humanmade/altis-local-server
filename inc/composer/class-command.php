@@ -763,17 +763,17 @@ EOT;
 				$mkcert = 'vendor/mkcert';
 
 				// Check if mkcert is installed globally already, bail if so.
-				$version = trim( shell_exec( 'mkcert -version' ) );
+				$version = trim( shell_exec( 'mkcert -version' ) ?: '' );
 				if ( $version ) {
-					$output->writeln( "<error>mkcert $version is installed globally already</error>" );
-					return 1;
+					$output->writeln( "<info>mkcert $version is already installed globally</>" );
+					return 0;
 				}
 
 				// Check if mkcert is installed locally already, bail if so.
-				$version = trim( shell_exec( "$mkcert -version" ) );
+				$version = trim( shell_exec( "$mkcert -version" ) ?: '' );
 				if ( $version ) {
-					$output->writeln( "<error>mkcert $version is installed locally already</error>" );
-					return 1;
+					$output->writeln( "<info>mkcert $version is already installed to vendor/mkcert</>" );
+					return 0;
 				}
 
 				$output->writeln( "Detected system architecture to be $os $arch" );
@@ -857,7 +857,7 @@ EOT;
 				break;
 
 			case 'exec':
-				$command = $input->getArgument( 'options' )[1] ?? null;
+				$command = $input->getArgument( 'options' )[1] ?? '';
 				exec( "$mkcert $command", $exec_output, $result );
 
 				if ( $result ) {
