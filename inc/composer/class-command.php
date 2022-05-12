@@ -235,7 +235,7 @@ EOT
 		// Generate SSL certificate if not found.
 		if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
 			// Create the certificate programmatically.
-			$generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+			$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
 				'subcommand' => 'ssl',
 				'options' => [
 					'generate',
@@ -243,8 +243,8 @@ EOT
 				],
 			] ), $output );
 
-			if ( $generated ) {
-				return 1;
+			if ( $not_generated ) {
+				return $not_generated;
 			}
 		}
 
@@ -714,8 +714,20 @@ EOT;
 		$mkcert = $this->get_mkcert_binary();
 
 		if ( $subcommand !== 'install' && ! $mkcert ) {
-			$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
-			return 1;
+			// Install mkcert programmatically if not yet available.
+			$not_installed = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+				'subcommand' => 'ssl',
+				'options' => [
+					'install',
+				],
+			] ), $output );
+
+			$mkcert = $this->get_mkcert_binary();
+
+			if ( $not_installed || ! $mkcert ) {
+				$output->writeln( "<error>mkcert could not be installed automatically, trying running 'composer server ssl install' manually to install and set it up.</error>" );
+				return $not_installed;
+			}
 		}
 
 		switch ( $subcommand ) {
