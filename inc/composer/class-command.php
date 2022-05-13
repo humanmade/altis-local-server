@@ -235,7 +235,7 @@ EOT
 		// Generate SSL certificate if not found.
 		if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
 			// Create the certificate programmatically.
-			$generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+			$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
 				'subcommand' => 'ssl',
 				'options' => [
 					'generate',
@@ -243,8 +243,8 @@ EOT
 				],
 			] ), $output );
 
-			if ( $generated ) {
-				return 1;
+			if ( $not_generated ) {
+				return $not_generated;
 			}
 		}
 
@@ -714,8 +714,20 @@ EOT;
 		$mkcert = $this->get_mkcert_binary();
 
 		if ( $subcommand !== 'install' && ! $mkcert ) {
-			$output->writeln( "<error>mkcert is not installed, run 'composer server ssl install' to install and set it up.</error>" );
-			return 1;
+			// Install mkcert programmatically if not yet available.
+			$not_installed = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+				'subcommand' => 'ssl',
+				'options' => [
+					'install',
+				],
+			] ), $output );
+
+			$mkcert = $this->get_mkcert_binary();
+
+			if ( $not_installed && ! $mkcert ) {
+				$output->writeln( "<error>mkcert could not be installed automatically, trying running 'composer server ssl install' manually to install and set it up.</error>" );
+				return $not_installed;
+			}
 		}
 
 		switch ( $subcommand ) {
@@ -742,7 +754,7 @@ EOT;
 
 				// If couldn't detect a support architecture, ask the user to install mkcert manually.
 				if ( ! $binary_arch ) {
-					$output->writeln( '<error>This command is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
+					$output->writeln( '<error>`composer server ssl install` is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
 					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
 					return 1;
 				}
@@ -751,17 +763,17 @@ EOT;
 				$mkcert = 'vendor/mkcert';
 
 				// Check if mkcert is installed globally already, bail if so.
-				$version = trim( shell_exec( 'mkcert -version' ) );
+				$version = trim( shell_exec( 'mkcert -version' ) ?: '' );
 				if ( $version ) {
-					$output->writeln( "<error>mkcert $version is installed globally already</error>" );
-					return 1;
+					$output->writeln( "<info>mkcert $version is already installed globally</>" );
+					return 0;
 				}
 
 				// Check if mkcert is installed locally already, bail if so.
-				$version = trim( shell_exec( "$mkcert -version" ) );
+				$version = trim( shell_exec( "$mkcert -version" ) ?: '' );
 				if ( $version ) {
-					$output->writeln( "<error>mkcert $version is installed locally already</error>" );
-					return 1;
+					$output->writeln( "<info>mkcert $version is already installed to vendor/mkcert</>" );
+					return 0;
 				}
 
 				$output->writeln( "Detected system architecture to be $os $arch" );
@@ -845,7 +857,7 @@ EOT;
 				break;
 
 			case 'exec':
-				$command = $input->getArgument( 'options' )[1] ?? null;
+				$command = $input->getArgument( 'options' )[1] ?? '';
 				exec( "$mkcert $command", $exec_output, $result );
 
 				if ( $result ) {

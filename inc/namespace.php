@@ -176,8 +176,13 @@ function set_search_package_id( $id, string $slug, string $file ) : ?string {
  */
 function disable_self_ssl_verification( bool $verify, string $url ) : bool {
 	$domains = get_config_domains( true );
+	$request_domain = parse_url( $url, PHP_URL_HOST );
 
-	if ( in_array( parse_url( $url, PHP_URL_HOST ), $domains, true ) ) {
+	if (
+		in_array( $request_domain, $domains, true )
+		||
+		false !== strpos( $request_domain, $domains[0] ) // Support subdomains of primary domain.
+	) {
 		$verify = false;
 	}
 
