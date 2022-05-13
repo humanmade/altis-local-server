@@ -123,7 +123,8 @@ class Docker_Compose_Generator {
 				"proxy:pinpoint-{$this->hostname}",
 				"proxy:cognito-{$this->hostname}",
 				"proxy:elasticsearch-{$this->hostname}",
-				"proxy:s3-{$this->hostname}.localhost",
+				"proxy:s3-{$this->hostname}",
+				"proxy:s3-{$this->project_name}.localhost",
 			],
 			'volumes' => [
 				$this->get_app_volume(),
@@ -508,7 +509,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => "s3.localhost,{$this->hostname},{$this->tld},s3-{$this->hostname},localhost,s3",
+					'MINIO_DOMAIN' => "s3.localhost,{$this->hostname},s3-{$this->hostname},s3,localhost",
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ROOT_USER' => 'admin',
 					'MINIO_ROOT_PASSWORD' => 'password',
@@ -536,8 +537,8 @@ class Docker_Compose_Generator {
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname}.localhost;PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
-					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname},s3.localhost",
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
+					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
 			's3-sync-to-host' => [
@@ -586,7 +587,7 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => "https://{$this->tld}/s3-{$this->project_name}/", // TODO set_url_scheme.
+					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "https://{$this->tld}/s3-{$this->project_name}/" ), // bucket name is automatically prepended to host.
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 				],
 				'external_links' => [
