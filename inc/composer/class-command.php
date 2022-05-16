@@ -232,9 +232,8 @@ EOT
 			return 1;
 		}
 
-		// Generate SSL certificate if not found, and secure it turned on,
+		// Generate SSL certificate if not found, and the secure flag is turned on.
 		$is_secure = $this->is_using_codespaces() ? false : static::get_composer_config()['secure'] ?? true;
-
 		if ( $is_secure && ! file_exists( 'vendor/ssl-cert.pem' ) ) {
 			// Create the certificate programmatically.
 			$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
@@ -1177,8 +1176,8 @@ EOT;
 	 *
 	 * @return boolean
 	 */
-	public function is_using_codespaces() : bool {
-		$config = $this->get_composer_config();
+	public static function is_using_codespaces() : bool {
+		$config = static::get_composer_config();
 		return getenv( 'CODESPACES' ) === 'true' && ( $config['codespaces_integration'] ?? true );
 	}
 
@@ -1247,7 +1246,7 @@ EOT;
 	 * @return string
 	 */
 	public static function set_url_scheme( $url ) {
-		$is_secure = static::get_composer_config()['secure'] ?? true;
+		$is_secure = static::get_composer_config()['secure'] ?? ! static::is_using_codespaces();
 
 		return preg_replace( '/^https?/', 'http' . ( $is_secure ? 's' : '' ), $url );
 	}
