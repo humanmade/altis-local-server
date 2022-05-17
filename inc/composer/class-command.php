@@ -956,7 +956,7 @@ EOT;
 	 * @return void
 	 */
 	protected function generate_docker_compose( array $args = [] ) : void {
-		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $this->get_project_tld(), $args );
+		$docker_compose = new Docker_Compose_Generator( getcwd(), $this->get_project_subdomain(), $this->get_project_tld(), $this->get_project_url(), $args );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 		file_put_contents(
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',

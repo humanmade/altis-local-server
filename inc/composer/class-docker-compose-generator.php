@@ -50,6 +50,13 @@ class Docker_Compose_Generator {
 	protected $hostname;
 
 	/**
+	 * The client facing domain name for the project.
+	 *
+	 * @var string
+	 */
+	protected $url;
+
+	/**
 	 * An array of data passed to
 	 *
 	 * @var array
@@ -59,17 +66,19 @@ class Docker_Compose_Generator {
 	/**
 	 * Create and configure the generator.
 	 *
-	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param string $project_name The docker compose project name.
 	 * @param string $tld The primary top level domain for the server.
+	 * @param string $url The client facing URL.
 	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
-	public function __construct( string $project_name, string $root_dir, string $tld, array $args = [] ) {
+	public function __construct( string $root_dir, string $project_name, string $tld, string $url, array $args = [] ) {
 		$this->project_name = $project_name;
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
 		$this->root_dir = $root_dir;
 		$this->tld = $tld;
 		$this->hostname = $this->tld ? $this->project_name . '.' . $this->tld : $this->project_name;
+		$this->url = $url;
 		$this->args = $args;
 	}
 
@@ -161,7 +170,7 @@ class Docker_Compose_Generator {
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
 				'S3_CONSOLE_URL' => Command::set_url_scheme( "https://s3-console-{$this->hostname}" ),
-				'TACHYON_URL' => Command::set_url_scheme( "https://{$this->hostname}/tachyon" ),
+				'TACHYON_URL' => Command::set_url_scheme( "{$this->url}/tachyon" ),
 				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => Command::set_url_scheme( "https://pinpoint-{$this->hostname}" ),
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => Command::set_url_scheme( "https://cognito-{$this->hostname}" ),
