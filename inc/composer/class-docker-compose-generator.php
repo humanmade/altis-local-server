@@ -579,7 +579,7 @@ class Docker_Compose_Generator {
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
-				'image' => 'humanmade/tachyon:v2.4.0',
+				'image' => 'humanmade/tachyon:v2.6.0',
 				'container_name' => "{$this->project_name}-tachyon",
 				'ports' => [
 					'8080',
