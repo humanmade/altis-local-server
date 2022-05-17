@@ -587,7 +587,8 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
 					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "https://{$this->tld}/s3-{$this->project_name}/" ), // bucket name is automatically prepended to host.
+					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
+					'AWS_S3_CLIENT_ARGS' => 's3BucketEndpoint=true',
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 				],
 				'external_links' => [
