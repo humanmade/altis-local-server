@@ -12,11 +12,6 @@ use Altis;
 add_action( 'altis.modules.init', function () {
 	$default_settings = [
 		'enabled' => Altis\get_environment_architecture() === 'local-server',
-		's3' => true,
-		'tachyon' => true,
-		'analytics' => true,
-		'elasticsearch' => '7',
-		'php' => '8.0',
 	];
 	$options = [
 		'defaults' => $default_settings,
