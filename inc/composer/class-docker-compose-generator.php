@@ -754,44 +754,23 @@ class Docker_Compose_Generator {
 			define( 'Altis\\ROOT_DIR', $this->root_dir );
 		}
 
-		$config = Altis\get_config()['modules'] ?? [];
+		$modules = Altis\get_config()['modules'] ?? [];
 
-		$analytics_enabled = $config['analytics']['enabled'] ?? true;
-		$search_enabled = $config['search']['enabled'] ?? true;
+		$analytics_enabled = $modules['analytics']['enabled'] ?? true;
+		$search_enabled = $modules['search']['enabled'] ?? true;
 
 		$defaults = [
-			's3' => $config['cloud']['s3-uploads'] ?? true,
-			'tachyon' => $config['media']['tachyhon'] ?? true,
+			's3' => $modules['cloud']['s3-uploads'] ?? true,
+			'tachyon' => $modules['media']['tachyhon'] ?? true,
 			'analytics' => $analytics_enabled,
-			'cavalcade' => $config['cloud']['cavalcade'] ?? true,
+			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
 			'elasticsearch' => ( $analytics_enabled || $search_enabled ) ? '7' : false,
 			'kibana' => ( $analytics_enabled || $search_enabled ),
-			'xray' => $config['cloud']['xray'] ?? true,
+			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
 		];
 
-		$merged_config = array_merge( $defaults, $config['local-server'] ?? [] );
-
-		// Check CI only / local only flags.
-		foreach ( $merged_config as $key => $value ) {
-			if ( is_bool( $value ) ) {
-				continue;
-			}
-			if ( $value === 'all' ) {
-				$merged_config[ $key ] = true;
-			}
-			if ( $value === 'none' ) {
-				$merged_config[ $key ] = false;
-			}
-			if ( $value === 'local' ) {
-				$merged_config[ $key ] = ! getenv( 'CI' );
-			}
-			if ( $value === 'ci' ) {
-				$merged_config[ $key ] = getenv( 'CI' );
-			}
-		}
-
-		return array_merge( $defaults, $config );
+		return array_merge( $defaults, $modules['local-server'] ?? [] );
 	}
 
 	/**
