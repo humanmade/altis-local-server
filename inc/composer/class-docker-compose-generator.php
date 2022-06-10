@@ -574,7 +574,7 @@ class Docker_Compose_Generator {
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
-				'image' => 'cd2team/mailhog:1632011321',
+				'image' => 'cd2team/mailhog:latest',
 				'container_name' => "{$this->project_name}-mailhog",
 				'ports' => [
 					'8025',
