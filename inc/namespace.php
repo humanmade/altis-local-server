@@ -17,7 +17,7 @@ function bootstrap() {
 
 	$config = Altis\get_config()['modules']['local-server'];
 
-	if ( $config['s3'] ) {
+	if ( $config['s3'] ?? true ) {
 		define( 'S3_UPLOADS_BUCKET', getenv( 'S3_UPLOADS_BUCKET' ) );
 		define( 'S3_UPLOADS_REGION', getenv( 'S3_UPLOADS_REGION' ) );
 		define( 'S3_UPLOADS_KEY', getenv( 'S3_UPLOADS_KEY' ) );
@@ -59,7 +59,7 @@ function bootstrap() {
 		'port' => getenv( 'REDIS_PORT' ),
 	];
 
-	if ( $config['tachyon'] ) {
+	if ( $config['tachyon'] ?? true ) {
 		define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
 
 		/**
@@ -77,7 +77,7 @@ function bootstrap() {
 		}, 10, 2 );
 	}
 
-	if ( $config['analytics'] ) {
+	if ( $config['analytics'] ?? true ) {
 		define( 'ALTIS_ANALYTICS_PINPOINT_ID', '12345678901234567890123456' );
 		define( 'ALTIS_ANALYTICS_PINPOINT_REGION', 'us-east-1' );
 		define( 'ALTIS_ANALYTICS_COGNITO_ID', 'us-east-1:f6f6f6-fafa-f5f5-8f8f-1234567890' );
