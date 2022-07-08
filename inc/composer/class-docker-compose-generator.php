@@ -840,7 +840,11 @@ class Docker_Compose_Generator {
 			define( 'Altis\\ROOT_DIR', $this->root_dir );
 		}
 
-		$modules = Altis\get_config()['modules'] ?? [];
+		$modules = [];
+
+		if ( function_exists( 'Altis\\get_config' ) ) {
+			$modules = Altis\get_config()['modules'] ?? [];
+		}
 
 		$analytics_enabled = $modules['analytics']['enabled'] ?? true;
 		$search_enabled = $modules['search']['enabled'] ?? true;
