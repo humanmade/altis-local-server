@@ -29,8 +29,7 @@ class Plugin implements PluginInterface, Capable {
 		if ( ! function_exists( '\\Altis\\get_config' ) ) {
 			// Composer <2.2 has broken autoloading, so we need to manually
 			// load altis/core in.
-			$vendor_altis = dirname( __DIR__, 3 );
-			$path = $vendor_altis . '/core/inc/namespace.php';
+			$path = $composer->getConfig()->get( 'vendor-dir' ) . '/altis/core/inc/namespace.php';
 			if ( file_exists( $path ) ) {
 				require $path;
 			} else {
