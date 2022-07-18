@@ -5,6 +5,7 @@
 
 namespace Altis\Local_Server\Composer;
 
+use Altis;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -190,6 +191,11 @@ class Docker_Compose_Generator {
 			$services['depends_on']['elasticsearch'] = [
 				'condition' => 'service_healthy',
 			];
+		}
+
+		// Forward CI env var - set by Travis, Circle CI, GH Actions and more...
+		if ( getenv( 'CI' ) ) {
+			$services['environment']['CI'] = getenv( 'CI' );
 		}
 
 		return $services;
@@ -615,7 +621,7 @@ class Docker_Compose_Generator {
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
-				'image' => 'cd2team/mailhog:1632011321',
+				'image' => 'cd2team/mailhog:latest',
 				'container_name' => "{$this->project_name}-mailhog",
 				'ports' => [
 					'8025',
@@ -738,10 +744,16 @@ class Docker_Compose_Generator {
 
 		$services = array_merge(
 			$services,
-			$this->get_service_s3(),
-			$this->get_service_tachyon(),
 			$this->get_service_mailhog()
 		);
+
+		if ( $this->get_config()['s3'] ) {
+			$services = array_merge( $services, $this->get_service_s3() );
+		}
+
+		if ( $this->get_config()['s3'] && $this->get_config()['tachyon'] ) {
+			$services = array_merge( $services, $this->get_service_tachyon() );
+		}
 
 		if ( $this->get_config()['analytics'] && $this->get_config()['elasticsearch'] ) {
 			$services = array_merge( $services, $this->get_service_analytics() );
@@ -829,28 +841,34 @@ class Docker_Compose_Generator {
 	}
 
 	/**
-	 * Get a module config from composer.json.
+	 * Get the Local Server config from composer.json.
 	 *
-	 * @param string $module The module to get the config for.
 	 * @return array
 	 */
-	protected function get_config( $module = 'local-server' ) : array {
-		// @codingStandardsIgnoreLine
-		$json = file_get_contents( $this->root_dir . DIRECTORY_SEPARATOR . 'composer.json' );
-		$composer_json = json_decode( $json, true );
+	protected function get_config() : array {
+		// Set the root directory required by Altis\get_config() if not available.
+		if ( ! defined( 'Altis\\ROOT_DIR' ) ) {
+			define( 'Altis\\ROOT_DIR', $this->root_dir );
+		}
 
-		$config = ( $composer_json['extra']['altis']['modules'][ $module ] ?? [] );
+		$modules = Altis\get_config()['modules'] ?? [];
+
+		$analytics_enabled = $modules['analytics']['enabled'] ?? true;
+		$search_enabled = $modules['search']['enabled'] ?? true;
+
 		$defaults = [
-			'analytics' => true,
-			'cavalcade' => true,
-			'elasticsearch' => '7',
-			'kibana' => true,
-			'xray' => true,
+			's3' => $modules['cloud']['s3-uploads'] ?? true,
+			'tachyon' => $modules['media']['tachyon'] ?? true,
+			'analytics' => $analytics_enabled,
+			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
+			'elasticsearch' => ( $analytics_enabled || $search_enabled ) ? '7' : false,
+			'kibana' => ( $analytics_enabled || $search_enabled ),
+			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
 			'php' => '8.0',
 		];
 
-		return array_merge( $defaults, $config );
+		return array_merge( $defaults, $modules['local-server'] ?? [] );
 	}
 
 	/**
