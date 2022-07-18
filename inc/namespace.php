@@ -92,6 +92,15 @@ function bootstrap() {
 	add_filter( 'altis.search.packages_dir', __NAMESPACE__ . '\\set_search_packages_dir' );
 	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 3 );
 
+	// If we're on Codespaces, the native host will be localhost.
+	if ( $config['codespaces_integration'] ?? null && $_SERVER['HTTP_HOST'] === 'localhost' ) {
+		// Use forwarded host if we can.
+		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_HOST'] ) ) {
+			// phpcs:ignore HM.Security.ValidatedSanitizedInput
+			$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_X_FORWARDED_HOST'];
+		}
+	}
+
 	// Disable HTTPS validation for local URLs.
 	add_filter( 'https_ssl_verify', __NAMESPACE__ . '\\disable_self_ssl_verification', 10, 2 );
 }

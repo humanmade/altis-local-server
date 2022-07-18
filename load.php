@@ -12,6 +12,7 @@ use Altis;
 add_action( 'altis.modules.init', function () {
 	$default_settings = [
 		'enabled' => Altis\get_environment_architecture() === 'local-server',
+		'codespaces_integration' => true,
 	];
 	$options = [
 		'defaults' => $default_settings,

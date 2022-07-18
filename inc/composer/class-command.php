@@ -130,7 +130,7 @@ EOT
 			'xdebug' => 'off',
 			'mutagen' => 'off',
 			'tmp' => false,
-			'secure' => $this->get_composer_config()['secure'] ?? true,
+			'secure' => static::get_composer_config()['secure'] ?? true,
 		];
 
 		// If Xdebug switch is passed add to docker compose args.
@@ -232,8 +232,9 @@ EOT
 			return 1;
 		}
 
-		// Generate SSL certificate if not found.
-		if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
+		// Generate SSL certificate if not found, and the secure flag is turned on.
+		$is_secure = $this->is_using_codespaces() ? false : static::get_composer_config()['secure'] ?? true;
+		if ( $is_secure && ! file_exists( 'vendor/ssl-cert.pem' ) ) {
 			// Create the certificate programmatically.
 			$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
 				'subcommand' => 'ssl',
@@ -955,7 +956,7 @@ EOT;
 	 * @return void
 	 */
 	protected function generate_docker_compose( array $args = [] ) : void {
-		$docker_compose = new Docker_Compose_Generator( $this->get_project_subdomain(), getcwd(), $this->get_project_tld(), $args );
+		$docker_compose = new Docker_Compose_Generator( getcwd(), $this->get_project_subdomain(), $this->get_project_tld(), $this->get_project_url(), $args );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 		file_put_contents(
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
@@ -1065,7 +1066,7 @@ EOT;
 	 *
 	 * @return array
 	 */
-	protected function get_composer_config() : array {
+	protected static function get_composer_config() : array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		$composer_json = json_decode( file_get_contents( getcwd() . '/composer.json' ), true );
 		$config = $composer_json['extra']['altis']['modules']['local-server'] ?? [];
@@ -1079,6 +1080,10 @@ EOT;
 	 * @return string
 	 */
 	protected function get_project_tld() : string {
+		if ( $this->is_using_codespaces() ) {
+			return '';
+		}
+
 		$config = $this->get_composer_config();
 
 		if ( isset( $config['tld'] ) ) {
@@ -1095,7 +1100,30 @@ EOT;
 	 *
 	 * @return string
 	 */
+	protected function get_project_url() : string {
+		$config = $this->get_composer_config();
+		if ( $this->is_using_codespaces() ) {
+			return 'https://' . getenv( 'CODESPACE_NAME' ) . '-80.githubpreview.dev/';
+		}
+
+		$tld = $this->get_project_tld();
+		$site_url = sprintf( static::set_url_scheme( 'https://%s%s/' ),
+			$this->get_project_subdomain(),
+			$tld ? '.' . $tld : ''
+		);
+		return $site_url;
+	}
+
+	/**
+	 * Get the name of the project for the local subdomain
+	 *
+	 * @return string
+	 */
 	protected function get_project_subdomain() : string {
+		if ( $this->is_using_codespaces() ) {
+			return 'localhost';
+		}
+
 		$config = $this->get_composer_config();
 
 		if ( isset( $config['name'] ) ) {
@@ -1105,23 +1133,6 @@ EOT;
 		}
 
 		return preg_replace( '/[^A-Za-z0-9\-\_]/', '', $project_name );
-	}
-
-	/**
-	 * Get the name of the project for the local subdomain
-	 *
-	 * @return string
-	 */
-	protected function get_project_url() : string {
-		$is_secure = $this->get_composer_config()['secure'] ?? true;
-		$tld = $this->get_project_tld();
-		$site_url = sprintf(
-			'http%s://%s%s/',
-			$is_secure ? 's' : '',
-			$this->get_project_subdomain(),
-			$tld ? '.' . $tld : ''
-		);
-		return $site_url;
 	}
 
 	/**
@@ -1158,6 +1169,16 @@ EOT;
 	 */
 	public static function is_macos() : bool {
 		return php_uname( 's' ) === 'Darwin';
+	}
+
+	/**
+	 * Check if within Codespaces environment, and that Codespaces integration is activated.
+	 *
+	 * @return boolean
+	 */
+	public static function is_using_codespaces() : bool {
+		$config = static::get_composer_config();
+		return getenv( 'CODESPACES' ) === 'true' && ( $config['codespaces_integration'] ?? true );
 	}
 
 	/**
@@ -1215,6 +1236,19 @@ EOT;
 			$this->is_mutagen_installed() && $mutagen ? 'mutagen-compose' : $default_command,
 			$command
 		);
+	}
+
+	/**
+	 * Convert URLs to secure or non-secure based on configurations.
+	 *
+	 * @param string $url URL to update the scheme for.
+	 *
+	 * @return string
+	 */
+	public static function set_url_scheme( $url ) {
+		$is_secure = static::get_composer_config()['secure'] ?? ! static::is_using_codespaces();
+
+		return preg_replace( '/^https?/', 'http' . ( $is_secure ? 's' : '' ), $url );
 	}
 
 }
