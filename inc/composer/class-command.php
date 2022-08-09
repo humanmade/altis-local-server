@@ -736,7 +736,7 @@ EOT;
 				// Detect platform architecture to attempt automatic installation.
 				$os = php_uname( 's' ); // 'Darwin', 'Linux', 'Windows'
 				$arch = php_uname( 'm' ); // 'arm64' for arm, 'x86_64' or 'amd64' for x64
-				$mkcert_version = 'v1.4.3';
+				$mkcert_version = 'v1.4.4';
 
 				switch ( $os ) {
 					case 'Darwin':
