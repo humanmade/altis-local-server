@@ -104,7 +104,7 @@ function bootstrap() {
 	// Disable HTTPS validation for local URLs.
 	add_filter( 'https_ssl_verify', __NAMESPACE__ . '\\disable_self_ssl_verification', 10, 2 );
 
-	// Route e-mails to MailHog
+	// Route e-mails to MailHog.
 	add_action( 'phpmailer_init', __NAMESPACE__ . '\\mailhog_init' );
 }
 
@@ -234,11 +234,11 @@ function get_config_domains( bool $include_aux_services = false ) : array {
 /**
  * Configure phpMailer to use MailHog with Local Server.
  *
- * @param PHPMailer $phpmailer
+ * @param PHPMailer $phpmailer The WordPress PHPMailer instance.
  */
 function mailhog_init( $phpmailer ) {
 	$phpmailer->isSMTP();
-	$phpmailer->Host = 'mailhog';
-	$phpmailer->SMTPAuth = false;
-	$phpmailer->Port = 1025;
+	$phpmailer->Host     = 'mailhog'; // @phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+	$phpmailer->SMTPAuth = false; // @phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+	$phpmailer->Port     = 1025; // @phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 }
