@@ -172,7 +172,7 @@ class Docker_Compose_Generator {
 				'S3_UPLOADS_REGION' => 'us-east-1',
 				'S3_CONSOLE_URL' => Command::set_url_scheme( "https://s3-console-{$this->hostname}" ),
 				'TACHYON_URL' => Command::set_url_scheme( "{$this->url}tachyon" ),
-				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
+				'PHP_SENDMAIL_PATH' => '/bin/false',
 				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => Command::set_url_scheme( "https://pinpoint-{$this->hostname}" ),
 				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => Command::set_url_scheme( "https://cognito-{$this->hostname}" ),
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
