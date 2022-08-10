@@ -239,7 +239,7 @@ function get_config_domains( bool $include_aux_services = false ) : array {
 function mailhog_init( $phpmailer ) {
 	// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 	$phpmailer->isSMTP();
-	$phpmailer->Host     = 'mailhog'; 
+	$phpmailer->Host     = 'mailhog';
 	$phpmailer->SMTPAuth = false;
 	$phpmailer->Port     = 1025;
 	// phpcs:enable
