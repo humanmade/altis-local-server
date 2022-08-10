@@ -237,8 +237,10 @@ function get_config_domains( bool $include_aux_services = false ) : array {
  * @param PHPMailer $phpmailer The WordPress PHPMailer instance.
  */
 function mailhog_init( $phpmailer ) {
+	// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 	$phpmailer->isSMTP();
-	$phpmailer->Host     = 'mailhog'; // @phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-	$phpmailer->SMTPAuth = false; // @phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-	$phpmailer->Port     = 1025; // @phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+	$phpmailer->Host     = 'mailhog'; 
+	$phpmailer->SMTPAuth = false;
+	$phpmailer->Port     = 1025;
+	// phpcs:enable
 }
