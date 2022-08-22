@@ -85,8 +85,7 @@ class Docker_Compose_Generator {
 		];
 
 		$versions = array_keys( $version_map );
-		$config = $this->get_config();
-		$version = ! empty( $config['php'] ) ? (string) $config['php'] : '7.4';
+		$version = (string) $this->get_config()['php'];
 
 		if ( ! in_array( $version, $versions, true ) ) {
 			echo sprintf(
@@ -844,6 +843,7 @@ class Docker_Compose_Generator {
 			'kibana' => ( $analytics_enabled || $search_enabled ),
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
+			'php' => '7.4',
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );

@@ -12,7 +12,6 @@ use Altis;
 add_action( 'altis.modules.init', function () {
 	$default_settings = [
 		'enabled' => Altis\get_environment_architecture() === 'local-server',
-		'php' => '7.4',
 	];
 	$options = [
 		'defaults' => $default_settings,
