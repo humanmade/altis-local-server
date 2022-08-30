@@ -19,3 +19,11 @@ To change the PHP version use the Local Server module configuration to set the `
 ```
 
 Altis will always default to the _highest_ supported version of PHP unless support is marked as experimental. [See the PHP compatiblity chart here](docs://guides/updating-php/README.md) to see which version of PHP your version of Local Server will be running on by default, and which other versions are available.
+
+## Restarting the environment
+
+After changing the PHP version in composer.json, restart the environment with the following:
+
+```
+composer server stop && composer server start
+```
