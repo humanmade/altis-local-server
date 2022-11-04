@@ -172,6 +172,8 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
 			return $this->import_uploads( $input, $output );
+		} elseif ( $subcommand === 'cloud-build' ) {
+			return $this->cloud_build( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -731,6 +733,35 @@ EOT;
 			'mirror --exclude ".*" /content local/s3-%s',
 			$this->get_project_subdomain()
 		) );
+	}
+
+	/**
+	 * Run the .build-script as it would be in Altis Cloud
+	 *
+	 * @param InputInterface $input
+	 * @param OutputInterface $output
+	 * @return void
+	 */
+	protected function cloud_build( InputInterface $input, OutputInterface $output ) {
+		$output->writeln( '<info>Buld will install production dependencies, so you may need to `composer install` when doing development again.</info>' );
+
+		$columns = exec( 'tput cols' );
+		$lines = exec( 'tput lines' );
+		$base_command = sprintf(
+			'docker run ' .
+				'--rm ' .
+				'-e BUILD_VERBOSE=1 ' .
+				'-e COLUMNS=%1$d -e LINES=%2$d ' .
+				'--volume=%3$s:/build/src:delegated ' .
+				'--volume=$(eval echo ~$USER)/.ssh:/build/ssh:delegated ' .
+				'humanmade/altis-build-container:edge',
+			$columns,
+			$lines,
+			getcwd(),
+			$this->get_project_subdomain()
+		);
+		passthru( $base_command, $return_var );
+		return $return_var;
 	}
 
 	/**
