@@ -71,10 +71,10 @@ Run any shell command from the PHP container:
 Open a shell:
 	shell
 Database commands:
-	db                            Log into MySQL on the Database server
-	db sequel                     Generates an SPF file for Sequel Pro
-	db info                       Prints out Database connection details
-	db exec -- "<query>"          Run and output the result of a SQL query.
+	db                           Log into MySQL on the Database server
+	db sequel                    Generates an SPF file for Sequel Pro
+	db info                      Prints out Database connection details
+	db exec -- <args> "<query>"  Run and output the result of a SQL query, with options mysql args.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
