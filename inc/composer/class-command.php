@@ -680,9 +680,12 @@ EOT;
 				break;
 			case 'exec':
 				$options = $input->getArgument( 'options' ) ?? [];
-				array_shift( $options ); // remove the subcommand, we don't need it
-				$query = array_pop( $options ) ?: null; // the query is always the last option
-				$args = count( $options ) > 1 ? implode( ' ', $options ) : ''; // implode all optional options
+				// Remove the subcommand, we don't need it.
+				array_shift( $options );
+				// The query is always the last option.
+				$query = array_pop( $options ) ?: null;
+				// Implode all optional options.
+				$args = count( $options ) > 1 ? implode( ' ', $options ) : '';
 
 				if ( empty( $query ) ) {
 					$output->writeln( '<error>No query specified: pass a query via `db exec -- "sql query..."`</error>' );
