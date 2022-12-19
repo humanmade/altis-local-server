@@ -52,7 +52,7 @@ This depends on your Linux distribution. For Ubuntu, you can install PHP via the
 
 ```sh
 $ sudo apt update
-$ sudo apt install php-cli php-curl
+$ sudo apt install php-cli php-curl php-zip
 ```
 
 Once PHP has been installed, [install Composer following the official instructions](https://getcomposer.org/download/).
