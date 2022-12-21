@@ -74,7 +74,7 @@ Database commands:
 	db                           Log into MySQL on the Database server
 	db sequel                    Generates an SPF file for Sequel Pro
 	db info                      Prints out Database connection details
-	db exec -- <args> "<query>"  Run and output the result of a SQL query, with options mysql args.
+	db exec -- <args> "<query>"  Run and output the result of a SQL query, with optional mysql args.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
@@ -685,7 +685,7 @@ EOT;
 				// The query is always the last option.
 				$query = array_pop( $options ) ?: null;
 				// Implode all optional options.
-				$args = count( $options ) > 1 ? implode( ' ', $options ) : '';
+				$args = count( $options ) > 0 ? implode( ' ', $options ) : '';
 
 				if ( empty( $query ) ) {
 					$output->writeln( '<error>No query specified: pass a query via `db exec -- "sql query..."`</error>' );
