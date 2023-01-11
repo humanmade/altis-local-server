@@ -329,7 +329,7 @@ class Docker_Compose_Generator {
 	protected function get_service_redis() : array {
 		return [
 			'redis' => [
-				'image' => 'redis:3.2-alpine',
+				'image' => 'redis:7.0-alpine',
 				'container_name' => "{$this->project_name}-redis",
 				'ports' => [
 					'6379',
