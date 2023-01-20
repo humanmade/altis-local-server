@@ -641,17 +641,17 @@ EOT
 				$connection_data = $this->get_db_connection_data();
 
 				$db_info = <<<EOT
-<info>Root password</info>:  ${connection_data['MYSQL_ROOT_PASSWORD']}
+<info>Root password</info>:  {$connection_data['MYSQL_ROOT_PASSWORD']}
 
-<info>Database</info>:       ${connection_data['MYSQL_DATABASE']}
-<info>User</info>:           ${connection_data['MYSQL_USER']}
-<info>Password</info>:       ${connection_data['MYSQL_PASSWORD']}
+<info>Database</info>:       {$connection_data['MYSQL_DATABASE']}
+<info>User</info>:           {$connection_data['MYSQL_USER']}
+<info>Password</info>:       {$connection_data['MYSQL_PASSWORD']}
 
-<info>Host</info>:           ${connection_data['HOST']}
-<info>Port</info>:           ${connection_data['PORT']}
+<info>Host</info>:           {$connection_data['HOST']}
+<info>Port</info>:           {$connection_data['PORT']}
 
-<comment>Version</comment>:        ${connection_data['MYSQL_MAJOR']}
-<comment>MySQL link</comment>:     mysql://${connection_data['MYSQL_USER']}:${connection_data['MYSQL_PASSWORD']}@${connection_data['HOST']}:${connection_data['PORT']}/${connection_data['MYSQL_DATABASE']}
+<comment>Version</comment>:        {$connection_data['MYSQL_MAJOR']}
+<comment>MySQL link</comment>:     mysql://{$connection_data['MYSQL_USER']}:{$connection_data['MYSQL_PASSWORD']}@{$connection_data['HOST']}:{$connection_data['PORT']}/{$connection_data['MYSQL_DATABASE']}
 
 EOT;
 				$output->write( $db_info );
