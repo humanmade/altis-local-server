@@ -898,13 +898,13 @@ EOT;
 
 		// Check if mkcert is installed globally already, bail if so.
 		$version = trim( shell_exec( 'mkcert -version 2>/dev/null' ) ?? '' );
-		if ( $version ) {
+		if ( strlen( $version ) > 0 ) {
 			return 'mkcert';
 		}
 
 		// Check if mkcert is installed locally already, bail if so.
 		$version = trim( shell_exec( "$mkcert -version 2>/dev/null" ) ?? '' );
-		if ( $version ) {
+		if ( strlen( $version ) > 0 ) {
 			return $mkcert;
 		}
 
