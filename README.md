@@ -21,13 +21,17 @@ Altis Local Server is included by default in an Altis project, so you don't need
 
 Altis Local Server can be installed as a dependency within a Composer-based WordPress project:
 
-`composer require --dev altis/local-server`
+```sh
+$ composer require --dev altis/local-server
+```
+
+Please note that non-Altis installation is not officially supported, and is made available on an as-is basis.
 
 ## Getting Started
 
 In your Altis project you can run the following commands:
 
-```
+```sh
 # Start the server cluster
 composer server start
 
