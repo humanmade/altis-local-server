@@ -93,7 +93,7 @@ function bootstrap() {
 	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 3 );
 
 	// If we're on Codespaces, the native host will be localhost.
-	if ( $config['codespaces_integration'] ?? null && $_SERVER['HTTP_HOST'] === 'localhost' ) {
+	if ( ( $config['codespaces_integration'] ?? null ) && $_SERVER['HTTP_HOST'] === 'localhost' ) {
 		// Use forwarded host if we can.
 		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_HOST'] ) ) {
 			// phpcs:ignore HM.Security.ValidatedSanitizedInput
