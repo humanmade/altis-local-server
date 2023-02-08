@@ -452,7 +452,9 @@ EOT
 		} );
 
 		if ( $return_val === 0 ) {
+			$site_url = $this->get_project_url();
 			$output->writeln( '<info>Restarted.</>' );
+			$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 		} else {
 			$output->writeln( '<error>Failed to restart services.</>' );
 		}
