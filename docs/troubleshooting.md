@@ -53,11 +53,11 @@ sysctl -w vm.max_map_count=262144
 
 Local Server uses [Traefik Proxy](https://doc.traefik.io/traefik/) to listen for requests and map them to the appropriate containers.
 
-The proxy container runs on ports `80`, `8080` and `443` locally. This means if you are already running a service that uses any of those ports such as a built in Apache or nginx server you will need to stop those before you can start Local Server.
+The proxy container runs on ports `80`, `8080` and `443` locally. This means if you are already running a service that uses any of those ports such as a built in Apache or nginx server (or one provided via MAMP, XAMPP, WAMP, Laravel Valet, Caddy, Local, VVV, etc) you will need to stop those before you can start Local Server.
 
 On MacOS try running `sudo apachectl stop`. To prevent the built in server from starting automatically when starting the Mac run `sudo launchctl load -w /System/Library/LaunchDaemons/org.apache.httpd.plist`.
 
-Conversely if you are trying to run another service but are encoutnering this problem you may need to stop Local Server fully.
+Conversely if you are trying to run another service but are encountering this problem you may need to stop Local Server fully.
 
 To do this run `composer server stop --clean`, or `composer server destroy --clean`. Note that you should only do this if you have no other running instance of Local Server.
 
