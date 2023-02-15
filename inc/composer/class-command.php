@@ -743,7 +743,7 @@ EOT;
 	 * @return void
 	 */
 	protected function cloud_build( InputInterface $input, OutputInterface $output ) {
-		$output->writeln( '<info>Buld will install production dependencies, so you may need to `composer install` when doing development again.</info>' );
+		$output->writeln( '<info>Build will install production dependencies, so you may need to `composer install` when doing development again.</info>' );
 
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
