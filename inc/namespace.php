@@ -56,7 +56,7 @@ function bootstrap() {
 	define( 'REDIS_HOST', getenv( 'REDIS_HOST' ) );
 	define( 'REDIS_PORT', getenv( 'REDIS_PORT' ) );
 	define( 'REDIS_SECURE', false );
-	define( 'REDIS_AUTH', "" );
+	define( 'REDIS_AUTH', '' );
 
 	global $redis_server;
 	$redis_server = [
