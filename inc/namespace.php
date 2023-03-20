@@ -53,10 +53,15 @@ function bootstrap() {
 		define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
 	}
 
+	define( 'REDIS_HOST', getenv( 'REDIS_HOST' ) );
+	define( 'REDIS_PORT', getenv( 'REDIS_PORT' ) );
+	define( 'REDIS_SECURE', false );
+	define( 'REDIS_AUTH', '' );
+
 	global $redis_server;
 	$redis_server = [
-		'host' => getenv( 'REDIS_HOST' ),
-		'port' => getenv( 'REDIS_PORT' ),
+		'host' => REDIS_HOST,
+		'port' => REDIS_PORT,
 	];
 
 	if ( $config['tachyon'] ?? true ) {
