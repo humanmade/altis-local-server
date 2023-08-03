@@ -126,7 +126,9 @@ class Docker_Compose_Generator {
 			],
 			'image' => $image,
 			'links' => [
+				'db',
 				'db:db-read-replica',
+				's3',
 				's3:s3.localhost',
 			],
 			'external_links' => [
