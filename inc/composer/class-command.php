@@ -969,7 +969,7 @@ EOT;
 	/**
 	 * Return the Database connection details.
 	 *
-  	 * @throws \RuntimeException When the database container cannot be found.
+	 * @throws \RuntimeException When the database container cannot be found.
 	 * @return array
 	 */
 	private function get_db_connection_data() {
