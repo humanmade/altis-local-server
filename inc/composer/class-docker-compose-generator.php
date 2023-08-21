@@ -23,6 +23,13 @@ class Docker_Compose_Generator {
 	protected $project_name;
 
 	/**
+	 * The S3 bucket name.
+	 *
+	 * @var string
+	 */
+	protected $bucket_name;
+
+	/**
 	 * The Altis project root directory.
 	 *
 	 * @var string
@@ -75,6 +82,7 @@ class Docker_Compose_Generator {
 	 */
 	public function __construct( string $root_dir, string $project_name, string $tld, string $url, array $args = [] ) {
 		$this->project_name = $project_name;
+		$this->bucket_name = "s3-{$this->project_name}";
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
 		$this->root_dir = $root_dir;
 		$this->tld = $tld;
@@ -90,10 +98,10 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$version_map = [
-			'8.2' => 'humanmade/altis-local-server-php:8.2.0',
-			'8.1' => 'humanmade/altis-local-server-php:6.0.0-beta.1',
-			'8.0' => 'humanmade/altis-local-server-php:5.0.1',
-			'7.4' => 'humanmade/altis-local-server-php:4.2.0',
+			'8.2' => 'humanmade/altis-local-server-php:8.2.3',
+			'8.1' => 'humanmade/altis-local-server-php:6.0.5',
+			'8.0' => 'humanmade/altis-local-server-php:5.0.4',
+			'7.4' => 'humanmade/altis-local-server-php:4.2.5',
 		];
 
 		$versions = array_keys( $version_map );
@@ -127,7 +135,9 @@ class Docker_Compose_Generator {
 			],
 			'image' => $image,
 			'links' => [
+				'db',
 				'db:db-read-replica',
+				's3',
 				's3:s3.localhost',
 			],
 			'external_links' => [
@@ -166,8 +176,8 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/s3-{$this->project_name}/" ),
-				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
+				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/{$this->bucket_name}/" ),
+				'S3_UPLOADS_BUCKET' => "{$this->bucket_name}",
 				'S3_UPLOADS_BUCKET_URL' => Command::set_url_scheme( "https://s3-{$this->hostname}" ),
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
@@ -288,7 +298,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.5.2',
+				'image' => 'humanmade/altis-local-server-nginx:3.5.4',
 				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
@@ -554,7 +564,7 @@ class Docker_Compose_Generator {
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
 					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
@@ -574,7 +584,7 @@ class Docker_Compose_Generator {
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite -a local/s3-{$this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/{$this->bucket_name} && mc policy set public local/{$this->bucket_name} && mc mirror --watch --overwrite -a local/{$this->bucket_name} /content\"",
 			],
 		];
 	}
@@ -603,7 +613,7 @@ class Docker_Compose_Generator {
 				],
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
-					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
+					'AWS_S3_BUCKET' => "{$this->bucket_name}",
 					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
 					'AWS_S3_CLIENT_ARGS' => 's3BucketEndpoint=true',
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
