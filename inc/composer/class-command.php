@@ -969,6 +969,7 @@ EOT;
 	/**
 	 * Return the Database connection details.
 	 *
+	 * @throws \RuntimeException When the database container cannot be found.
 	 * @return array
 	 */
 	private function get_db_connection_data() {
@@ -1012,6 +1013,10 @@ EOT;
 		// Retrieve the forwarded ports using Docker and the container ID.
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
 		preg_match( '/([\d.]+):([\d]+)->.*/', trim( $ports ), $ports_matches );
+
+		if ( empty( $ports_matches ) ) {
+			throw new \RuntimeException( 'Could not retrieve information for the database. Is the container running?' );
+		}
 
 		return array_merge(
 			array_filter( $values ),
