@@ -827,7 +827,7 @@ class Docker_Compose_Generator {
 			$afterburner_config = <<<EOL
 				[Afterburner]
 				extension = afterburner.so
-				afterburner.redis_server_info = "rediss://redis:6379"
+				afterburner.redis_server_info = "redis://redis:6379"
 				afterburner.lru_cache_max_items = 1000
 				afterburner.redis_skip_server_check = yes
 		
