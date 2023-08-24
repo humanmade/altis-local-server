@@ -818,6 +818,20 @@ class Docker_Compose_Generator {
 			];
 		}
 
+		// Enable afterburner if requested.
+		if ($this->args['afterburner'] ?? false) {
+			$afterburner_config = <<<EOL
+				[Afterburner]
+				extension = afterburner.so
+				afterburner.redis_server_info = "rediss://redis:6379"
+				afterburner.lru_cache_max_items = 1000
+				afterburner.redis_skip_server_check = yes
+		
+				EOL;
+
+				file_put_contents("{$this->config_dir}/php.ini", $afterburner_config, FILE_APPEND | LOCK_EX);
+		}
+
 		// Handle mutagen volume according to args.
 		if ( ! empty( $this->args['mutagen'] ) && $this->args['mutagen'] === 'on' ) {
 			$config['volumes']['app'] = null;

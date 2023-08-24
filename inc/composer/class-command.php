@@ -131,6 +131,7 @@ EOT
 			'mutagen' => 'off',
 			'tmp' => false,
 			'secure' => static::get_composer_config()['secure'] ?? true,
+			'afterburner' => 'off',
 		];
 
 		// If Xdebug switch is passed add to docker compose args.
@@ -152,6 +153,11 @@ EOT
 				$output->writeln( '<info>For installation instructions see the Development Channel section here https://mutagen.io/documentation/introduction/installation.</>' );
 				return 1;
 			}
+		}
+
+		// If Afterburner switch is passed add to the docker composer args.
+		if ( $input->hasParameterOption( '--afterburner' ) ) {
+			$settings['afterburner'] = true;
 		}
 
 		// Refresh the docker-compose.yml file.
