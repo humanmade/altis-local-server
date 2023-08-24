@@ -131,6 +131,10 @@ class Docker_Compose_Generator {
 			$volumes[] = "{$this->config_dir}/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini";
 		}
 
+		if ($this->args['afterburner'] == true) {
+			$volumes[] = "{$this->config_dir}/afterburner.ini:/usr/local/etc/php/conf.d/afterburner.ini";
+		}
+
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -829,7 +833,7 @@ class Docker_Compose_Generator {
 		
 				EOL;
 
-				file_put_contents("{$this->config_dir}/php.ini", $afterburner_config, FILE_APPEND | LOCK_EX);
+			file_put_contents("{$this->config_dir}/afterburner.ini", $afterburner_config);
 		}
 
 		// Handle mutagen volume according to args.

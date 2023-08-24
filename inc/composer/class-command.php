@@ -49,13 +49,14 @@ class Command extends BaseCommand {
 Run the local development server.
 
 Default command - start the local development server:
-	start [--xdebug=<mode>] [--mutagen] [--tmp]
+	start [--xdebug=<mode>] [--mutagen] [--tmp] [--afterburner]
 	                              --xdebug starts the server with xdebug enabled
 	                              optionally set the xdebug mode by assigning a value.
 	                              --mutagen will start the server using Mutagen
 	                              for file sharing.
 	                              --tmp will mount the PHP container's /tmp directory to
 	                              .tmp in your project directory. Useful with --xdebug=profile
+								  --afterburner starts the server with the Afterburner extension enabled
 Stop the local development server or specific service:
 	stop [<service>] [--clean]                passing --clean will also stop the proxy container
 Restart the local development server:
@@ -89,7 +90,8 @@ EOT
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
 			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Start the server with Mutagen file sharing' )
 			->addOption( 'clean', null, InputOption::VALUE_NONE, 'Remove or stop the proxy container when destroying or stopping the server' )
-			->addOption( 'tmp', null, InputOption::VALUE_NONE, 'Mount the PHP container\'s /tmp directory to `.tmp` for debugging purposes' );
+			->addOption('tmp', null, InputOption::VALUE_NONE, 'Mount the PHP container\'s /tmp directory to `.tmp` for debugging purposes')
+			->addOption('afterburner', null, InputOption::VALUE_NONE, 'Start the server with the Afterburner extension enabled');
 	}
 
 	/**
