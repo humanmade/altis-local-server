@@ -201,7 +201,6 @@ EOT
 		return [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-			'COMPOSE_PROJECT_TLD' => $this->get_project_tld(),
 			'DOCKER_CLIENT_TIMEOUT' => 120,
 			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
