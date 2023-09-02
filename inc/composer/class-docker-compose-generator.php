@@ -167,6 +167,7 @@ class Docker_Compose_Generator {
 			'environment' => [
 				'HOST_PATH' => $this->root_dir,
 				'COMPOSE_PROJECT_NAME' => $this->project_name,
+				'ALTIS_DEFAULT_HOST' => $this->hostname,
 				'DB_HOST' => 'db',
 				'DB_READ_REPLICA_HOST' => 'db-read-replica',
 				'DB_PASSWORD' => 'wordpress',
