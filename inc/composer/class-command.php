@@ -474,18 +474,6 @@ EOT
 		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
 
-		$passed_url = false;
-		foreach ( $options as $option ) {
-			if ( strpos( $option, '--url=' ) === 0 ) {
-				$passed_url = true;
-				break;
-			}
-		}
-
-		if ( ! $passed_url && $program === 'wp' ) {
-			$options[] = '--url=' . $site_url;
-		}
-
 		// Escape all options. Because the shell is going to strip the
 		// initial escaping like "My string" => My String, then we need
 		// to reapply escaping.
