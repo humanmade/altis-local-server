@@ -877,13 +877,12 @@ class Docker_Compose_Generator {
 		$defaults = [
 			's3' => $modules['cloud']['s3-uploads'] ?? true,
 			'tachyon' => $modules['media']['tachyon'] ?? true,
-			'analytics' => $analytics_enabled,
 			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
 			'elasticsearch' => ( $analytics_enabled || $search_enabled ) ? '7' : false,
 			'kibana' => ( $analytics_enabled || $search_enabled ),
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
-			'php' => '8.0',
+			'php' => '8.1',
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
