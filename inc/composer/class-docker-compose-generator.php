@@ -871,12 +871,13 @@ class Docker_Compose_Generator {
 
 		$modules = Altis\get_config()['modules'] ?? [];
 
-		$analytics_enabled = $modules['analytics']['enabled'] ?? true;
+		$analytics_enabled = $modules['analytics']['enabled'] ?? false;
 		$search_enabled = $modules['search']['enabled'] ?? true;
 
 		$defaults = [
 			's3' => $modules['cloud']['s3-uploads'] ?? true,
 			'tachyon' => $modules['media']['tachyon'] ?? true,
+			'analytics' => $analytics_enabled,
 			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
 			'elasticsearch' => ( $analytics_enabled || $search_enabled ) ? '7' : false,
 			'kibana' => ( $analytics_enabled || $search_enabled ),
