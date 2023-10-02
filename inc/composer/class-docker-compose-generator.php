@@ -871,7 +871,7 @@ class Docker_Compose_Generator {
 
 		$modules = Altis\get_config()['modules'] ?? [];
 
-		$analytics_enabled = $modules['analytics']['enabled'] ?? true;
+		$analytics_enabled = $modules['analytics']['enabled'] ?? false;
 		$search_enabled = $modules['search']['enabled'] ?? true;
 
 		$defaults = [
@@ -883,7 +883,7 @@ class Docker_Compose_Generator {
 			'kibana' => ( $analytics_enabled || $search_enabled ),
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
-			'php' => '8.0',
+			'php' => '8.1',
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
