@@ -131,7 +131,7 @@ class Docker_Compose_Generator {
 			$volumes[] = "{$this->config_dir}/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini";
 		}
 
-		if ( $this->get_config()['afterburner'] && $version !== "7.4" ) {
+		if ( $this->get_config()['afterburner'] && $version !== '7.4' ) {
 			$volumes[] = "{$this->config_dir}/afterburner.ini:/usr/local/etc/php/conf.d/afterburner.ini";
 		}
 
