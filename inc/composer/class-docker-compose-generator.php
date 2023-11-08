@@ -98,9 +98,9 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$version_map = [
-			'8.2' => 'humanmade/altis-local-server-php:8.2.5',
-			'8.1' => 'humanmade/altis-local-server-php:6.0.7',
-			'8.0' => 'humanmade/altis-local-server-php:5.0.7',
+			'8.2' => 'humanmade/altis-local-server-php:8.2.9',
+			'8.1' => 'humanmade/altis-local-server-php:6.0.10',
+			'8.0' => 'humanmade/altis-local-server-php:5.0.10',
 			'7.4' => 'humanmade/altis-local-server-php:4.2.5',
 		];
 
@@ -129,6 +129,10 @@ class Docker_Compose_Generator {
 
 		if ( $this->args['xdebug'] !== 'off' ) {
 			$volumes[] = "{$this->config_dir}/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini";
+		}
+
+		if ( $this->get_config()['afterburner'] && $version !== '7.4' ) {
+			$volumes[] = "{$this->config_dir}/afterburner.ini:/usr/local/etc/php/conf.d/afterburner.ini";
 		}
 
 		$services = [
@@ -881,6 +885,7 @@ class Docker_Compose_Generator {
 			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
 			'elasticsearch' => ( $analytics_enabled || $search_enabled ) ? '7' : false,
 			'kibana' => ( $analytics_enabled || $search_enabled ),
+			'afterburner' => false,
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
 			'php' => '8.1',
