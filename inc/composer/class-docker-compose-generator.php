@@ -155,12 +155,7 @@ class Docker_Compose_Generator {
 				"proxy:s3-{$this->hostname}",
 				"proxy:s3-{$this->project_name}.localhost",
 			],
-			'volumes' => [
-				$this->get_app_volume(),
-				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
-				'socket:/var/run/php-fpm',
-				'tmp:/tmp',
-			],
+			'volumes' => $volumes,
 			'networks' => [
 				'proxy',
 				'default',
