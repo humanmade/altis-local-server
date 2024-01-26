@@ -40,7 +40,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, ssl, set, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, import-uploads' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
