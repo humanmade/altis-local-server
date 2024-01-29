@@ -82,8 +82,8 @@ SSL commands:
 	ssl exec -- "command"         Executes an arbitrary mkcert command
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
-Import files from content/uploads directly to s3:
-	import-uploads                Copies files from `content/uploads` to s3
+Sync files from content/uploads to the S3 container:
+	import-uploads                Syncs files from `content/uploads` to the S3 container.
 EOT
 			)
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
