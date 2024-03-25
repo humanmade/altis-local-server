@@ -71,10 +71,10 @@ Run any shell command from the PHP container:
 Open a shell:
 	shell
 Database commands:
-	db                            Log into MySQL on the Database server
-	db sequel                     Generates an SPF file for Sequel Pro
-	db info                       Prints out Database connection details
-	db exec -- "<query>"          Run and output the result of a SQL query.
+	db                           Log into MySQL on the Database server
+	db sequel                    Generates an SPF file for Sequel Pro
+	db info                      Prints out Database connection details
+	db exec -- <args> "<query>"  Run and output the result of a SQL query, with optional mysql args.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
@@ -681,7 +681,14 @@ EOT;
 
 				break;
 			case 'exec':
-				$query = $input->getArgument( 'options' )[1] ?? null;
+				$options = $input->getArgument( 'options' ) ?? [];
+				// Remove the subcommand, we don't need it.
+				array_shift( $options );
+				// The query is always the last option.
+				$query = array_pop( $options ) ?: null;
+				// Implode all optional options.
+				$args = count( $options ) > 0 ? implode( ' ', $options ) : '';
+
 				if ( empty( $query ) ) {
 					$output->writeln( '<error>No query specified: pass a query via `db exec -- "sql query..."`</error>' );
 					break;
@@ -690,7 +697,7 @@ EOT;
 					$query = "$query;";
 				}
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root -e \"$query\"", $return_val );
+				passthru( "$base_command mysql --database=wordpress --user=root $args -e \"$query\"", $return_val );
 				break;
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
