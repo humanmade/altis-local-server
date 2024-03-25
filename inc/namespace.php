@@ -38,7 +38,7 @@ function bootstrap() {
 	}
 
 	if ( empty( $_SERVER['HTTP_HOST'] ) ) {
-		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.' . getenv( 'COMPOSE_PROJECT_TLD' );
+		$_SERVER['HTTP_HOST'] = getenv( 'ALTIS_DEFAULT_HOST' );
 	}
 
 	defined( 'DB_HOST' ) or define( 'DB_HOST', getenv( 'DB_HOST' ) );
