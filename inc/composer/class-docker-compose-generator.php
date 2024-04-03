@@ -365,9 +365,30 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_db() : array {
+		$version_map = [
+			'5.7' => 'biarms/mysql:5.7',
+			'8.0' => 'mysql:8.0',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['mysql'] ?? '8.0';
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured MySQL version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
 		return [
 			'db' => [
-				'image' => 'biarms/mysql:5.7',
+				'image' => '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
