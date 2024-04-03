@@ -371,7 +371,7 @@ class Docker_Compose_Generator {
 		];
 
 		$versions = array_keys( $version_map );
-		$version = (string) $this->get_config()['mysql'] ?? '8.0';
+		$version = (string) $this->get_config()['mysql'];
 
 		if ( ! in_array( $version, $versions, true ) ) {
 			echo sprintf(
@@ -910,6 +910,7 @@ class Docker_Compose_Generator {
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
 			'php' => '8.1',
+			'mysql' => '8.0',
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
