@@ -1,4 +1,27 @@
-# Interacting with the Database
+# Database
+
+## Available Versions
+
+The available versions for MySQL are `5.7` and `8.0`
+
+MySQL defaults to version 8.0 however you can change the version in your config if your cloud environments have not yet been updated and you need to match them:
+
+```json
+{
+	"extra": {
+		"altis": {
+			"modules": {
+				"local-server": {
+					"mysql": "8.0"
+				}
+			}
+		}
+	}
+}
+```
+
+
+## Interacting with the Database
 
 You can log into MySQL and run any query in the default database (`wordpress`) by using:
 
