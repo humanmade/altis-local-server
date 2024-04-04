@@ -386,7 +386,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'db' => [
-				'image' => '',
+				'image' => $image,
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
