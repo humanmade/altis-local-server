@@ -389,8 +389,8 @@ class Docker_Compose_Generator {
 		return [
 			'db' => [
 				'image' => $image,
-				// Use the mysql_native_password plugin for compatibility with MySQL 5.7 and suppress deprecation warnings.
-				'command' => $version == "8.0" ? "--default-authentication-plugin=mysql_native_password --log-error-suppression-list=MY-013360" : "",
+				// Suppress mysql_native_password deprecation warnings.
+				'command' => $version === '8.0' ? '--log-error-suppression-list=MY-013360' : '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
