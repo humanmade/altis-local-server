@@ -387,7 +387,8 @@ class Docker_Compose_Generator {
 		return [
 			'db' => [
 				'image' => $image,
-				// Suppress mysql_native_password deprecation warnings.
+				// Suppress mysql_native_password deprecation warning
+				// Only affects in-place upgrades from MySQL 5.7 to 8.0.
 				'command' => $version === '8.0' ? '--log-error-suppression-list=MY-013360' : '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
