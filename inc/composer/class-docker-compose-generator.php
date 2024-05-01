@@ -363,9 +363,33 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_db() : array {
+		$version_map = [
+			'5.7' => 'biarms/mysql:5.7',
+			'8.0' => 'mysql:8.0',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['mysql'];
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured MySQL version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
 		return [
 			'db' => [
-				'image' => 'biarms/mysql:5.7',
+				'image' => $image,
+				// Suppress mysql_native_password deprecation warning
+				// Only affects in-place upgrades from MySQL 5.7 to 8.0.
+				'command' => $version === '8.0' ? '--log-error-suppression-list=MY-013360' : '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
@@ -887,6 +911,7 @@ class Docker_Compose_Generator {
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
 			'php' => '8.1',
+			'mysql' => '8.0',
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
