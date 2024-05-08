@@ -73,6 +73,7 @@ Open a shell:
 Database commands:
 	db                            Log into MySQL on the Database server
 	db sequel                     Generates an SPF file for Sequel Pro
+	db tableplus                  Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
 	db exec -- "<query>"          Run and output the result of a SQL query.
 SSL commands:
@@ -680,6 +681,27 @@ EOT;
 				}
 
 				break;
+
+			case 'tableplus':
+				$connection_data = $this->get_db_connection_data();
+				$url = sprintf(
+					'mysql://%s:%s@%s:%s/%s',
+					$connection_data['MYSQL_USER'],
+					$connection_data['MYSQL_PASSWORD'],
+					$connection_data['HOST'],
+					$connection_data['PORT'],
+					$connection_data['MYSQL_DATABASE']
+				);
+				$url .= '?' . http_build_query( [
+					'name' => $this->get_project_subdomain(),
+					'env' => 'local',
+				] );
+				exec( sprintf( 'open "%s"', $url ), $null, $return_val );
+				if ( $return_val !== 0 ) {
+					$output->writeln( '<error>You must have TablePlus (https://tableplus.com/) installed to use this command</error>' );
+				}
+				break;
+
 			case 'exec':
 				$query = $input->getArgument( 'options' )[1] ?? null;
 				if ( empty( $query ) ) {
