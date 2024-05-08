@@ -72,7 +72,7 @@ Open a shell:
 	shell
 Database commands:
 	db                            Log into MySQL on the Database server
-	db (sequel|spf)               Generates an SPF file for Sequel Pro
+	db (sequel|spf)               Opens Sequel Pro/Sequel Ace with the database connection
 	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
 	db exec -- "<query>"          Run and output the result of a SQL query.
@@ -679,7 +679,7 @@ EOT;
 
 				exec( "open $output_file_path", $null, $return_val );
 				if ( $return_val !== 0 ) {
-					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) installed to use this command</error>' );
+					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) or Sequel Ace (https://sequel-ace.com/) installed to use this command</error>' );
 				}
 
 				break;
