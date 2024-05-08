@@ -72,8 +72,8 @@ Open a shell:
 	shell
 Database commands:
 	db                            Log into MySQL on the Database server
-	db sequel                     Generates an SPF file for Sequel Pro
-	db tableplus                  Opens TablePlus with the database connection
+	db (sequel|spf)               Generates an SPF file for Sequel Pro
+	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
 	db exec -- "<query>"          Run and output the result of a SQL query.
 SSL commands:
@@ -659,7 +659,9 @@ EOT
 EOT;
 				$output->write( $db_info );
 				break;
+
 			case 'sequel':
+			case 'spf':
 				if ( php_uname( 's' ) !== 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
@@ -683,6 +685,7 @@ EOT;
 				break;
 
 			case 'tableplus':
+			case 'tbp':
 				$connection_data = $this->get_db_connection_data();
 				$url = sprintf(
 					'mysql://%s:%s@%s:%s/%s',
@@ -714,10 +717,12 @@ EOT;
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root -e \"$query\"", $return_val );
 				break;
+
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root", $return_val );
 				break;
+
 			default:
 				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
 				$return_val = 1;
