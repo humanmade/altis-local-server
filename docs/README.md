@@ -104,6 +104,6 @@ Note: Altis local-server automatically collects domains names to issue the SSL c
 * `composer server exec -- <command>` - Runs any command on the PHP container.
 * `composer server db` - Logs into MySQL on the DB container.
   * `composer server db info` - Print MySQL connection details.
-  * `composer server db (sequel|spf)` - Opens a connection to the database in [Sequel Pro](https://sequelpro.com) or Sequel Ace (https://sequel-ace.com/).
+  * `composer server db (sequel|spf)` - Opens a connection to the database in [Sequel Pro](https://sequelpro.com) or [Sequel Ace](https://sequel-ace.com/).
   * `composer server db (tableplus|tbp)` - Opens a connection to the database in [Table Plus](https://tableplus.com/).
 * `composer server import-uploads` - Syncs files from `content/uploads` to the S3 container.
