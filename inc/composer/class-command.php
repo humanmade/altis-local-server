@@ -72,7 +72,8 @@ Open a shell:
 	shell
 Database commands:
 	db                            Log into MySQL on the Database server
-	db sequel                     Generates an SPF file for Sequel Pro
+	db (sequel|spf)               Opens Sequel Pro/Sequel Ace with the database connection
+	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
 	db exec -- "<query>"          Run and output the result of a SQL query.
 SSL commands:
@@ -658,7 +659,9 @@ EOT
 EOT;
 				$output->write( $db_info );
 				break;
+
 			case 'sequel':
+			case 'spf':
 				if ( php_uname( 's' ) !== 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
@@ -676,10 +679,32 @@ EOT;
 
 				exec( "open $output_file_path", $null, $return_val );
 				if ( $return_val !== 0 ) {
-					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) installed to use this command</error>' );
+					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) or Sequel Ace (https://sequel-ace.com/) installed to use this command</error>' );
 				}
 
 				break;
+
+			case 'tableplus':
+			case 'tbp':
+				$connection_data = $this->get_db_connection_data();
+				$url = sprintf(
+					'mysql://%s:%s@%s:%s/%s',
+					$connection_data['MYSQL_USER'],
+					$connection_data['MYSQL_PASSWORD'],
+					$connection_data['HOST'],
+					$connection_data['PORT'],
+					$connection_data['MYSQL_DATABASE']
+				);
+				$url .= '?' . http_build_query( [
+					'name' => $this->get_project_subdomain(),
+					'env' => 'local',
+				] );
+				exec( sprintf( 'open "%s"', $url ), $null, $return_val );
+				if ( $return_val !== 0 ) {
+					$output->writeln( '<error>You must have TablePlus (https://tableplus.com/) installed to use this command</error>' );
+				}
+				break;
+
 			case 'exec':
 				$query = $input->getArgument( 'options' )[1] ?? null;
 				if ( empty( $query ) ) {
@@ -692,10 +717,12 @@ EOT;
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root -e \"$query\"", $return_val );
 				break;
+
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root", $return_val );
 				break;
+
 			default:
 				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
 				$return_val = 1;
