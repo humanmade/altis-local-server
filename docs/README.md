@@ -2,8 +2,6 @@
 
 ![](./assets/banner-local-server.png)
 
-**Note:** Local Server is a Docker-based environment.
-
 The Local Server module providers a local development environment for Altis projects. It is built on a containerized architecture using Docker images and Docker Compose to provide drop-in replacements for most components of the Cloud infrastructure.
 
 ## Installing
