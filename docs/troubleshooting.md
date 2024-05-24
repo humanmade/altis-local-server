@@ -63,7 +63,7 @@ To do this run `composer server stop --clean`, or `composer server destroy --cle
 
 ## Windows 10 Home Edition
 
-Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
+Docker Desktop for Windows uses Windows-native Hyper-V virtualization and networking, which is not available in the Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-containers) (Windows Subsystem for Linux, version 2).
 
 
 ## File sharing is too slow
