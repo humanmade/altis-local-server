@@ -580,6 +580,9 @@ EOT
 		} else {
 			$log = $input->getArgument( 'options' )[0];
 		}
+		if ( $log === 'mysql' || $log === 'sql' ) {
+			$log = 'db';
+		}	
 		$compose = $this->process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
 		$compose->setTimeout( 0 );
