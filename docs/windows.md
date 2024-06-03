@@ -2,7 +2,7 @@
 
 Altis Local Server supports running on Windows 10 through the use of Docker Desktop and Windows Subsystem for Linux (WSL). Support for Hyper-V is required, which is available on Windows 10 Professional and Enterprise editions.
 
-**Note:** Hyper-V virtualization and networking is not available in Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use the [Local Chassis](docs://local-chassis) environment.
+**Note:** Hyper-V virtualization and networking is not available in Windows 10 Home edition. If you are using Windows 10 Home Edition you will need to use [WSL 2](https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-containers) (Windows Subsystem for Linux, version 2).
 
 Follow these steps to set up Local Server on Windows for the first time:
 
