@@ -300,7 +300,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.5.2',
+				'image' => 'humanmade/altis-local-server-nginx:3.5.8',
 				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
@@ -329,6 +329,8 @@ class Docker_Compose_Generator {
 					'GZIP_STATUS' => 'on',
 					// Increase read response timeout when debugging.
 					'READ_TIMEOUT' => ( $this->args['xdebug'] ?? 'off' ) !== 'off' ? '9000s' : '60s',
+					// Disables rate limiting.
+					'PHP_PUBLIC_POOL_ENABLE_RATE_LIMIT' => 'false',
 				],
 			],
 		];
