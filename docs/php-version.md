@@ -10,7 +10,7 @@ To change the PHP version use the Local Server module configuration to set the `
 		"altis": {
 			"modules": {
 				"local-server": {
-					"php": "7.4"
+					"php": "8.2"
 				}
 			}
 		}
@@ -18,4 +18,4 @@ To change the PHP version use the Local Server module configuration to set the `
 }
 ```
 
-Altis will always default to the _highest_ supported version of PHP unless support is marked as experimental. [See the PHP compatiblity chart here](docs://guides/updating-php/README.md) to see which version of PHP your version of Local Server will be running on by default, and which other versions are available.
+Altis will always default to the _highest_ supported version of PHP unless support is marked as experimental. [See the PHP compatibility chart here](docs://guides/updating-php/README.md) to see which version of PHP your version of Local Server will be running on by default, and which other versions are available.
