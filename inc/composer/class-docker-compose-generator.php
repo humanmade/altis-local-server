@@ -249,7 +249,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'nodejs' => [
-				'image' => "node:{$version}-bookworm-slim",
+				'image' => "node:{$version}-bookworm",
 				'container_name' => "{$this->project_name}-nodejs",
 				'ports' => [
 					'3000',
@@ -262,6 +262,15 @@ class Docker_Compose_Generator {
 				'networks' => [
 					'proxy',
 					'default',
+				],
+				'healthcheck' => [
+					'test' => [
+						'CMD-SHELL',
+						'curl --silent --fail localhost:3000 || exit 1',
+					],
+					'interval' => '5s',
+					'timeout' => '5s',
+					'retries' => 25,
 				],
 				'labels' => [
 					'traefik.frontend.priority=1',
