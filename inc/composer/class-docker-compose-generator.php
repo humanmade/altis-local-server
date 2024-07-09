@@ -125,10 +125,6 @@ class Docker_Compose_Generator {
 			'tmp:/tmp',
 		];
 
-		if ( $this->get_config()['nodejs'] ) {
-			$volumes[] = "{$this->root_dir}/node_modules:/var/www/html/node_modules";
-		}
-
 		if ( $this->args['xdebug'] !== 'off' ) {
 			$volumes[] = "{$this->config_dir}/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini";
 		}
@@ -251,7 +247,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'nodejs' => [
-				'image' => 'node:21-bookworm-slim', 
+				'image' => 'node:21-bookworm-slim',
 				'container_name' => "{$this->project_name}-nodejs",
 				'ports' => [
 					'3000',
