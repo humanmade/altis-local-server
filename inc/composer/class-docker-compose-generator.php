@@ -245,9 +245,11 @@ class Docker_Compose_Generator {
 	protected function get_service_nodejs() : array {
 		$config = $this->get_config();
 
+		$version = (string) $this->get_config()['nodejs']['version'] ?? '20';
+
 		return [
 			'nodejs' => [
-				'image' => 'node:21-bookworm-slim',
+				'image' => "node:{$version}-bookworm-slim",
 				'container_name' => "{$this->project_name}-nodejs",
 				'ports' => [
 					'3000',

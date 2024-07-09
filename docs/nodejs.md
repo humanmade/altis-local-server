@@ -13,7 +13,8 @@ Node.js can be enabled in Local Server by adding `extra.altis.modules.local-serv
 			"modules": {
 				"local-server": {
 					"nodejs": {
-            "path": "../altis-nodejs-skeleton"
+            "path": "../altis-nodejs-skeleton",
+            "version": "21.1"
           }
 				}
 			}
@@ -22,6 +23,7 @@ Node.js can be enabled in Local Server by adding `extra.altis.modules.local-serv
 }
 ```
 
-path refers to the relative path of the project's front-end code.
+`path` refers to the relative path of the project's front-end code.
+`version` refers to the version of Node.js to use
 
 This will make the application available at nodejs-my-project.altis.dev.
