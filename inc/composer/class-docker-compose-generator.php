@@ -125,6 +125,10 @@ class Docker_Compose_Generator {
 			'tmp:/tmp',
 		];
 
+		if ( $this->get_config()['nodejs'] ) {
+			$volumes[] = "{$this->root_dir}/node_modules:/var/www/html/node_modules";
+		}
+
 		if ( $this->args['xdebug'] !== 'off' ) {
 			$volumes[] = "{$this->config_dir}/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini";
 		}
@@ -234,6 +238,42 @@ class Docker_Compose_Generator {
 				],
 				$this->get_php_reusable()
 			),
+		];
+	}
+
+	/**
+	 * Get the NodeJS container service.
+	 *
+	 * @return array
+	 */
+	protected function get_service_nodejs() : array {
+		$config = $this->get_config();
+
+		return [
+			'nodejs' => [
+				'image' => 'node:21-bookworm-slim', 
+				'container_name' => "{$this->project_name}-nodejs",
+				'ports' => [
+					'3000',
+				],
+				'volumes' => [
+					"../{$config['nodejs']['path']}/:/usr/src/app"
+				],
+				'working_dir' => '/usr/src/app',
+				'command' => 'npm run dev',
+				'networks' => [
+					'proxy',
+					'default',
+				],
+				'labels' => [
+					'traefik.frontend.priority=1',
+					'traefik.port=3000',
+					'traefik.protocol=http',
+					'traefik.docker.network=proxy',
+					"traefik.frontend.rule=HostRegexp:nodejs-{$this->hostname}",
+					"traefik.domain=nodejs-{$this->hostname}",
+				],
+			]
 		];
 	}
 
@@ -813,6 +853,10 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_webgrind() );
 		}
 
+		if ( $this->get_config()['nodejs'] ) {
+			$services = array_merge( $services, $this->get_service_nodejs() );
+		}
+
 		// Default compose configuration.
 		$config = [
 			// 'version' => '2.5',
@@ -914,6 +958,7 @@ class Docker_Compose_Generator {
 			'ignore-paths' => [],
 			'php' => '8.1',
 			'mysql' => '8.0',
+			'nodejs' => $modules['nodejs'] ?? false,
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
