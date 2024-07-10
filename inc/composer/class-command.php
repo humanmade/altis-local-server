@@ -322,7 +322,7 @@ EOT
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
-		if (static::get_composer_config()['nodejs'] ?? false) {
+		if ( static::get_composer_config()['nodejs'] ?? false ) {
 			$tld = $this->get_project_tld();
 			$subdomain = $this->get_project_subdomain();
 			$hostname = $subdomain . '.' . $tld;

@@ -245,7 +245,7 @@ class Docker_Compose_Generator {
 	protected function get_service_nodejs() : array {
 		$config = $this->get_config();
 
-		// Read package.json from nodejs.path to get the Node.js version to use
+		// Read package.json from nodejs.path to get the Node.js version to use.
 		$package_json = json_decode( file_get_contents( "{$config['nodejs']['path']}/package.json" ), true );
 		$version = $package_json['engines']['node'] ?? '20';
 
@@ -257,7 +257,7 @@ class Docker_Compose_Generator {
 					'3000',
 				],
 				'volumes' => [
-					"../{$config['nodejs']['path']}/:/usr/src/app"
+					"../{$config['nodejs']['path']}/:/usr/src/app",
 				],
 				'working_dir' => '/usr/src/app',
 				'command' => 'npm run dev',
@@ -277,7 +277,7 @@ class Docker_Compose_Generator {
 					'ALTIS_ENVIRONMENT_NAME' => $this->project_name,
 					'ALTIS_ENVIRONMENT_TYPE' => 'local',
 				],
-			]
+			],
 		];
 	}
 
