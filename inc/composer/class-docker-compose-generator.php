@@ -260,7 +260,7 @@ class Docker_Compose_Generator {
 					"../{$config['nodejs']['path']}/:/usr/src/app",
 				],
 				'working_dir' => '/usr/src/app',
-				'command' => 'npm run dev',
+				'command' => 'sh -c "npm install && npm run dev"',
 				'networks' => [
 					'proxy',
 					'default',
