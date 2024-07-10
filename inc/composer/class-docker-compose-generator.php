@@ -273,6 +273,10 @@ class Docker_Compose_Generator {
 					"traefik.frontend.rule=HostRegexp:nodejs-{$this->hostname}",
 					"traefik.domain=nodejs-{$this->hostname}",
 				],
+				'environment' => [
+					'ALTIS_ENVIRONMENT_NAME' => $this->project_name,
+					'ALTIS_ENVIRONMENT_TYPE' => 'local',
+				],
 			]
 		];
 	}
