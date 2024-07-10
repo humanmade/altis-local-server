@@ -8,18 +8,18 @@ Node.js can be enabled in Local Server by adding `extra.altis.modules.local-serv
 
 ```json
 {
-	"extra": {
-		"altis": {
-			"modules": {
-				"local-server": {
-					"nodejs": {
-            "path": "../altis-nodejs-skeleton",
-            "version": "21.1"
-          }
-				}
-			}
-		}
-	}
+   "extra":{
+      "altis":{
+         "modules":{
+            "local-server":{
+               "nodejs":{
+                  "path":"../altis-nodejs-skeleton",
+                  "version":"21.1"
+               }
+            }
+         }
+      }
+   }
 }
 ```
 
