@@ -245,7 +245,9 @@ class Docker_Compose_Generator {
 	protected function get_service_nodejs() : array {
 		$config = $this->get_config();
 
-		$version = (string) $this->get_config()['nodejs']['version'] ?? '20';
+		// Read package.json from nodejs.path to get the Node.js version to use
+		$package_json = json_decode( file_get_contents( "{$config['nodejs']['path']}/package.json" ), true );
+		$version = $package_json['engines']['node'] ?? '20';
 
 		return [
 			'nodejs' => [
