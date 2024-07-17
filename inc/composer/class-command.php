@@ -577,6 +577,7 @@ EOT
 					'redis',
 					's3',
 					'xray',
+					'nodejs',
 				],
 				0
 			);
