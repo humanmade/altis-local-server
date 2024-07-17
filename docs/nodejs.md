@@ -22,7 +22,7 @@ Node.js can be enabled in Local Server by adding `extra.altis.modules.local-serv
 }
 ```
 
-`path` refers to the relative path of the project's front-end code.
+`path` is relative to the directory where `composer.json` lives.
 
 ## Setting Node.js Version
 Similar to configuring the Altis infrastructure, the Local Server determines the Node.js version to use based on the `engines.node` value found in the `package.json` at the specified `path`.
