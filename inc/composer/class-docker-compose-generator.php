@@ -793,7 +793,7 @@ class Docker_Compose_Generator {
 
 		// Default compose configuration.
 		$config = [
-			'version' => '2.3',
+			// 'version' => '2.5',
 			'services' => $services,
 			'networks' => [
 				'default' => null,
