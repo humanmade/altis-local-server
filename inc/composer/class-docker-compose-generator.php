@@ -238,6 +238,50 @@ class Docker_Compose_Generator {
 	}
 
 	/**
+	 * Get the NodeJS container service.
+	 *
+	 * @return array
+	 */
+	protected function get_service_nodejs() : array {
+		$config = $this->get_config();
+
+		// Read package.json from nodejs.path to get the Node.js version to use.
+		$package_json = json_decode( file_get_contents( "{$config['nodejs']['path']}/package.json" ), true );
+		$version = $package_json['engines']['node'] ?? '20';
+
+		return [
+			'nodejs' => [
+				'image' => "node:{$version}-bookworm-slim",
+				'container_name' => "{$this->project_name}-nodejs",
+				'ports' => [
+					'3000',
+				],
+				'volumes' => [
+					"../{$config['nodejs']['path']}/:/usr/src/app",
+				],
+				'working_dir' => '/usr/src/app',
+				'command' => 'sh -c "npm install && npm run dev"',
+				'networks' => [
+					'proxy',
+					'default',
+				],
+				'labels' => [
+					'traefik.frontend.priority=1',
+					'traefik.port=3000',
+					'traefik.protocol=http',
+					'traefik.docker.network=proxy',
+					"traefik.frontend.rule=HostRegexp:nodejs-{$this->hostname}",
+					"traefik.domain=nodejs-{$this->hostname}",
+				],
+				'environment' => [
+					'ALTIS_ENVIRONMENT_NAME' => $this->project_name,
+					'ALTIS_ENVIRONMENT_TYPE' => 'local',
+				],
+			],
+		];
+	}
+
+	/**
 	 * Webgrind service container for viewing Xdebug profiles.
 	 *
 	 * @return array
@@ -813,6 +857,10 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_webgrind() );
 		}
 
+		if ( $this->get_config()['nodejs'] ) {
+			$services = array_merge( $services, $this->get_service_nodejs() );
+		}
+
 		// Default compose configuration.
 		$config = [
 			// 'version' => '2.5',
@@ -914,6 +962,7 @@ class Docker_Compose_Generator {
 			'ignore-paths' => [],
 			'php' => '8.1',
 			'mysql' => '8.0',
+			'nodejs' => $modules['nodejs'] ?? false,
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
