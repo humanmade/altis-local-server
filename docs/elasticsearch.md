@@ -1,20 +1,44 @@
 # Elasticsearch
 
-Elasticsearch is an integral component of Altis, enabling enhanced search and relevancy as well as powering the analytics data query
-layer.
+Elasticsearch is available on some Altis plans, and is fully integrated into Altis with the [Enhanced Search module](docs://search/), enabling enhanced search and relevancy as well as powering the analytics data query layer.
 
-## Available Versions
+(Note: Altis uses [OpenDistro for Elasticsearch](https://opendistro.github.io/for-elasticsearch-docs/) and [OpenSearch](https://opensearch.org/), which are compatible with Elasticsearch.)
 
-Elasticsearch defaults to version 7.10 however you can change the version in your config if your cloud environments have not yet
-been updated and you need to match them:
+
+## Enabling
+
+Elasticsearch support in Local Server is enabled when the Enhanced Search module is installed. It can be disabled through configuration if desired:
 
 ```json
 {
     "extra": {
         "altis": {
             "modules": {
-                "local-server": {
-                    "elasticsearch": "6.8"
+                "search": {
+                    "local": {
+                        "enabled": false
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+
+## Available Versions
+
+Elasticsearch defaults to version 7.10, however you can change the version in your config if using a different version. This should match your cloud environments; consult the Settings > Environment page for your environment for details about the configuration being used.
+
+```json
+{
+    "extra": {
+        "altis": {
+            "modules": {
+                "search": {
+                    "local": {
+                        "version": "6.8"
+                    }
                 }
             }
         }
@@ -39,7 +63,24 @@ and debugging queries and more.
 
 Kibana is available at [`/kibana/`](internal://site/kibana/).
 
-The version will always match the current Elasticsearch version.
+The version will always match the current Elasticsearch version. Kibana is enabled in Local Server by default when Enhanced Search is installed, but can be disabled via configuration:
+
+```json
+{
+    "extra": {
+        "altis": {
+            "modules": {
+                "search": {
+                    "local": {
+                        "kibana": false
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
 
 ### Adding Index Patterns
 
