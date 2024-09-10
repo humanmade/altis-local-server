@@ -48,6 +48,9 @@ MySQL link:     mysql://wordpress:wordpress@0.0.0.0:32809/wordpress
 Use `composer server db sequel` to open the database in Sequel Ace. This command can only be run under MacOS and
 requires [Sequel Ace](https://sequel-ace.com//) to be installed on your computer.
 
+Use `composer server db tableplus` to open the database in TablePlus. This command requires [TablePlus](https://tableplus.com/) to
+be installed on your computer.
+
 Use `composer server db exec -- "<command>"` to execute and output the results of an arbitrary SQL command:
 
 ```sh
