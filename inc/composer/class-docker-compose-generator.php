@@ -411,7 +411,6 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_db() : array {
 		$version_map = [
-			'5.7' => 'biarms/mysql:5.7',
 			'8.0' => 'mysql:8.0',
 		];
 
