@@ -202,7 +202,6 @@ EOT
 		return [
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
-			'COMPOSE_PROJECT_TLD' => $this->get_project_tld(),
 			'DOCKER_CLIENT_TIMEOUT' => 120,
 			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
@@ -481,18 +480,6 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
-
-		$passed_url = false;
-		foreach ( $options as $option ) {
-			if ( strpos( $option, '--url=' ) === 0 ) {
-				$passed_url = true;
-				break;
-			}
-		}
-
-		if ( ! $passed_url && $program === 'wp' ) {
-			$options[] = '--url=' . $site_url;
-		}
 
 		// Escape all options. Because the shell is going to strip the
 		// initial escaping like "My string" => My String, then we need
