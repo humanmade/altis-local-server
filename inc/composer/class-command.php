@@ -141,7 +141,7 @@ EOT
 		$config = [];
 		foreach ( $packages as $name => $package ) {
 			$extra = $package->getExtra();
-			if ( ! isset( $extra['altis'] ) || ! isset( $extra['altis']['local-server'] ) ) {
+			if ( empty( $extra['altis'] ) || empty( $extra['altis']['local-server'] ) ) {
 				continue;
 			}
 
