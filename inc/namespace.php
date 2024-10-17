@@ -17,7 +17,7 @@ function bootstrap() {
 
 	$config = Altis\get_config()['modules']['local-server'];
 
-	if ( $config['s3'] ) {
+	if ( $config['s3'] ?? true ) {
 		define( 'S3_UPLOADS_BUCKET', getenv( 'S3_UPLOADS_BUCKET' ) );
 		define( 'S3_UPLOADS_REGION', getenv( 'S3_UPLOADS_REGION' ) );
 		define( 'S3_UPLOADS_KEY', getenv( 'S3_UPLOADS_KEY' ) );
@@ -28,13 +28,17 @@ function bootstrap() {
 		add_filter( 's3_uploads_s3_client_params', function ( $params ) {
 			if ( defined( 'S3_UPLOADS_ENDPOINT' ) && S3_UPLOADS_ENDPOINT ) {
 				$params['endpoint'] = S3_UPLOADS_ENDPOINT;
+				$params['bucket_endpoint'] = true;
+				$params['http'] = [
+					'verify' => false,
+				];
 			}
 			return $params;
 		}, 5, 1 );
 	}
 
 	if ( empty( $_SERVER['HTTP_HOST'] ) ) {
-		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' );
+		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.' . getenv( 'COMPOSE_PROJECT_TLD' );
 	}
 
 	defined( 'DB_HOST' ) or define( 'DB_HOST', getenv( 'DB_HOST' ) );
@@ -49,13 +53,18 @@ function bootstrap() {
 		define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
 	}
 
+	define( 'REDIS_HOST', getenv( 'REDIS_HOST' ) );
+	define( 'REDIS_PORT', getenv( 'REDIS_PORT' ) );
+	define( 'REDIS_SECURE', false );
+	define( 'REDIS_AUTH', '' );
+
 	global $redis_server;
 	$redis_server = [
-		'host' => getenv( 'REDIS_HOST' ),
-		'port' => getenv( 'REDIS_PORT' ),
+		'host' => REDIS_HOST,
+		'port' => REDIS_PORT,
 	];
 
-	if ( $config['tachyon'] ) {
+	if ( $config['tachyon'] ?? true ) {
 		define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
 
 		/**
@@ -73,7 +82,7 @@ function bootstrap() {
 		}, 10, 2 );
 	}
 
-	if ( $config['analytics'] ) {
+	if ( $config['analytics'] ?? true ) {
 		define( 'ALTIS_ANALYTICS_PINPOINT_ID', '12345678901234567890123456' );
 		define( 'ALTIS_ANALYTICS_PINPOINT_REGION', 'us-east-1' );
 		define( 'ALTIS_ANALYTICS_COGNITO_ID', 'us-east-1:f6f6f6-fafa-f5f5-8f8f-1234567890' );
@@ -87,6 +96,21 @@ function bootstrap() {
 	// Filter ES package IDs for local.
 	add_filter( 'altis.search.packages_dir', __NAMESPACE__ . '\\set_search_packages_dir' );
 	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 3 );
+
+	// If we're on Codespaces, the native host will be localhost.
+	if ( ( $config['codespaces_integration'] ?? null ) && $_SERVER['HTTP_HOST'] === 'localhost' ) {
+		// Use forwarded host if we can.
+		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_HOST'] ) ) {
+			// phpcs:ignore HM.Security.ValidatedSanitizedInput
+			$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_X_FORWARDED_HOST'];
+		}
+	}
+
+	// Disable HTTPS validation for local URLs.
+	add_filter( 'https_ssl_verify', __NAMESPACE__ . '\\disable_self_ssl_verification', 10, 2 );
+
+	// Route e-mails to MailHog.
+	add_action( 'phpmailer_init', __NAMESPACE__ . '\\mailhog_init' );
 }
 
 /**
@@ -149,4 +173,79 @@ function set_search_packages_dir() : string {
 function set_search_package_id( $id, string $slug, string $file ) : ?string {
 	$id = sprintf( 'packages/%s', basename( $file ) );
 	return $id;
+}
+
+/**
+ * Disables SSL verification for local HTTP calls.
+ *
+ * @param boolean $verify Whether to verify SSL certificates for local calls.
+ * @param string $url URL being requested.
+ *
+ * @return boolean
+ */
+function disable_self_ssl_verification( bool $verify, string $url ) : bool {
+	$domains = get_config_domains( true );
+	$request_domain = parse_url( $url, PHP_URL_HOST );
+
+	if (
+		in_array( $request_domain, $domains, true )
+		||
+		false !== strpos( $request_domain, $domains[0] ) // Support subdomains of primary domain.
+	) {
+		$verify = false;
+	}
+
+	return $verify;
+}
+
+/**
+ * Get domains configured in Altis config.
+ *
+ * @param bool $include_aux_services Add domains for auxiliary services like S3.
+ *
+ * @return array
+ */
+function get_config_domains( bool $include_aux_services = false ) : array {
+	static $domains = [];
+
+	if ( ! $domains ) {
+		$config = Altis\get_config()['modules']['local-server'];
+
+		$project_name = preg_replace( '/[^A-Za-z0-9\-\_]/', '', $config['name'] ?? basename( getcwd() ) );
+		$project_tld = $config['tld'] ?? 'altis.dev';
+		$domains[] = $project_name . '.' . $project_tld;
+
+		$domains = array_merge( $domains, $config['domains'] ?? [] );
+		$domains[] = 'altis.dev';
+	}
+
+	if ( $include_aux_services ) {
+		$aux_services = [
+			'elasticsearch',
+			'pinpoint',
+			'cognito',
+			's3',
+			's3-console',
+		];
+
+		foreach ( $aux_services as $aux_service ) {
+			$domains[] = "{$aux_service}-{$domains[0]}";
+		}
+	}
+
+	return $domains;
+}
+
+/**
+ * Configure phpMailer to use MailHog with Local Server.
+ *
+ * @param PHPMailer $phpmailer The WordPress PHPMailer instance.
+ */
+function mailhog_init( $phpmailer ) {
+	// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+	$phpmailer->isSMTP();
+	$phpmailer->Host     = 'mailhog';
+	$phpmailer->SMTPAuth = false;
+	$phpmailer->Port     = 1025;
+	// phpcs:enable
 }

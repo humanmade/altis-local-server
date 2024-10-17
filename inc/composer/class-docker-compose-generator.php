@@ -5,6 +5,7 @@
 
 namespace Altis\Local_Server\Composer;
 
+use Altis;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -20,6 +21,13 @@ class Docker_Compose_Generator {
 	 * @var string
 	 */
 	protected $project_name;
+
+	/**
+	 * The S3 bucket name.
+	 *
+	 * @var string
+	 */
+	protected $bucket_name;
 
 	/**
 	 * The Altis project root directory.
@@ -50,6 +58,13 @@ class Docker_Compose_Generator {
 	protected $hostname;
 
 	/**
+	 * The client facing domain name for the project.
+	 *
+	 * @var string
+	 */
+	protected $url;
+
+	/**
 	 * An array of data passed to
 	 *
 	 * @var array
@@ -59,16 +74,20 @@ class Docker_Compose_Generator {
 	/**
 	 * Create and configure the generator.
 	 *
-	 * @param string $project_name The docker compose project name.
 	 * @param string $root_dir The project root directory.
+	 * @param string $project_name The docker compose project name.
+	 * @param string $tld The primary top level domain for the server.
+	 * @param string $url The client facing URL.
 	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
 	 */
-	public function __construct( string $project_name, string $root_dir, array $args = [] ) {
+	public function __construct( string $root_dir, string $project_name, string $tld, string $url, array $args = [] ) {
 		$this->project_name = $project_name;
-		$this->root_dir = $root_dir;
+		$this->bucket_name = "s3-{$this->project_name}";
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
-		$this->tld = 'altis.dev';
-		$this->hostname = $this->project_name . '.' . $this->tld;
+		$this->root_dir = $root_dir;
+		$this->tld = $tld;
+		$this->hostname = $this->tld ? $this->project_name . '.' . $this->tld : $this->project_name;
+		$this->url = $url;
 		$this->args = $args;
 	}
 
@@ -78,6 +97,43 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_php_reusable() : array {
+		$version_map = [
+			'8.3' => 'humanmade/altis-local-server-php:8.3.7',
+			'8.2' => 'humanmade/altis-local-server-php:8.2.20',
+			'8.1' => 'humanmade/altis-local-server-php:6.0.14',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['php'];
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured PHP version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
+		$volumes = [
+			$this->get_app_volume(),
+			"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
+			'socket:/var/run/php-fpm',
+			'tmp:/tmp',
+		];
+
+		if ( $this->args['xdebug'] !== 'off' ) {
+			$volumes[] = "{$this->config_dir}/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini";
+		}
+
+		if ( $this->get_config()['afterburner'] && $version !== '7.4' ) {
+			$volumes[] = "{$this->config_dir}/afterburner.ini:/usr/local/etc/php/conf.d/afterburner.ini";
+		}
+
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -91,9 +147,11 @@ class Docker_Compose_Generator {
 					'condition' => 'service_started',
 				],
 			],
-			'image' => 'humanmade/altis-local-server-php:4.2.0',
+			'image' => $image,
 			'links' => [
+				'db',
 				'db:db-read-replica',
+				's3',
 				's3:s3.localhost',
 			],
 			'external_links' => [
@@ -102,13 +160,9 @@ class Docker_Compose_Generator {
 				"proxy:cognito-{$this->hostname}",
 				"proxy:elasticsearch-{$this->hostname}",
 				"proxy:s3-{$this->hostname}",
+				"proxy:s3-{$this->project_name}.localhost",
 			],
-			'volumes' => [
-				$this->get_app_volume(),
-				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
-				'socket:/var/run/php-fpm',
-				'tmp:/tmp',
-			],
+			'volumes' => $volumes,
 			'networks' => [
 				'proxy',
 				'default',
@@ -131,17 +185,17 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => "https://{$this->tld}/",
-				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
-				'S3_UPLOADS_BUCKET_URL' => "https://s3-{$this->hostname}",
+				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/{$this->bucket_name}/" ),
+				'S3_UPLOADS_BUCKET' => "{$this->bucket_name}",
+				'S3_UPLOADS_BUCKET_URL' => Command::set_url_scheme( "https://s3-{$this->hostname}" ),
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
-				'S3_CONSOLE_URL' => "https://s3-console-{$this->hostname}",
-				'TACHYON_URL' => "https://{$this->hostname}/tachyon",
-				'PHP_SENDMAIL_PATH' => '/usr/sbin/sendmail -t -i -S mailhog:1025',
-				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => "https://pinpoint-{$this->hostname}",
-				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => "https://cognito-{$this->hostname}",
+				'S3_CONSOLE_URL' => Command::set_url_scheme( "https://s3-console-{$this->hostname}" ),
+				'TACHYON_URL' => Command::set_url_scheme( "{$this->url}tachyon" ),
+				'PHP_SENDMAIL_PATH' => '/bin/false',
+				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => Command::set_url_scheme( "https://pinpoint-{$this->hostname}" ),
+				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => Command::set_url_scheme( "https://cognito-{$this->hostname}" ),
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
 				'XDEBUG_CONFIG' => sprintf(
 					'client_host=%s',
@@ -160,6 +214,11 @@ class Docker_Compose_Generator {
 			];
 		}
 
+		// Forward CI env var - set by Travis, Circle CI, GH Actions and more...
+		if ( getenv( 'CI' ) ) {
+			$services['environment']['CI'] = getenv( 'CI' );
+		}
+
 		return $services;
 	}
 
@@ -176,6 +235,50 @@ class Docker_Compose_Generator {
 				],
 				$this->get_php_reusable()
 			),
+		];
+	}
+
+	/**
+	 * Get the NodeJS container service.
+	 *
+	 * @return array
+	 */
+	protected function get_service_nodejs() : array {
+		$config = $this->get_config();
+
+		// Read package.json from nodejs.path to get the Node.js version to use.
+		$package_json = json_decode( file_get_contents( "{$config['nodejs']['path']}/package.json" ), true );
+		$version = $package_json['engines']['node'] ?? '20';
+
+		return [
+			'nodejs' => [
+				'image' => "node:{$version}-bookworm-slim",
+				'container_name' => "{$this->project_name}-nodejs",
+				'ports' => [
+					'3000',
+				],
+				'volumes' => [
+					"../{$config['nodejs']['path']}/:/usr/src/app",
+				],
+				'working_dir' => '/usr/src/app',
+				'command' => 'sh -c "npm install && npm run dev"',
+				'networks' => [
+					'proxy',
+					'default',
+				],
+				'labels' => [
+					'traefik.frontend.priority=1',
+					'traefik.port=3000',
+					'traefik.protocol=http',
+					'traefik.docker.network=proxy',
+					"traefik.frontend.rule=HostRegexp:nodejs-{$this->hostname}",
+					"traefik.domain=nodejs-{$this->hostname}",
+				],
+				'environment' => [
+					'ALTIS_ENVIRONMENT_NAME' => $this->project_name,
+					'ALTIS_ENVIRONMENT_TYPE' => 'local',
+				],
+			],
 		];
 	}
 
@@ -242,9 +345,13 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_nginx() : array {
+		$config = $this->get_config();
+		$domains = $config['domains'] ?? [];
+		$domains = $domains ? ',' . implode( ',', $domains ) : '';
+
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.5.8',
 				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
@@ -265,13 +372,16 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
+					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
 				],
 				'environment' => [
 					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
 					'GZIP_STATUS' => 'on',
 					// Increase read response timeout when debugging.
 					'READ_TIMEOUT' => ( $this->args['xdebug'] ?? 'off' ) !== 'off' ? '9000s' : '60s',
+					// Disables rate limiting.
+					'PHP_PUBLIC_POOL_ENABLE_RATE_LIMIT' => 'false',
 				],
 			],
 		];
@@ -285,7 +395,7 @@ class Docker_Compose_Generator {
 	protected function get_service_redis() : array {
 		return [
 			'redis' => [
-				'image' => 'redis:3.2-alpine',
+				'image' => 'redis:7.0-alpine',
 				'container_name' => "{$this->project_name}-redis",
 				'ports' => [
 					'6379',
@@ -300,9 +410,32 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_db() : array {
+		$version_map = [
+			'8.0' => 'mysql:8.0',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['mysql'];
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured MySQL version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
 		return [
 			'db' => [
-				'image' => 'biarms/mysql:5.7',
+				'image' => $image,
+				// Suppress mysql_native_password deprecation warning
+				// Only affects in-place upgrades from MySQL 5.7 to 8.0.
+				'command' => $version === '8.0' ? '--log-error-suppression-list=MY-013360' : '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
@@ -392,6 +525,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=HostRegexp:elasticsearch-{$this->hostname}",
+					"traefik.domain=elasticsearch-{$this->hostname}",
 				],
 				'environment' => [
 					'http.max_content_length=10mb',
@@ -480,7 +614,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => 's3.localhost,altis.dev,s3',
+					'MINIO_DOMAIN' => "s3.localhost,{$this->hostname},s3-{$this->hostname},s3,localhost",
 					'MINIO_REGION_NAME' => 'us-east-1',
 					'MINIO_ROOT_USER' => 'admin',
 					'MINIO_ROOT_PASSWORD' => 'password',
@@ -508,7 +642,8 @@ class Docker_Compose_Generator {
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
+					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
 			's3-sync-to-host' => [
@@ -527,7 +662,7 @@ class Docker_Compose_Generator {
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite -a local/s3-{$this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/{$this->bucket_name} && mc policy set public local/{$this->bucket_name} && mc mirror --watch --overwrite -a local/{$this->bucket_name} /content\"",
 			],
 		];
 	}
@@ -540,7 +675,7 @@ class Docker_Compose_Generator {
 	protected function get_service_tachyon() : array {
 		return [
 			'tachyon' => [
-				'image' => 'humanmade/tachyon:v2.4.0',
+				'image' => 'humanmade/tachyon:v2.6.0',
 				'container_name' => "{$this->project_name}-tachyon",
 				'ports' => [
 					'8080',
@@ -556,8 +691,10 @@ class Docker_Compose_Generator {
 				],
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
-					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
-					'AWS_S3_ENDPOINT' => "https://{$this->tld}/",
+					'AWS_S3_BUCKET' => "{$this->bucket_name}",
+					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
+					'AWS_S3_CLIENT_ARGS' => 's3BucketEndpoint=true',
+					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
@@ -574,7 +711,7 @@ class Docker_Compose_Generator {
 	protected function get_service_mailhog() : array {
 		return [
 			'mailhog' => [
-				'image' => 'cd2team/mailhog:1632011321',
+				'image' => 'cd2team/mailhog:latest',
 				'container_name' => "{$this->project_name}-mailhog",
 				'ports' => [
 					'8025',
@@ -620,6 +757,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:cognito-{$this->hostname}",
+					"traefik.domain=cognito-{$this->hostname}",
 				],
 			],
 			'pinpoint' => [
@@ -638,6 +776,7 @@ class Docker_Compose_Generator {
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
 					"traefik.frontend.rule=Host:pinpoint-{$this->hostname}",
+					"traefik.domain=pinpoint-{$this->hostname}",
 				],
 				'environment' => [
 					'INDEX_ROTATION' => 'OneDay',
@@ -695,10 +834,16 @@ class Docker_Compose_Generator {
 
 		$services = array_merge(
 			$services,
-			$this->get_service_s3(),
-			$this->get_service_tachyon(),
 			$this->get_service_mailhog()
 		);
+
+		if ( $this->get_config()['s3'] ) {
+			$services = array_merge( $services, $this->get_service_s3() );
+		}
+
+		if ( $this->get_config()['s3'] && $this->get_config()['tachyon'] ) {
+			$services = array_merge( $services, $this->get_service_tachyon() );
+		}
 
 		if ( $this->get_config()['analytics'] && $this->get_config()['elasticsearch'] ) {
 			$services = array_merge( $services, $this->get_service_analytics() );
@@ -712,9 +857,13 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_webgrind() );
 		}
 
+		if ( $this->get_config()['nodejs'] ) {
+			$services = array_merge( $services, $this->get_service_nodejs() );
+		}
+
 		// Default compose configuration.
 		$config = [
-			'version' => '2.3',
+			// 'version' => '2.5',
 			'services' => $services,
 			'networks' => [
 				'default' => null,
@@ -734,9 +883,11 @@ class Docker_Compose_Generator {
 
 		// Mount tmp volume locally if requested.
 		if ( $this->args['tmp'] ?? false ) {
+			@mkdir( "{$this->root_dir}/.tmp" );
 			$config['volumes']['tmp'] = [
 				'driver' => 'local',
 				'driver_opts' => [
+					'type' => 'none',
 					'device' => "{$this->root_dir}/.tmp",
 					'o' => 'bind',
 				],
@@ -784,27 +935,37 @@ class Docker_Compose_Generator {
 	}
 
 	/**
-	 * Get a module config from composer.json.
+	 * Get the Local Server config from composer.json.
 	 *
-	 * @param string $module The module to get the config for.
 	 * @return array
 	 */
-	protected function get_config( $module = 'local-server' ) : array {
-		// @codingStandardsIgnoreLine
-		$json = file_get_contents( $this->root_dir . DIRECTORY_SEPARATOR . 'composer.json' );
-		$composer_json = json_decode( $json, true );
+	protected function get_config() : array {
+		// Set the root directory required by Altis\get_config() if not available.
+		if ( ! defined( 'Altis\\ROOT_DIR' ) ) {
+			define( 'Altis\\ROOT_DIR', $this->root_dir );
+		}
 
-		$config = ( $composer_json['extra']['altis']['modules'][ $module ] ?? [] );
+		$modules = Altis\get_config()['modules'] ?? [];
+
+		$analytics_enabled = $modules['analytics']['enabled'] ?? false;
+		$search_enabled = $modules['search']['enabled'] ?? true;
+
 		$defaults = [
-			'analytics' => true,
-			'cavalcade' => true,
-			'elasticsearch' => '7',
-			'kibana' => true,
-			'xray' => true,
+			's3' => $modules['cloud']['s3-uploads'] ?? true,
+			'tachyon' => $modules['media']['tachyon'] ?? true,
+			'analytics' => $analytics_enabled,
+			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
+			'elasticsearch' => ( $analytics_enabled || $search_enabled ) ? '7' : false,
+			'kibana' => ( $analytics_enabled || $search_enabled ),
+			'afterburner' => false,
+			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
+			'php' => '8.1',
+			'mysql' => '8.0',
+			'nodejs' => $modules['nodejs'] ?? false,
 		];
 
-		return array_merge( $defaults, $config );
+		return array_merge( $defaults, $modules['local-server'] ?? [] );
 	}
 
 	/**

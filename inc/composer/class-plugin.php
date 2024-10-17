@@ -26,6 +26,16 @@ class Plugin implements PluginInterface, Capable {
 	 * @return void
 	 */
 	public function activate( Composer $composer, IOInterface $io ) {
+		if ( ! function_exists( '\\Altis\\get_config' ) ) {
+			// Composer <2.2 has broken autoloading, so we need to manually
+			// load altis/core in.
+			$path = $composer->getConfig()->get( 'vendor-dir' ) . '/altis/core/inc/namespace.php';
+			if ( file_exists( $path ) ) {
+				require $path;
+			} else {
+				trigger_error( 'Altis\\get_config() not found, and cannot manually load altis/core module. See https://github.com/humanmade/altis-local-server/issues/501', E_USER_WARNING );
+			}
+		}
 	}
 
 	/**
