@@ -1,6 +1,6 @@
-# ElasticSearch
+# Elasticsearch
 
-ElasticSearch is an integral component of Altis, enabling enhanced search and relevancy as well as powering the analytics data query
+Elasticsearch is an integral component of Altis, enabling enhanced search and relevancy as well as powering the analytics data query
 layer.
 
 ## Available Versions
@@ -78,9 +78,9 @@ types.
 
 ![Kibana Discover panel](./assets/kibana-discover.png)
 
-## Accessing ElasticSearch Directly
+## Accessing Elasticsearch Directly
 
-The ElasticSearch host name is not directly exposed however you can find the dynamic port and IP to connect to by
+The Elasticsearch host name is not directly exposed however you can find the dynamic port and IP to connect to by
 running `composer server status | grep elasticsearch`.
 
 You should see output similar to this:
@@ -89,17 +89,17 @@ You should see output similar to this:
 project_elasticsearch_1   /elastic-entrypoint.sh ela ...   Up (healthy)   0.0.0.0:32871->9200/tcp, 9300/tcp
 ```
 
-Copy the mapped IP and port (`0.0.0.0:32871` in the example above) and use it to query ElasticSearch directly:
+Copy the mapped IP and port (`0.0.0.0:32871` in the example above) and use it to query Elasticsearch directly:
 
 ```shell
 curl -XGET http://0.0.0.0:32871
 ```
 
-## ElasticSearch Memory Limit
+## Elasticsearch Memory Limit
 
-ElasticSearch requires more memory on certain operating systems such as Ubuntu or when using Continuous Integration services. If
-ElasticSearch does not have enough memory it can cause other services to stop working. The Local Server supports an environment
-variable which can change the default memory limit for ElasticSearch called `ES_MEM_LIMIT`.
+Elasticsearch requires more memory on certain operating systems such as Ubuntu or when using Continuous Integration services. If
+Elasticsearch does not have enough memory it can cause other services to stop working. The Local Server supports an environment
+variable which can change the default memory limit for Elasticsearch called `ES_MEM_LIMIT`.
 
 You can set the `ES_MEM_LIMIT` variable in 2 ways:
 
