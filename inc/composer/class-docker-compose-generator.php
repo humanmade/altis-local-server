@@ -960,7 +960,7 @@ class Docker_Compose_Generator {
 			'afterburner' => false,
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
-			'php' => '8.1',
+			'php' => '8.2',
 			'mysql' => '8.0',
 			'nodejs' => $modules['nodejs'] ?? false,
 		];
