@@ -50,7 +50,7 @@ class Local_Server_Extension implements Compose_Extension {
 	}
 
 	public function filter_compose( array $config ) : array {
-		$config['services']'foo'] = [
+		$config['services']['foo'] = [
 			'container_name' => "{$this->generator->project_name}-foo",
 			'image' => 'hello-world',
 		];
