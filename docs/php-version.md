@@ -19,8 +19,8 @@ To change the PHP version use the Local Server module configuration to set the `
 }
 ```
 
-**Note**: Only the major and minor versions (x.y) should be listed. We will use the latest patch version we have tested and made
-available both locally and in the cloud.
+**Note**: Only the major and minor versions (x.y) should be specified. Altis automatically manages and updates the patch version
+as part of regular maintenance.
 
 Altis will always default to the _highest_ supported version of PHP unless support is marked as
 experimental. [See the PHP compatibility chart here](docs://guides/updating-php/README.md) to see which version of PHP your version
