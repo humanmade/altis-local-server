@@ -322,6 +322,13 @@ EOT
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
+		if ( static::get_composer_config()['nodejs'] ?? false ) {
+			$tld = $this->get_project_tld();
+			$subdomain = $this->get_project_subdomain();
+			$hostname = $subdomain . '.' . $tld;
+			$output->writeln( '<info>To access your Node.js site visit:</> <comment>https://nodejs-' . $hostname . '</>' );
+		}
+
 		$this->check_host_entries( $input, $output );
 
 		return 0;
@@ -570,6 +577,7 @@ EOT
 					'redis',
 					's3',
 					'xray',
+					'nodejs',
 				],
 				0
 			);
@@ -579,6 +587,9 @@ EOT
 			$log = $service;
 		} else {
 			$log = $input->getArgument( 'options' )[0];
+		}
+		if ( $log === 'mysql' || $log === 'sql' ) {
+			$log = 'db';
 		}
 		$compose = $this->process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );

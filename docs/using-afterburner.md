@@ -1,18 +1,19 @@
 # Using Afterburner
 
-If your project uses Afterburner in Altis Cloud, you can enable it in Altis Local Service by setting the `altis.modules.local-server.afterburner` value to `true`:
+If your project uses Afterburner in Altis Cloud, you can enable it in Altis Local Service by setting
+the `altis.modules.local-server.afterburner` value to `true`:
 
 ```json
 {
-	"extra": {
-		"altis": {
-			"modules": {
-				"local-server": {
-					"afterburner": true
-				}
-			}
-		}
-	}
+    "extra": {
+        "altis": {
+            "modules": {
+                "local-server": {
+                    "afterburner": true
+                }
+            }
+        }
+    }
 }
 ```
 
