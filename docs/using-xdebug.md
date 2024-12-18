@@ -136,9 +136,7 @@ Local Server takes advantage of
 PhpStorm's [Zero Configuration Debugging](https://www.jetbrains.com/help/phpstorm/zero-configuration-debugging.html). All you need
 to do is tell it about the server by following these steps:
 
-1. Go
-   to [Preferences > Languages & Frameworks > PHP > Servers](jetbrains://PhpStorm/settings?name=Languages+%26+Frameworks--PHP--Servers)
-   (link opens in PhpStorm).
+1. Go to `Preferences > PHP > Servers`.
 2. Click the plus icon and create a new Server entry with the following settings:
     - The name should be your project host name: `<my-project>.altis.dev`
     - The host name should also be: `<my-project>.altis.dev`
