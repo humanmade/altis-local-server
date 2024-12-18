@@ -372,7 +372,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname}{$domains}",
 					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
 				],
 				'environment' => [
@@ -642,7 +642,7 @@ class Docker_Compose_Generator {
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
 					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
@@ -687,7 +687,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
 				],
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
