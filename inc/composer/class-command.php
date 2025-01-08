@@ -482,7 +482,7 @@ EOT
 		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
 		$config = $this->get_composer_config();
-		$default_site_url = $config['default_site_url'];
+		$default_site_url = $config['default_site_url'] ?? null;
 
 		$passed_url = false;
 		foreach ( $options as $option ) {
