@@ -481,6 +481,8 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
+		$config = $this->get_composer_config();
+		$default_site_url = $config['default_site_url'];
 
 		$passed_url = false;
 		foreach ( $options as $option ) {
@@ -491,7 +493,7 @@ EOT
 		}
 
 		if ( ! $passed_url && $program === 'wp' ) {
-			$options[] = '--url=' . $site_url;
+			$default_site_url ? $options[] = '--url=' . sprintf( static::set_url_scheme( 'https://%s/' ), $default_site_url ) : $options[] = '--url=' . $site_url;
 		}
 
 		// Escape all options. Because the shell is going to strip the
