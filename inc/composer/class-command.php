@@ -492,7 +492,7 @@ EOT
 			}
 		}
 
-		if ( ! $passed_url && $program === 'wp' ) {
+		if ( ! $passed_url && ( $program === 'wp' || $options[0] === 'wp' ) ) {
 			$default_site_url ? $options[] = '--url=' . sprintf( static::set_url_scheme( 'https://%s/' ), $default_site_url ) : $options[] = '--url=' . $site_url;
 		}
 
