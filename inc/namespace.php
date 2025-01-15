@@ -53,10 +53,15 @@ function bootstrap() {
 		define( 'AWS_XRAY_DAEMON_IP_ADDRESS', gethostbyname( getenv( 'AWS_XRAY_DAEMON_HOST' ) ) );
 	}
 
+	define( 'REDIS_HOST', getenv( 'REDIS_HOST' ) );
+	define( 'REDIS_PORT', getenv( 'REDIS_PORT' ) );
+	define( 'REDIS_SECURE', false );
+	define( 'REDIS_AUTH', '' );
+
 	global $redis_server;
 	$redis_server = [
-		'host' => getenv( 'REDIS_HOST' ),
-		'port' => getenv( 'REDIS_PORT' ),
+		'host' => REDIS_HOST,
+		'port' => REDIS_PORT,
 	];
 
 	if ( $config['tachyon'] ?? true ) {
@@ -93,7 +98,7 @@ function bootstrap() {
 	add_filter( 'altis.search.create_package_id', __NAMESPACE__ . '\\set_search_package_id', 10, 3 );
 
 	// If we're on Codespaces, the native host will be localhost.
-	if ( $config['codespaces_integration'] ?? null && $_SERVER['HTTP_HOST'] === 'localhost' ) {
+	if ( ( $config['codespaces_integration'] ?? null ) && $_SERVER['HTTP_HOST'] === 'localhost' ) {
 		// Use forwarded host if we can.
 		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_HOST'] ) ) {
 			// phpcs:ignore HM.Security.ValidatedSanitizedInput

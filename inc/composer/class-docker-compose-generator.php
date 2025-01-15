@@ -23,6 +23,13 @@ class Docker_Compose_Generator {
 	protected $project_name;
 
 	/**
+	 * The S3 bucket name.
+	 *
+	 * @var string
+	 */
+	protected $bucket_name;
+
+	/**
 	 * The Altis project root directory.
 	 *
 	 * @var string
@@ -75,6 +82,7 @@ class Docker_Compose_Generator {
 	 */
 	public function __construct( string $root_dir, string $project_name, string $tld, string $url, array $args = [] ) {
 		$this->project_name = $project_name;
+		$this->bucket_name = "s3-{$this->project_name}";
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
 		$this->root_dir = $root_dir;
 		$this->tld = $tld;
@@ -90,9 +98,9 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$version_map = [
-			'8.1' => 'humanmade/altis-local-server-php:6.0.0-beta.1',
-			'8.0' => 'humanmade/altis-local-server-php:5.0.1',
-			'7.4' => 'humanmade/altis-local-server-php:4.2.0',
+			'8.3' => 'humanmade/altis-local-server-php:8.3.9',
+			'8.2' => 'humanmade/altis-local-server-php:8.2.23',
+			'8.1' => 'humanmade/altis-local-server-php:6.0.19',
 		];
 
 		$versions = array_keys( $version_map );
@@ -111,6 +119,21 @@ class Docker_Compose_Generator {
 
 		$image = $version_map[ $version ];
 
+		$volumes = [
+			$this->get_app_volume(),
+			"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
+			'socket:/var/run/php-fpm',
+			'tmp:/tmp',
+		];
+
+		if ( $this->args['xdebug'] !== 'off' ) {
+			$volumes[] = "{$this->config_dir}/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini";
+		}
+
+		if ( $this->get_config()['afterburner'] && $version !== '7.4' ) {
+			$volumes[] = "{$this->config_dir}/afterburner.ini:/usr/local/etc/php/conf.d/afterburner.ini";
+		}
+
 		$services = [
 			'init' => true,
 			'depends_on' => [
@@ -126,7 +149,9 @@ class Docker_Compose_Generator {
 			],
 			'image' => $image,
 			'links' => [
+				'db',
 				'db:db-read-replica',
+				's3',
 				's3:s3.localhost',
 			],
 			'external_links' => [
@@ -137,12 +162,7 @@ class Docker_Compose_Generator {
 				"proxy:s3-{$this->hostname}",
 				"proxy:s3-{$this->project_name}.localhost",
 			],
-			'volumes' => [
-				$this->get_app_volume(),
-				"{$this->config_dir}/php.ini:/usr/local/etc/php/conf.d/altis.ini",
-				'socket:/var/run/php-fpm',
-				'tmp:/tmp',
-			],
+			'volumes' => $volumes,
 			'networks' => [
 				'proxy',
 				'default',
@@ -165,8 +185,8 @@ class Docker_Compose_Generator {
 				'ELASTICSEARCH_HOST' => 'elasticsearch',
 				'ELASTICSEARCH_PORT' => 9200,
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/s3-{$this->project_name}/" ),
-				'S3_UPLOADS_BUCKET' => "s3-{$this->project_name}",
+				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/{$this->bucket_name}/" ),
+				'S3_UPLOADS_BUCKET' => "{$this->bucket_name}",
 				'S3_UPLOADS_BUCKET_URL' => Command::set_url_scheme( "https://s3-{$this->hostname}" ),
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
@@ -215,6 +235,50 @@ class Docker_Compose_Generator {
 				],
 				$this->get_php_reusable()
 			),
+		];
+	}
+
+	/**
+	 * Get the NodeJS container service.
+	 *
+	 * @return array
+	 */
+	protected function get_service_nodejs() : array {
+		$config = $this->get_config();
+
+		// Read package.json from nodejs.path to get the Node.js version to use.
+		$package_json = json_decode( file_get_contents( "{$config['nodejs']['path']}/package.json" ), true );
+		$version = $package_json['engines']['node'] ?? '20';
+
+		return [
+			'nodejs' => [
+				'image' => "node:{$version}-bookworm-slim",
+				'container_name' => "{$this->project_name}-nodejs",
+				'ports' => [
+					'3000',
+				],
+				'volumes' => [
+					"../{$config['nodejs']['path']}/:/usr/src/app",
+				],
+				'working_dir' => '/usr/src/app',
+				'command' => 'sh -c "npm install && npm run dev"',
+				'networks' => [
+					'proxy',
+					'default',
+				],
+				'labels' => [
+					'traefik.frontend.priority=1',
+					'traefik.port=3000',
+					'traefik.protocol=http',
+					'traefik.docker.network=proxy',
+					"traefik.frontend.rule=HostRegexp:nodejs-{$this->hostname}",
+					"traefik.domain=nodejs-{$this->hostname}",
+				],
+				'environment' => [
+					'ALTIS_ENVIRONMENT_NAME' => $this->project_name,
+					'ALTIS_ENVIRONMENT_TYPE' => 'local',
+				],
+			],
 		];
 	}
 
@@ -287,7 +351,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.4.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.5.8',
 				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
@@ -308,7 +372,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname}{$domains}",
 					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
 				],
 				'environment' => [
@@ -316,6 +380,8 @@ class Docker_Compose_Generator {
 					'GZIP_STATUS' => 'on',
 					// Increase read response timeout when debugging.
 					'READ_TIMEOUT' => ( $this->args['xdebug'] ?? 'off' ) !== 'off' ? '9000s' : '60s',
+					// Disables rate limiting.
+					'PHP_PUBLIC_POOL_ENABLE_RATE_LIMIT' => 'false',
 				],
 			],
 		];
@@ -329,7 +395,7 @@ class Docker_Compose_Generator {
 	protected function get_service_redis() : array {
 		return [
 			'redis' => [
-				'image' => 'redis:3.2-alpine',
+				'image' => 'redis:7.0-alpine',
 				'container_name' => "{$this->project_name}-redis",
 				'ports' => [
 					'6379',
@@ -344,9 +410,32 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_db() : array {
+		$version_map = [
+			'8.0' => 'mysql:8.0',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['mysql'];
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured MySQL version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
 		return [
 			'db' => [
-				'image' => 'biarms/mysql:5.7',
+				'image' => $image,
+				// Suppress mysql_native_password deprecation warning
+				// Only affects in-place upgrades from MySQL 5.7 to 8.0.
+				'command' => $version === '8.0' ? '--log-error-suppression-list=MY-013360' : '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
@@ -553,7 +642,7 @@ class Docker_Compose_Generator {
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/s3-{$this->project_name}",
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
 					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
@@ -573,7 +662,7 @@ class Docker_Compose_Generator {
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/s3-{$this->project_name} && mc policy set public local/s3-{$this->project_name} && mc mirror --watch --overwrite -a local/s3-{$this->project_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/{$this->bucket_name} && mc policy set public local/{$this->bucket_name} && mc mirror --watch --overwrite -a local/{$this->bucket_name} /content\"",
 			],
 		];
 	}
@@ -598,11 +687,11 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
 				],
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
-					'AWS_S3_BUCKET' => "s3-{$this->project_name}",
+					'AWS_S3_BUCKET' => "{$this->bucket_name}",
 					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
 					'AWS_S3_CLIENT_ARGS' => 's3BucketEndpoint=true',
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
@@ -768,9 +857,13 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_webgrind() );
 		}
 
+		if ( $this->get_config()['nodejs'] ) {
+			$services = array_merge( $services, $this->get_service_nodejs() );
+		}
+
 		// Default compose configuration.
 		$config = [
-			'version' => '2.3',
+			// 'version' => '2.5',
 			'services' => $services,
 			'networks' => [
 				'default' => null,
@@ -854,7 +947,7 @@ class Docker_Compose_Generator {
 
 		$modules = Altis\get_config()['modules'] ?? [];
 
-		$analytics_enabled = $modules['analytics']['enabled'] ?? true;
+		$analytics_enabled = $modules['analytics']['enabled'] ?? false;
 		$search_enabled = $modules['search']['enabled'] ?? true;
 
 		$defaults = [
@@ -864,9 +957,12 @@ class Docker_Compose_Generator {
 			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
 			'elasticsearch' => ( $analytics_enabled || $search_enabled ) ? '7' : false,
 			'kibana' => ( $analytics_enabled || $search_enabled ),
+			'afterburner' => false,
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
-			'php' => '8.0',
+			'php' => '8.2',
+			'mysql' => '8.0',
+			'nodejs' => $modules['nodejs'] ?? false,
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );

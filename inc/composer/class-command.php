@@ -40,7 +40,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, ssl, set, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, import-uploads' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -71,10 +71,11 @@ Run any shell command from the PHP container:
 Open a shell:
 	shell
 Database commands:
-	db                           Log into MySQL on the Database server
-	db sequel                    Generates an SPF file for Sequel Pro
-	db info                      Prints out Database connection details
-	db exec -- <args> "<query>"  Run and output the result of a SQL query, with optional mysql args.
+	db                            Log into MySQL on the Database server
+	db (sequel|spf)               Opens Sequel Pro/Sequel Ace with the database connection
+	db (tableplus|tbp)            Opens TablePlus with the database connection
+	db info                       Prints out Database connection details
+	db exec -- <args> "<query>"   Run and output the result of a SQL query, with optional mysql args.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
@@ -82,8 +83,8 @@ SSL commands:
 	ssl exec -- "command"         Executes an arbitrary mkcert command
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
-Import files from content/uploads directly to s3:
-	import-uploads                Copies files from `content/uploads` to s3
+Sync files from content/uploads to the S3 container:
+	import-uploads                Syncs files from `content/uploads` to the S3 container.
 EOT
 			)
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
@@ -321,6 +322,13 @@ EOT
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 
+		if ( static::get_composer_config()['nodejs'] ?? false ) {
+			$tld = $this->get_project_tld();
+			$subdomain = $this->get_project_subdomain();
+			$hostname = $subdomain . '.' . $tld;
+			$output->writeln( '<info>To access your Node.js site visit:</> <comment>https://nodejs-' . $hostname . '</>' );
+		}
+
 		$this->check_host_entries( $input, $output );
 
 		return 0;
@@ -452,7 +460,9 @@ EOT
 		} );
 
 		if ( $return_val === 0 ) {
+			$site_url = $this->get_project_url();
 			$output->writeln( '<info>Restarted.</>' );
+			$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
 		} else {
 			$output->writeln( '<error>Failed to restart services.</>' );
 		}
@@ -471,6 +481,8 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
+		$config = $this->get_composer_config();
+		$default_site_url = $config['default-site-url'] ?? null;
 
 		$passed_url = false;
 		foreach ( $options as $option ) {
@@ -480,8 +492,8 @@ EOT
 			}
 		}
 
-		if ( ! $passed_url && $program === 'wp' ) {
-			$options[] = '--url=' . $site_url;
+		if ( ! $passed_url && ( $program === 'wp' || $options[0] === 'wp' ) ) {
+			$default_site_url ? $options[] = '--url=' . sprintf( static::set_url_scheme( 'https://%s/' ), $default_site_url ) : $options[] = '--url=' . $site_url;
 		}
 
 		// Escape all options. Because the shell is going to strip the
@@ -567,6 +579,7 @@ EOT
 					'redis',
 					's3',
 					'xray',
+					'nodejs',
 				],
 				0
 			);
@@ -576,6 +589,9 @@ EOT
 			$log = $service;
 		} else {
 			$log = $input->getArgument( 'options' )[0];
+		}
+		if ( $log === 'mysql' || $log === 'sql' ) {
+			$log = 'db';
 		}
 		$compose = $this->process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
@@ -641,22 +657,24 @@ EOT
 				$connection_data = $this->get_db_connection_data();
 
 				$db_info = <<<EOT
-<info>Root password</info>:  ${connection_data['MYSQL_ROOT_PASSWORD']}
+<info>Root password</info>:  {$connection_data['MYSQL_ROOT_PASSWORD']}
 
-<info>Database</info>:       ${connection_data['MYSQL_DATABASE']}
-<info>User</info>:           ${connection_data['MYSQL_USER']}
-<info>Password</info>:       ${connection_data['MYSQL_PASSWORD']}
+<info>Database</info>:       {$connection_data['MYSQL_DATABASE']}
+<info>User</info>:           {$connection_data['MYSQL_USER']}
+<info>Password</info>:       {$connection_data['MYSQL_PASSWORD']}
 
-<info>Host</info>:           ${connection_data['HOST']}
-<info>Port</info>:           ${connection_data['PORT']}
+<info>Host</info>:           {$connection_data['HOST']}
+<info>Port</info>:           {$connection_data['PORT']}
 
-<comment>Version</comment>:        ${connection_data['MYSQL_MAJOR']}
-<comment>MySQL link</comment>:     mysql://${connection_data['MYSQL_USER']}:${connection_data['MYSQL_PASSWORD']}@${connection_data['HOST']}:${connection_data['PORT']}/${connection_data['MYSQL_DATABASE']}
+<comment>Version</comment>:        {$connection_data['MYSQL_MAJOR']}
+<comment>MySQL link</comment>:     mysql://{$connection_data['MYSQL_USER']}:{$connection_data['MYSQL_PASSWORD']}@{$connection_data['HOST']}:{$connection_data['PORT']}/{$connection_data['MYSQL_DATABASE']}
 
 EOT;
 				$output->write( $db_info );
 				break;
+
 			case 'sequel':
+			case 'spf':
 				if ( php_uname( 's' ) !== 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
@@ -674,10 +692,32 @@ EOT;
 
 				exec( "open $output_file_path", $null, $return_val );
 				if ( $return_val !== 0 ) {
-					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) installed to use this command</error>' );
+					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) or Sequel Ace (https://sequel-ace.com/) installed to use this command</error>' );
 				}
 
 				break;
+
+			case 'tableplus':
+			case 'tbp':
+				$connection_data = $this->get_db_connection_data();
+				$url = sprintf(
+					'mysql://%s:%s@%s:%s/%s',
+					$connection_data['MYSQL_USER'],
+					$connection_data['MYSQL_PASSWORD'],
+					$connection_data['HOST'],
+					$connection_data['PORT'],
+					$connection_data['MYSQL_DATABASE']
+				);
+				$url .= '?' . http_build_query( [
+					'name' => $this->get_project_subdomain(),
+					'env' => 'local',
+				] );
+				exec( sprintf( 'open "%s"', $url ), $null, $return_val );
+				if ( $return_val !== 0 ) {
+					$output->writeln( '<error>You must have TablePlus (https://tableplus.com/) installed to use this command</error>' );
+				}
+				break;
+
 			case 'exec':
 				$options = $input->getArgument( 'options' ) ?? [];
 				// Remove the subcommand, we don't need it.
@@ -697,10 +737,12 @@ EOT;
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root $args -e \"$query\"", $return_val );
 				break;
+
 			case null:
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root", $return_val );
 				break;
+
 			default:
 				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
 				$return_val = 1;
@@ -904,14 +946,14 @@ EOT;
 		$mkcert = 'vendor/mkcert';
 
 		// Check if mkcert is installed globally already, bail if so.
-		$version = trim( shell_exec( 'mkcert -version' ) );
-		if ( $version ) {
+		$version = trim( shell_exec( 'mkcert -version 2>/dev/null' ) ?? '' );
+		if ( strlen( $version ) > 0 ) {
 			return 'mkcert';
 		}
 
 		// Check if mkcert is installed locally already, bail if so.
-		$version = trim( shell_exec( "$mkcert -version" ) );
-		if ( $version ) {
+		$version = trim( shell_exec( "$mkcert -version 2>/dev/null" ) ?? '' );
+		if ( strlen( $version ) > 0 ) {
 			return $mkcert;
 		}
 
@@ -974,6 +1016,7 @@ EOT;
 	/**
 	 * Return the Database connection details.
 	 *
+	 * @throws \RuntimeException When the database container cannot be found.
 	 * @return array
 	 */
 	private function get_db_connection_data() {
@@ -1017,6 +1060,10 @@ EOT;
 		// Retrieve the forwarded ports using Docker and the container ID.
 		$ports = shell_exec( sprintf( "$command_prefix docker ps --format '{{.Ports}}' --filter id=%s", $db_container_id ) );
 		preg_match( '/([\d.]+):([\d]+)->.*/', trim( $ports ), $ports_matches );
+
+		if ( empty( $ports_matches ) ) {
+			throw new \RuntimeException( 'Could not retrieve information for the database. Is the container running?' );
+		}
 
 		return array_merge(
 			array_filter( $values ),
