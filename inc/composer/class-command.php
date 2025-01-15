@@ -75,7 +75,7 @@ Database commands:
 	db (sequel|spf)               Opens Sequel Pro/Sequel Ace with the database connection
 	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
-	db exec -- "<query>"          Run and output the result of a SQL query.
+	db exec -- <args> "<query>"   Run and output the result of a SQL query, with optional mysql args.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
@@ -719,7 +719,14 @@ EOT;
 				break;
 
 			case 'exec':
-				$query = $input->getArgument( 'options' )[1] ?? null;
+				$options = $input->getArgument( 'options' ) ?? [];
+				// Remove the subcommand, we don't need it.
+				array_shift( $options );
+				// The query is always the last option.
+				$query = array_pop( $options ) ?: null;
+				// Implode all optional options.
+				$args = count( $options ) > 0 ? implode( ' ', $options ) : '';
+
 				if ( empty( $query ) ) {
 					$output->writeln( '<error>No query specified: pass a query via `db exec -- "sql query..."`</error>' );
 					break;
@@ -728,7 +735,7 @@ EOT;
 					$query = "$query;";
 				}
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root -e \"$query\"", $return_val );
+				passthru( "$base_command mysql --database=wordpress --user=root $args -e \"$query\"", $return_val );
 				break;
 
 			case null:
