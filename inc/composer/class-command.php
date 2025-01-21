@@ -65,7 +65,9 @@ Destroy the local development server:
 View status of the local development server:
 	status
 Run WP CLI command:
-	cli -- <command>              eg: cli -- post list --debug
+	cli|wp -- <command>              eg: cli -- post list --debug
+Create a WP CLI alias. Useful if you have WP CLI installed locally:
+	create-alias
 Run any shell command from the PHP container:
 	exec -- <command>             eg: exec -- vendor/bin/phpcs
 Open a shell:
@@ -168,7 +170,7 @@ EOT
 			return $this->restart( $input, $output );
 		} elseif ( $subcommand === 'destroy' ) {
 			return $this->destroy( $input, $output );
-		} elseif ( $subcommand === 'cli' ) {
+		} elseif ( ( $subcommand === 'cli' ) || ( $subcommand === 'wp' ) ) {
 			return $this->exec( $input, $output, 'wp' );
 		} elseif ( $subcommand === 'exec' ) {
 			return $this->exec( $input, $output );
@@ -184,6 +186,8 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
 			return $this->import_uploads( $input, $output );
+		} elseif ( $subcommand === 'create-alias' ) {
+			return $this->create_alias( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -1303,6 +1307,71 @@ EOT;
 		$is_secure = static::get_composer_config()['secure'] ?? ! static::is_using_codespaces();
 
 		return preg_replace( '/^https?/', 'http' . ( $is_secure ? 's' : '' ), $url );
+	}
+
+	/**
+	 * Generate an alias for the php docker container in a wp-cli.local.yml file.
+	 * The format will look like this:
+	 *
+	 * @local:
+	 *   ssh: docker:www-data@altis-dev-php
+	 *   url: https://altis-dev.altis.dev
+	 *
+	 * We'll add the default url parameter like we do for running wp cli commands inside the container.
+	 * Otherwise, it will need to be specified every time by the user.
+	 *
+	 * @param InputInterface  $input
+	 * @param OutputInterface $output
+	 *
+	 * @return int
+	 */
+	protected function create_alias( InputInterface $input, OutputInterface $output ) : int {
+
+		$return_val = 0;
+
+		// If we are creating from scratch this is what the file will look like.
+		$local_alias = <<<EOT
+@local:
+  ssh: docker:www-data@{$this->get_project_subdomain()}-php
+  url: {$this->get_project_url()}
+EOT;
+
+		// first lets see if the file already exists and whether it already contains a local alias
+		$local_alias_file = getcwd() . '/wp-cli.local.yml';
+		if ( file_exists( $local_alias_file ) ) {
+			$local_alias_contents = file_get_contents( $local_alias_file );
+			$return_val           = 1;
+			if ( str_contains( $local_alias_contents, '@local:' ) ) {
+				$output->writeln( 'It looks like you already have a wp-cli.local.yml file that contains an `@local` alias.' );
+			} else {
+				// file exists but doesn't contain @local. Suggest how they can add it.
+				$output->writeln( <<<"EOT"
+It looks like you already have a wp-cli.local.yml file but it does not contain a `@local` alias.
+You can add the following to your wp-cli.local.yml file to use the local alias:
+
+$local_alias
+
+You can then run `wp @local` to use the local alias.
+EOT
+				);
+			}
+
+			return $return_val;
+		}
+
+		// if the file doesn't exist, we'll add it
+		$output->writeln( 'Generating wp-cli.local.yml...' );
+		file_put_contents( $local_alias_file, $local_alias );
+		$output->writeln( 'Done!' );
+
+		$output->writeln( <<<EOT
+
+A wp-cli.local.yml file has been created in the root of your project.
+You can now run `wp @local` to use the local alias.
+EOT
+		);
+
+		return $return_val;
 	}
 
 }
