@@ -65,7 +65,7 @@ Destroy the local development server:
 View status of the local development server:
 	status
 Run WP CLI command:
-	cli|wp -- <command>              eg: cli -- post list --debug
+	cli|wp -- <command>           eg: cli -- post list --debug
 Create a WP CLI alias. Useful if you have WP CLI installed locally:
 	create-alias
 Run any shell command from the PHP container:
@@ -1346,12 +1346,13 @@ EOT;
 			} else {
 				// file exists but doesn't contain @local. Suggest how they can add it.
 				$output->writeln( <<<"EOT"
-It looks like you already have a wp-cli.local.yml file but it does not contain a `@local` alias.
+It looks like you already have a wp-cli.local.yml file but it does not contain an `@local` alias.
 You can add the following to your wp-cli.local.yml file to use the local alias:
 
 $local_alias
 
-You can then run `wp @local` to use the local alias.
+You can then run WP CLI commands using the following syntax:
+`wp @local cli info`
 EOT
 				);
 			}
@@ -1367,7 +1368,8 @@ EOT
 		$output->writeln( <<<EOT
 
 A wp-cli.local.yml file has been created in the root of your project.
-You can now run `wp @local` to use the local alias.
+You can now run WP CLI commands using the following syntax:
+`wp @local cli info`
 EOT
 		);
 
