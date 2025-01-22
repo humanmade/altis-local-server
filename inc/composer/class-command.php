@@ -1320,8 +1320,8 @@ EOT;
 	 * We'll add the default url parameter like we do for running wp cli commands inside the container.
 	 * Otherwise, it will need to be specified every time by the user.
 	 *
-	 * @param InputInterface  $input
-	 * @param OutputInterface $output
+	 * @param InputInterface  $input Input from the console
+	 * @param OutputInterface $output Output to the console
 	 *
 	 * @return int
 	 */
@@ -1336,7 +1336,7 @@ EOT;
   url: {$this->get_project_url()}
 EOT;
 
-		// first lets see if the file already exists and whether it already contains a local alias
+		// first lets see if the file already exists and whether it already contains a local alias.
 		$local_alias_file = getcwd() . '/wp-cli.local.yml';
 		if ( file_exists( $local_alias_file ) ) {
 			$local_alias_contents = file_get_contents( $local_alias_file );
@@ -1360,7 +1360,7 @@ EOT
 			return $return_val;
 		}
 
-		// if the file doesn't exist, we'll add it
+		// if the file doesn't exist, we'll add it.
 		$output->writeln( 'Generating wp-cli.local.yml...' );
 		file_put_contents( $local_alias_file, $local_alias );
 		$output->writeln( 'Done!' );
