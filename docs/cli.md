@@ -15,6 +15,22 @@ Or to show all environment variables:
 composer server exec -- printenv
 ```
 
+## Shell sessions
+
+You can also start a shell session on the web server container using the `composer server shell` command. This will start an
+interactive shell session on the web server container.
+
+You will normally be logged in as the `www-data` user, but you can run the shell as the root user by passing the `--root` option.
+
+```sh
+composer server shell --root
+```
+
+note: The `--root` option is only available when running the shell session on local server. Any changes you make to the 
+container will not be carried over to the Altis environment.
+
+```sh
+
 ## WP CLI
 
 Local Server provides special support for [WP CLI](https://wp-cli.org/) commands via the `composer server cli --` command. Prepend
