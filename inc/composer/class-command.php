@@ -69,7 +69,8 @@ Run WP CLI command:
 Run any shell command from the PHP container:
 	exec -- <command>             eg: exec -- vendor/bin/phpcs
 Open a shell:
-	shell
+	shell                         Open a Bash shell as the www-data user.
+	shell --root|-r               Open a Bash shell as the root user.
 Database commands:
 	db                            Log into MySQL on the Database server
 	db (sequel|spf)               Opens Sequel Pro/Sequel Ace with the database connection
@@ -87,6 +88,7 @@ Sync files from content/uploads to the S3 container:
 	import-uploads                Syncs files from `content/uploads` to the S3 container.
 EOT
 			)
+			->addOption( 'root', 'r', InputOption::VALUE_OPTIONAL, 'Run as root', 'debug' )
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
 			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Start the server with Mutagen file sharing' )
 			->addOption( 'clean', null, InputOption::VALUE_NONE, 'Remove or stop the proxy container when destroying or stopping the server' )
@@ -619,9 +621,15 @@ EOT
 			$this->get_compose_command( 'ps -q php' )
 		) );
 
+		$user = '';
+		if ( $input->hasParameterOption( '--root' ) || $input->hasParameterOption( '-r' ) ) {
+			$user = '-u root';
+		}
+
 		passthru( sprintf(
-			"$command_prefix %s exec -it -e COLUMNS=%d -e LINES=%d %s /bin/bash",
+			"$command_prefix %s exec -it %s -e COLUMNS=%d -e LINES=%d %s /bin/bash",
 			'docker',
+			$user,
 			$columns,
 			$lines,
 			trim( $php_container_id )
