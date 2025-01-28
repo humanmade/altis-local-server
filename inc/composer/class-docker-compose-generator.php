@@ -98,10 +98,9 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$version_map = [
-			'8.2' => 'humanmade/altis-local-server-php:8.2.11',
-			'8.1' => 'humanmade/altis-local-server-php:6.0.12',
-			'8.0' => 'humanmade/altis-local-server-php:5.0.12',
-			'7.4' => 'humanmade/altis-local-server-php:4.2.5',
+			'8.3' => 'humanmade/altis-local-server-php:8.3.9',
+			'8.2' => 'humanmade/altis-local-server-php:8.2.23',
+			'8.1' => 'humanmade/altis-local-server-php:6.0.19',
 		];
 
 		$versions = array_keys( $version_map );
@@ -240,6 +239,50 @@ class Docker_Compose_Generator {
 	}
 
 	/**
+	 * Get the NodeJS container service.
+	 *
+	 * @return array
+	 */
+	protected function get_service_nodejs() : array {
+		$config = $this->get_config();
+
+		// Read package.json from nodejs.path to get the Node.js version to use.
+		$package_json = json_decode( file_get_contents( "{$config['nodejs']['path']}/package.json" ), true );
+		$version = $package_json['engines']['node'] ?? '20';
+
+		return [
+			'nodejs' => [
+				'image' => "node:{$version}-bookworm-slim",
+				'container_name' => "{$this->project_name}-nodejs",
+				'ports' => [
+					'3000',
+				],
+				'volumes' => [
+					"../{$config['nodejs']['path']}/:/usr/src/app",
+				],
+				'working_dir' => '/usr/src/app',
+				'command' => 'sh -c "npm install && npm run dev"',
+				'networks' => [
+					'proxy',
+					'default',
+				],
+				'labels' => [
+					'traefik.frontend.priority=1',
+					'traefik.port=3000',
+					'traefik.protocol=http',
+					'traefik.docker.network=proxy',
+					"traefik.frontend.rule=HostRegexp:nodejs-{$this->hostname}",
+					"traefik.domain=nodejs-{$this->hostname}",
+				],
+				'environment' => [
+					'ALTIS_ENVIRONMENT_NAME' => $this->project_name,
+					'ALTIS_ENVIRONMENT_TYPE' => 'local',
+				],
+			],
+		];
+	}
+
+	/**
 	 * Webgrind service container for viewing Xdebug profiles.
 	 *
 	 * @return array
@@ -308,7 +351,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.5.4',
+				'image' => 'humanmade/altis-local-server-nginx:3.5.8',
 				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
@@ -329,7 +372,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=https',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname}{$domains}",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname}{$domains}",
 					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
 				],
 				'environment' => [
@@ -337,6 +380,8 @@ class Docker_Compose_Generator {
 					'GZIP_STATUS' => 'on',
 					// Increase read response timeout when debugging.
 					'READ_TIMEOUT' => ( $this->args['xdebug'] ?? 'off' ) !== 'off' ? '9000s' : '60s',
+					// Disables rate limiting.
+					'PHP_PUBLIC_POOL_ENABLE_RATE_LIMIT' => 'false',
 				],
 			],
 		];
@@ -365,9 +410,32 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_db() : array {
+		$version_map = [
+			'8.0' => 'mysql:8.0',
+		];
+
+		$versions = array_keys( $version_map );
+		$version = (string) $this->get_config()['mysql'];
+
+		if ( ! in_array( $version, $versions, true ) ) {
+			echo sprintf(
+				"The configured MySQL version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				$version,
+				// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+				implode( "\n  - ", $versions )
+			);
+			exit( 1 );
+		}
+
+		$image = $version_map[ $version ];
+
 		return [
 			'db' => [
-				'image' => 'biarms/mysql:5.7',
+				'image' => $image,
+				// Suppress mysql_native_password deprecation warning
+				// Only affects in-place upgrades from MySQL 5.7 to 8.0.
+				'command' => $version === '8.0' ? '--log-error-suppression-list=MY-013360' : '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
@@ -574,7 +642,7 @@ class Docker_Compose_Generator {
 					'traefik.client.port=9000',
 					'traefik.client.protocol=http',
 					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
+					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
 					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
@@ -619,7 +687,7 @@ class Docker_Compose_Generator {
 					'traefik.port=8080',
 					'traefik.protocol=http',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[a-z.-_]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
+					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
 				],
 				'environment' => [
 					'AWS_REGION' => 'us-east-1',
@@ -789,9 +857,13 @@ class Docker_Compose_Generator {
 			$services = array_merge( $services, $this->get_service_webgrind() );
 		}
 
+		if ( $this->get_config()['nodejs'] ) {
+			$services = array_merge( $services, $this->get_service_nodejs() );
+		}
+
 		// Default compose configuration.
 		$config = [
-			'version' => '2.3',
+			// 'version' => '2.5',
 			'services' => $services,
 			'networks' => [
 				'default' => null,
@@ -888,7 +960,9 @@ class Docker_Compose_Generator {
 			'afterburner' => false,
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
-			'php' => '8.1',
+			'php' => '8.2',
+			'mysql' => '8.0',
+			'nodejs' => $modules['nodejs'] ?? false,
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
