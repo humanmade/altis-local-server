@@ -1093,6 +1093,7 @@ EOT;
 				'-e MC_HOST_local=http://admin:password@s3:9000 ' .
 				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
 				'--network=%4$s_default ' .
+				'--name=%4$s-import-uploads ' .
 				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
 			$columns,
 			$lines,
