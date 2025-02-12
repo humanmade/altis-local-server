@@ -146,6 +146,9 @@ class Docker_Compose_Generator {
 				'mailhog' => [
 					'condition' => 'service_started',
 				],
+				's3-create-bucket' => [
+					'condition' => 'service_completed_successfully',
+				],
 			],
 			'image' => $image,
 			'links' => [
@@ -628,8 +631,8 @@ class Docker_Compose_Generator {
 						'-f',
 						'http://localhost:9000/minio/health/live',
 					],
-					'interval' => '30s',
-					'timeout' => '20s',
+					'interval' => '5s',
+					'timeout' => '5s',
 					'retries' => 3,
 				],
 				'labels' => [
@@ -647,12 +650,29 @@ class Docker_Compose_Generator {
 					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
+			's3-create-bucket' => [
+				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'depends_on' => [
+					's3' => [
+						'condition' => 'service_healthy',
+					],
+				],
+				'links' => [
+					's3',
+				],
+				'environment' => [
+					'MC_HOST_local' => 'http://admin:password@s3:9000',
+				],
+				'entrypoint' => "/bin/sh -c \"mc mb -p local/{$this->bucket_name} && mc policy set public local/{$this->bucket_name}\"",
+			],
 			's3-sync-to-host' => [
 				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
 				'container_name' => "{$this->project_name}-s3-sync",
 				'restart' => 'unless-stopped',
 				'depends_on' => [
-					's3',
+					's3-create-bucket' => [
+						'condition' => 'service_completed_successfully',
+					],
 				],
 				'environment' => [
 					'MC_HOST_local' => 'http://admin:password@s3:9000',
@@ -663,7 +683,7 @@ class Docker_Compose_Generator {
 				'links' => [
 					's3',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/{$this->bucket_name} && mc policy set public local/{$this->bucket_name} && mc mirror --watch --overwrite -a local/{$this->bucket_name} /content\"",
+				'entrypoint' => "/bin/sh -c \"mc mirror --watch --overwrite -a local/{$this->bucket_name} /content\"",
 			],
 		];
 	}
