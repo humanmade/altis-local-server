@@ -118,7 +118,7 @@ in `composer.json`, namely the `altis.modules.local-server` tree, specifically t
       including `custom-domain.com`
   * `composer server ssl exec -- [<command>]` - Execute custom `mkcert` commands, e.g. `-uninstall` to revoke the root CA
 * `composer server logs <service>` - Tail the logs from a given service, defaults to `php`, available options
-  are `nginx`, `php`, `db`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
+  are `nginx`, `php`, `db|mysql|sql`, `redis`, `cavalcade`, `tachyon`, `s3` and `elasticsearch`.
 * `composer server shell` - Logs in to the PHP container.
 * `composer server cli|wp -- <command>` - Runs a WP CLI command. Use either `cli` or `wp`. For example,
   `composer server cli -- info` or `composer server wp -- info`. Do not include `wp` in `<command>`.
