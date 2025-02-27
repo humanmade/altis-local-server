@@ -73,6 +73,8 @@ class Docker_Compose_Generator {
 
 	/**
 	 * Extra configuration from packages.
+	 *
+	 * @var array
 	 */
 	protected $extra;
 
@@ -952,7 +954,7 @@ class Docker_Compose_Generator {
 		// Initialize plugins and run them.
 		if ( ! empty( $this->extra ) ) {
 			foreach ( $this->extra as $package_spec ) {
-				/** @var Compose_Extension */
+				/** @var Compose_Extension $handler Extension interface  */
 				$handler = new $package_spec['compose-extension']();
 				$handler->set_config( $this, $this->args );
 				$config = $handler->filter_compose( $config );

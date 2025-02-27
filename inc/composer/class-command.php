@@ -31,6 +31,7 @@ use Symfony\Component\Process\Process;
 class Command extends BaseCommand {
 	/**
 	 * Package-specific configuration.
+	 * @var array
 	 */
 	protected array $package_config;
 
@@ -149,8 +150,7 @@ EOT
 		}
 
 		// If we have any packages, ensure we have all the autoloaders loaded.
-		// (By default, Composer only loads composer-plugin packages and their
-		// dependencies.)
+		// (By default, Composer only loads composer-plugin packages and their dependencies).
 		if ( ! empty( $config ) ) {
 			require $this->getApplication()->getComposer()->getConfig()->get( 'vendor-dir' ) . '/autoload.php';
 		}
