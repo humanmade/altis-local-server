@@ -24,8 +24,9 @@ interface Compose_Extension {
 	 * before it is saved to a file. Handlers can filter this value and return
 	 * an updated config, such as adding additional services.
 	 *
-	 * @param array $config Full docker-compose.yml configuration.
+	 * @param array $docker_config Full docker-compose.yml configuration.
+	 *
 	 * @return array Altered docker-compose.yml configuration.
 	 */
-	public function filter_compose( array $config ) : array;
+	public function filter_compose( array $docker_config ) : array;
 }
