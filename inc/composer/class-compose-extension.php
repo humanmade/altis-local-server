@@ -1,4 +1,9 @@
 <?php
+/**
+ * Local Server docker-compose extension interface.
+ *
+ * @package altis/local-server
+ */
 
 namespace Altis\Local_Server\Composer;
 
