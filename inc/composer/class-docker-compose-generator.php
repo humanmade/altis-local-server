@@ -813,6 +813,8 @@ class Docker_Compose_Generator {
 		if ( ! empty( $this->extra ) ) {
 			foreach ( $this->extra as $package_spec ) {
 				/**
+				 * Create the extension handler.
+				 *
 				 * @var Compose_Extension $handler Extension interface.
 				 */
 				$handler = new $package_spec['compose-extension']();
