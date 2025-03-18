@@ -1,6 +1,6 @@
 # Elasticsearch
 
-Elasticsearch is available on some Altis plans, and is fully integrated into Altis with the [Enhanced Search module](docs://search/), enabling enhanced search and relevancy as well as powering the analytics data query layer.
+Elasticsearch is available on some Altis plans, and is fully integrated into Altis with the [Enhanced Search module](docs://search/), enabling enhanced search and relevancy.
 
 (Note: Altis uses [OpenDistro for Elasticsearch](https://opendistro.github.io/for-elasticsearch-docs/) and [OpenSearch](https://opensearch.org/), which are compatible with Elasticsearch.)
 
