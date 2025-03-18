@@ -31,6 +31,7 @@ use Symfony\Component\Process\Process;
 class Command extends BaseCommand {
 	/**
 	 * Package-specific configuration.
+	 *
 	 * @var array
 	 */
 	protected array $package_config;
