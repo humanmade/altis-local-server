@@ -29,6 +29,12 @@ use Symfony\Component\Process\Process;
  * @package altis/local-server
  */
 class Command extends BaseCommand {
+	/**
+	 * Package-specific configuration.
+	 *
+	 * @var array
+	 */
+	protected array $package_config;
 
 	/**
 	 * Command configuration.
@@ -118,6 +124,39 @@ EOT
 			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain()
 		);
+	}
+
+	/**
+	 * Get all extra configs added by all the packages.
+	 *
+	 * @return array Extra configurations added by packages (e.g. handlers).
+	 */
+	protected function get_package_configs() : array {
+		// Fetch all the packages.
+		$repo = $this->getApplication()->getComposer()->getLocker()->getLockedRepository( true );
+		$packages = [];
+		foreach ( $repo->getPackages() as $package ) {
+			$packages[ $package->getName() ] = $package;
+		}
+
+		// Check which are publishing containers.
+		$config = [];
+		foreach ( $packages as $name => $package ) {
+			$extra = $package->getExtra();
+			if ( empty( $extra['altis'] ) || empty( $extra['altis']['local-server'] ) ) {
+				continue;
+			}
+
+			$config[ $name ] = $extra['altis']['local-server'];
+		}
+
+		// If we have any packages, ensure we have all the autoloaders loaded.
+		// (By default, Composer only loads composer-plugin packages and their dependencies).
+		if ( ! empty( $config ) ) {
+			require $this->getApplication()->getComposer()->getConfig()->get( 'vendor-dir' ) . '/autoload.php';
+		}
+
+		return $config;
 	}
 
 	/**
@@ -1017,7 +1056,14 @@ EOT;
 	 * @return void
 	 */
 	protected function generate_docker_compose( array $args = [] ) : void {
-		$docker_compose = new Docker_Compose_Generator( getcwd(), $this->get_project_subdomain(), $this->get_project_tld(), $this->get_project_url(), $args );
+		$docker_compose = new Docker_Compose_Generator(
+			getcwd(),
+			$this->get_project_subdomain(),
+			$this->get_project_tld(),
+			$this->get_project_url(),
+			$args,
+			$this->get_package_configs()
+		);
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 		file_put_contents(
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',

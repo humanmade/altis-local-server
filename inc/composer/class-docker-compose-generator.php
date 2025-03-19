@@ -20,56 +20,63 @@ class Docker_Compose_Generator {
 	 *
 	 * @var string
 	 */
-	protected $project_name;
+	public $project_name;
 
 	/**
 	 * The S3 bucket name.
 	 *
 	 * @var string
 	 */
-	protected $bucket_name;
+	public $bucket_name;
 
 	/**
 	 * The Altis project root directory.
 	 *
 	 * @var string
 	 */
-	protected $root_dir;
+	public $root_dir;
 
 	/**
 	 * The docker-compose.yml directory.
 	 *
 	 * @var string
 	 */
-	protected $config_dir;
+	public $config_dir;
 
 	/**
 	 * The primary top level domain for the server.
 	 *
 	 * @var string
 	 */
-	protected $tld;
+	public $tld;
 
 	/**
 	 * The primary domain name for the project.
 	 *
 	 * @var string
 	 */
-	protected $hostname;
+	public $hostname;
 
 	/**
 	 * The client facing domain name for the project.
 	 *
 	 * @var string
 	 */
-	protected $url;
+	public $url;
 
 	/**
 	 * An array of data passed to
 	 *
 	 * @var array
 	 */
-	protected $args;
+	public $args;
+
+	/**
+	 * Extra configuration from packages.
+	 *
+	 * @var array
+	 */
+	protected $extra;
 
 	/**
 	 * Create and configure the generator.
@@ -79,8 +86,9 @@ class Docker_Compose_Generator {
 	 * @param string $tld The primary top level domain for the server.
 	 * @param string $url The client facing URL.
 	 * @param array $args An optional array of arguments to modify the behaviour of the generator.
+	 * @param array $extra Extra configuration from packages.
 	 */
-	public function __construct( string $root_dir, string $project_name, string $tld, string $url, array $args = [] ) {
+	public function __construct( string $root_dir, string $project_name, string $tld, string $url, array $args = [], array $extra = [] ) {
 		$this->project_name = $project_name;
 		$this->bucket_name = "s3-{$this->project_name}";
 		$this->config_dir = dirname( __DIR__, 2 ) . '/docker';
@@ -89,6 +97,7 @@ class Docker_Compose_Generator {
 		$this->hostname = $this->tld ? $this->project_name . '.' . $this->tld : $this->project_name;
 		$this->url = $url;
 		$this->args = $args;
+		$this->extra = $extra;
 	}
 
 	/**
@@ -939,6 +948,20 @@ class Docker_Compose_Generator {
 				$config['x-mutagen']['sync']['app']['ignore'] = [
 					'paths' => array_values( (array) $this->get_config()['ignore-paths'] ),
 				];
+			}
+		}
+
+		// Initialize plugins and run them.
+		if ( ! empty( $this->extra ) ) {
+			foreach ( $this->extra as $package_spec ) {
+				/**
+				 * Create the extension handler.
+				 *
+				 * @var Compose_Extension $handler Extension interface.
+				 */
+				$handler = new $package_spec['compose-extension']();
+				$handler->set_config( $this, $this->args );
+				$config = $handler->filter_compose( $config );
 			}
 		}
 
