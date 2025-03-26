@@ -354,7 +354,7 @@ EOT
 
 			// Check install was successful.
 			if ( $install_failed ) {
-				$output->writeln( sprintf( '<error>WordPress install failed. Exited with error code %d</>', $install_failed ) );
+				$output->writeln( sprintf( '<error>WordPress install failed or database unavailable. Exited with error code %d</>', $install_failed ) );
 				return $install_failed;
 			}
 
