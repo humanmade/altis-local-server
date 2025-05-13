@@ -158,9 +158,6 @@ class Docker_Compose_Generator {
 				's3-create-bucket' => [
 					'condition' => 'service_completed_successfully',
 				],
-				's3-create-user' => [
-					'condition' => 'service_completed_successfully',
-				]
 			],
 			'image' => $image,
 			'links' => [
@@ -528,21 +525,6 @@ class Docker_Compose_Generator {
 					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
 				],
 			],
-			's3-create-user' => [
-				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
-				'depends_on' => [
-					's3' => [
-						'condition' => 'service_healthy',
-					],
-				],
-				'links' => [
-					's3',
-				],
-				'environment' => [
-					'MC_HOST_local' => 'http://admin:password@s3:9000',
-				],
-				'entrypoint' => "/bin/sh -c \"mc admin user add local newuser newpassword && mc admin policy set local readwrite user=newuser\"",
-			],
 			's3-create-bucket' => [
 				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
 				'depends_on' => [
@@ -604,13 +586,10 @@ class Docker_Compose_Generator {
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
 				],
 				'environment' => [
-					'AWS_REGION' => 'us-east-1',
 					'S3_REGION' => 'us-east-1',
-					'AWS_S3_BUCKET' => "{$this->bucket_name}",
 					'S3_BUCKET' => "{$this->bucket_name}",
-					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "http://s3-{$this->hostname}/" ),
 					'S3_ENDPOINT' => Command::set_url_scheme( "http://s3-{$this->hostname}/" ),
-					'AWS_S3_CLIENT_ARGS' => 's3BucketEndpoint=true',
+					'S3_FORCE_PATH_STYLE' => 'true',
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 					'AWS_ACCESS_KEY_ID' => 'newuser',
 					'AWS_SECRET_ACCESS_KEY' => 'newpassword',
