@@ -588,7 +588,7 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'S3_REGION' => 'us-east-1',
 					'S3_BUCKET' => "{$this->bucket_name}",
-					'S3_ENDPOINT' => Command::set_url_scheme( "http://s3-{$this->hostname}/" ),
+					'S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
 					'S3_FORCE_PATH_STYLE' => 'true',
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
 					'AWS_ACCESS_KEY_ID' => 'newuser',
