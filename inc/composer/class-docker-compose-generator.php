@@ -586,11 +586,13 @@ class Docker_Compose_Generator {
 					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
 				],
 				'environment' => [
-					'AWS_REGION' => 'us-east-1',
-					'AWS_S3_BUCKET' => "{$this->bucket_name}",
-					'AWS_S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
-					'AWS_S3_CLIENT_ARGS' => 's3BucketEndpoint=true',
+					'S3_REGION' => 'us-east-1',
+					'S3_BUCKET' => "{$this->bucket_name}",
+					'S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
+					'S3_FORCE_PATH_STYLE' => 'true',
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
+					'AWS_ACCESS_KEY_ID' => 'newuser',
+					'AWS_SECRET_ACCESS_KEY' => 'newpassword',
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
