@@ -168,8 +168,6 @@ class Docker_Compose_Generator {
 			],
 			'external_links' => [
 				"proxy:{$this->hostname}",
-				"proxy:pinpoint-{$this->hostname}",
-				"proxy:cognito-{$this->hostname}",
 				"proxy:s3-{$this->hostname}",
 				"proxy:s3-{$this->project_name}.localhost",
 			],
@@ -203,8 +201,6 @@ class Docker_Compose_Generator {
 				'S3_CONSOLE_URL' => Command::set_url_scheme( "https://s3-console-{$this->hostname}" ),
 				'TACHYON_URL' => Command::set_url_scheme( "{$this->url}tachyon" ),
 				'PHP_SENDMAIL_PATH' => '/bin/false',
-				'ALTIS_ANALYTICS_PINPOINT_ENDPOINT' => Command::set_url_scheme( "https://pinpoint-{$this->hostname}" ),
-				'ALTIS_ANALYTICS_COGNITO_ENDPOINT' => Command::set_url_scheme( "https://cognito-{$this->hostname}" ),
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
 				'XDEBUG_CONFIG' => sprintf(
 					'client_host=%s',
@@ -633,57 +629,6 @@ class Docker_Compose_Generator {
 	}
 
 	/**
-	 * Get the Analytics services.
-	 *
-	 * @return array
-	 */
-	protected function get_service_analytics() : array {
-		return [
-			'cognito' => [
-				'container_name' => "{$this->project_name}-cognito",
-				'ports' => [
-					'3000',
-				],
-				'networks' => [
-					'proxy',
-					'default',
-				],
-				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-cognito:1.1.0',
-				'labels' => [
-					'traefik.port=3000',
-					'traefik.protocol=http',
-					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=Host:cognito-{$this->hostname}",
-					"traefik.domain=cognito-{$this->hostname}",
-				],
-			],
-			'pinpoint' => [
-				'container_name' => "{$this->project_name}-pinpoint",
-				'ports' => [
-					'3000',
-				],
-				'networks' => [
-					'proxy',
-					'default',
-				],
-				'restart' => 'unless-stopped',
-				'image' => 'humanmade/local-pinpoint:1.3.0',
-				'labels' => [
-					'traefik.port=3000',
-					'traefik.protocol=http',
-					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=Host:pinpoint-{$this->hostname}",
-					"traefik.domain=pinpoint-{$this->hostname}",
-				],
-				'environment' => [
-					'INDEX_ROTATION' => 'OneDay',
-				],
-			],
-		];
-	}
-
-	/**
 	 * Get the XRay service.
 	 *
 	 * @return array
@@ -737,10 +682,6 @@ class Docker_Compose_Generator {
 
 		if ( $this->get_config()['s3'] && $this->get_config()['tachyon'] ) {
 			$services = array_merge( $services, $this->get_service_tachyon() );
-		}
-
-		if ( $this->get_config()['analytics'] && $this->get_config()['elasticsearch'] ) {
-			$services = array_merge( $services, $this->get_service_analytics() );
 		}
 
 		if ( strpos( $this->args['xdebug'] ?? false, 'profile' ) !== false ) {
@@ -850,15 +791,13 @@ class Docker_Compose_Generator {
 
 		$modules = Altis\get_config()['modules'] ?? [];
 
-		$analytics_enabled = $modules['analytics']['enabled'] ?? false;
 		$search_enabled = $modules['search']['enabled'] ?? true;
 
 		$defaults = [
 			's3' => $modules['cloud']['s3-uploads'] ?? true,
 			'tachyon' => $modules['media']['tachyon'] ?? true,
-			'analytics' => $analytics_enabled,
 			'cavalcade' => $modules['cloud']['cavalcade'] ?? true,
-			'kibana' => ( $analytics_enabled || $search_enabled ),
+			'kibana' => ( $search_enabled ),
 			'afterburner' => false,
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
