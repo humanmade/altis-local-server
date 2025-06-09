@@ -691,7 +691,7 @@ class Docker_Compose_Generator {
 	protected function get_service_xray() : array {
 		return [
 			'xray' => [
-				'image' => 'amazon/aws-xray-daemon:3.3.3',
+				'image' => 'amazon/aws-xray-daemon:3.3.14',
 				'container_name' => "{$this->project_name}-xray",
 				'ports' => [
 					'2000',
