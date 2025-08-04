@@ -5,25 +5,9 @@ Elasticsearch is available on some Altis plans, and is fully integrated into Alt
 (Note: Altis uses [OpenDistro for Elasticsearch](https://opendistro.github.io/for-elasticsearch-docs/) and [OpenSearch](https://opensearch.org/), which are compatible with Elasticsearch.)
 
 
-## Enabling
+## Enabling Elasticsearch
 
-Elasticsearch support in Local Server is enabled when the Enhanced Search module is installed. It can be disabled through configuration if desired:
-
-```json
-{
-    "extra": {
-        "altis": {
-            "modules": {
-                "search": {
-                    "local": {
-                        "enabled": false
-                    }
-                }
-            }
-        }
-    }
-}
-```
+Elasticsearch support in Local Server is enabled when the Enhanced Search module is installed. 
 
 
 ## Available Versions
@@ -146,3 +130,23 @@ You can set the `ES_MEM_LIMIT` variable in 2 ways:
 
 - Set it globally e.g. `export ES_MEM_LIMIT=2g`
 - Set it for the local server process only: `ES_MEM_LIMIT=2g composer server start`
+
+## Disabling Elasticsearch
+
+Elasticsearch can be disabled through configuration if desired:
+
+```json
+{
+    "extra": {
+        "altis": {
+            "modules": {
+                "search": {
+                    "local": {
+                        "enabled": false
+                    }
+                }
+            }
+        }
+    }
+}
+```
