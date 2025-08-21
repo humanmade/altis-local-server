@@ -853,50 +853,57 @@ EOT;
 						break;
 				}
 
-				// If couldn't detect a support architecture, ask the user to install mkcert manually.
+				// If we couldn't detect a support architecture, ask the user to install mkcert manually.
 				if ( ! $binary_arch ) {
 					$output->writeln( '<error>`composer server ssl install` is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
 					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+
 					return 1;
 				}
 
 				$binary = "mkcert-$mkcert_version-$binary_arch";
-				$mkcert = 'vendor/mkcert';
+				$mkcert = 'mkcert';
 
-				// Check if mkcert is installed globally already, bail if so.
-				$version = trim( shell_exec( 'mkcert -version' ) ?: '' );
-				if ( $version ) {
-					$output->writeln( "<info>mkcert $version is already installed globally</>" );
-					return 0;
-				}
-
-				// Check if mkcert is installed locally already, bail if so.
+				// Check if mkcert is installed globally already.
 				$version = trim( shell_exec( "$mkcert -version" ) ?: '' );
 				if ( $version ) {
-					$output->writeln( "<info>mkcert $version is already installed to vendor/mkcert</>" );
-					return 0;
+					$output->writeln( "<info>mkcert $version is already installed globally</>" );
+
+				} else {
+
+					// Check if mkcert is installed locally already.
+					$mkcert = 'vendor/mkcert';
+					$version = trim( shell_exec( "$mkcert -version" ) ?: '' );
+					if ( $version ) {
+						$output->writeln( "<info>mkcert $version is already installed to vendor/mkcert</>" );
+
+					} else {
+
+						// We need to install it locally.
+						$output->writeln( "Detected system architecture to be $os $arch" );
+						$output->writeln( "Downloading https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary to $mkcert ..." );
+						exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
+						if ( $result ) {
+							$output->writeln( '<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>' );
+							$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+
+							return 1;
+						}
+
+						$output->writeln( "<info>mkcert $mkcert_version was downloaded.</info>" );
+
+						chmod( $mkcert, 0755 );
+
+						exec( "$mkcert -version", $dummy, $result );
+						if ( $result ) {
+							$output->writeln( '<error>Could not launch mkcert binary, try manually installing mkcert.</error>' );
+							$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+
+							return 1;
+						}
+						$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
+					}
 				}
-
-				$output->writeln( "Detected system architecture to be $os $arch" );
-				$output->writeln( "Downloading https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary to $mkcert ..." );
-				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
-				if ( $result ) {
-					$output->writeln( '<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>' );
-					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
-					return 1;
-				}
-
-				$output->writeln( "<info>mkcert $mkcert_version was downloaded.</info>" );
-
-				chmod( $mkcert, 0755 );
-
-				exec( "$mkcert -version", $dummy, $result );
-				if ( $result ) {
-					$output->writeln( '<error>Could not launch mkcert binary, try manually installing mkcert.</error>' );
-					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
-					return 1;
-				}
-				$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
 
 				// Setup and accept the root certificate.
 				exec( "$mkcert -install", $dummy, $result );
@@ -908,6 +915,7 @@ EOT;
 
 				$output->writeln( '<info>mkcert root CA was installed and accepted successfully.</info>' );
 				break;
+
 			case 'generate':
 				$config = $this->get_composer_config();
 
