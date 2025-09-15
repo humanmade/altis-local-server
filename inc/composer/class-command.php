@@ -280,18 +280,29 @@ EOT
 
 		// Generate SSL certificate if not found, and the secure flag is turned on.
 		$is_secure = $this->is_using_codespaces() ? false : static::get_composer_config()['secure'] ?? true;
-		if ( $is_secure && ! file_exists( 'vendor/ssl-cert.pem' ) ) {
-			// Create the certificate programmatically.
-			$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
-				'subcommand' => 'ssl',
-				'options' => [
-					'generate',
-					'*.altis.dev', // default domain, configured names will be automatically added.
-				],
-			] ), $output );
+		if ( $is_secure ) {
+			// Do we need to regenerate the certificate?
+			$needs_new_cert = false;
+			if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
+				$needs_new_cert = true;
+			} elseif ( $this->check_ssl_expiry( 'vendor/ssl-cert.pem' ) < 30 ) {
+				$output->writeln( '<info>Certificate is expiring in less than 30 days, regenerating.</>' );
+				$needs_new_cert = true;
+			}
 
-			if ( $not_generated ) {
-				return $not_generated;
+			// Create the certificate programmatically.
+			if ( $needs_new_cert ) {
+				$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+					'subcommand' => 'ssl',
+					'options' => [
+						'generate',
+						'*.altis.dev', // default domain, configured names will be automatically added.
+					],
+				] ), $output );
+
+				if ( $not_generated ) {
+					return $not_generated;
+				}
 			}
 		}
 
