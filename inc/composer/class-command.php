@@ -971,15 +971,22 @@ EOT;
 				break;
 
 			case '':
-				$cert_exists = file_exists( 'vendor/ssl-cert.pem' ) && file_exists( 'vendor/ssl-key.pem' );
+				$cert_file = 'vendor/ssl-cert.pem';
+				$cert_exists = file_exists( $cert_file ) && file_exists( $cert_file );
 				if ( ! $cert_exists ) {
 					$output->writeln( "<error>Certificate file does not exist. Use 'composer server ssl generate' to generate one. </error>" );
 					return 1;
-				} else {
-					$output->writeln( '<info>Certificate file exists.</info>' );
 				}
 
-				break;
+				// Check certificate expiration
+				$validity_remaining = $this->check_ssl_expiry( $cert_file );
+				if ( $validity_remaining < 0 ) {
+					$output->writeln( "<error>Certificate has expired. Use 'composer server ssl generate' to regenerate it.</error>" );
+					return 1;
+				}
+
+				$output->writeln( "<info>Certificate exists and is valid for $validity_remaining more days</info>" );
+				return 0;
 
 			default:
 				$output->writeln( "<error>The subcommand $subcommand is not recognized</error>" );
@@ -1009,6 +1016,26 @@ EOT;
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get the SSL certificate expiration date.
+	 *
+	 * @return int Days until expiry. If negative, the certificate has already expired.
+	 */
+	protected function check_ssl_expiry( string $path ) : int {
+		// Check certificate expiration
+		$cert_info = shell_exec( "openssl x509 -in $path -noout -enddate 2>/dev/null" );
+		if ( ! $cert_info ) {
+			throw new Exception( 'Unable to retrieve certificate information.' );
+		}
+
+		// Parse the date and check if expired
+		if ( ! preg_match( '/notAfter=(.+)/', $cert_info, $matches ) ) {
+			throw new Exception( 'Unable to parse certificate expiration date.' );
+		}
+		$expiry_date = strtotime( $matches[1] );
+		return ceil( ( $expiry_date - time() ) / 86400 );
 	}
 
 	/**
