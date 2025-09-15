@@ -14,6 +14,7 @@ namespace Altis\Local_Server\Composer;
 
 use Composer\Command\BaseCommand;
 use Composer\Composer;
+use Exception;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -1032,7 +1033,7 @@ EOT;
 	/**
 	 * Get the SSL certificate expiration date.
 	 *
-	 * @throws Exception if openssl is missing, the certificate is invalid, or it cannot be read.
+	 * @throws Exception If openssl is missing, the certificate is invalid, or it cannot be read.
 	 * @param string $path Path to the certificate file.
 	 * @return int Days until expiry. If negative, the certificate has already expired.
 	 */
