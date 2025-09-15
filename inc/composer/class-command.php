@@ -989,7 +989,7 @@ EOT;
 					return 1;
 				}
 
-				// Check certificate expiration
+				// Check certificate expiration.
 				$validity_remaining = $this->check_ssl_expiry( $cert_file );
 				if ( $validity_remaining < 0 ) {
 					$output->writeln( "<error>Certificate has expired. Use 'composer server ssl generate' to regenerate it.</error>" );
@@ -1032,16 +1032,17 @@ EOT;
 	/**
 	 * Get the SSL certificate expiration date.
 	 *
+	 * @throws Exception if openssl is missing, the certificate is invalid, or it cannot be read.
+	 * @param string $path Path to the certificate file.
 	 * @return int Days until expiry. If negative, the certificate has already expired.
 	 */
 	protected function check_ssl_expiry( string $path ) : int {
-		// Check certificate expiration
 		$cert_info = shell_exec( "openssl x509 -in $path -noout -enddate 2>/dev/null" );
 		if ( ! $cert_info ) {
 			throw new Exception( 'Unable to retrieve certificate information.' );
 		}
 
-		// Parse the date and check if expired
+		// Parse the date and check if expired.
 		if ( ! preg_match( '/notAfter=(.+)/', $cert_info, $matches ) ) {
 			throw new Exception( 'Unable to parse certificate expiration date.' );
 		}
