@@ -224,11 +224,11 @@ class Docker_Compose_Generator {
 	/**
 	 * Default memory limit for all services that don't specify one.
 	 *
-	 * @param $args
+	 * @param array $args The services array to apply defaults to.
 	 *
-	 * @return array
+	 * @return array The modified array.
 	 */
-	protected function apply_service_defaults( $args ) : array {
+	protected function apply_service_defaults( array $args ) : array {
 		$mem_limit = getenv( 'LS_MEM_LIMIT' ) ?: '1g';
 		foreach ( $args as $service => $service_args ) {
 			if ( isset( $service_args['mem_limit'] ) ) {
@@ -239,7 +239,6 @@ class Docker_Compose_Generator {
 
 		return $args;
 	}
-
 
 	/**
 	 * Get the PHP container service.
