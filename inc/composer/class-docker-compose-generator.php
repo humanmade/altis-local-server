@@ -222,19 +222,38 @@ class Docker_Compose_Generator {
 	}
 
 	/**
+	 * Default memory limit for all services that don't specify one.
+	 *
+	 * @param array $args The services array to apply defaults to.
+	 *
+	 * @return array The modified array.
+	 */
+	protected function apply_service_defaults( array $args ) : array {
+		$mem_limit = getenv( 'LS_MEM_LIMIT' ) ?: '1g';
+		foreach ( $args as $service => $service_args ) {
+			if ( isset( $service_args['mem_limit'] ) ) {
+				continue;
+			}
+			$args[ $service ]['mem_limit'] = $mem_limit;
+		}
+
+		return $args;
+	}
+
+	/**
 	 * Get the PHP container service.
 	 *
 	 * @return array
 	 */
 	protected function get_service_php() : array {
-		return [
+		return $this->apply_service_defaults( [
 			'php' => array_merge(
 				[
 					'container_name' => "{$this->project_name}-php",
 				],
 				$this->get_php_reusable()
 			),
-		];
+		] );
 	}
 
 	/**
@@ -249,7 +268,7 @@ class Docker_Compose_Generator {
 		$package_json = json_decode( file_get_contents( "{$config['nodejs']['path']}/package.json" ), true );
 		$version = $package_json['engines']['node'] ?? '20';
 
-		return [
+		return $this->apply_service_defaults( [
 			'nodejs' => [
 				'image' => "node:{$version}-bookworm-slim",
 				'container_name' => "{$this->project_name}-nodejs",
@@ -278,7 +297,7 @@ class Docker_Compose_Generator {
 					'ALTIS_ENVIRONMENT_TYPE' => 'local',
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -287,7 +306,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_webgrind() : array {
-		return [
+		return $this->apply_service_defaults( [
 			'webgrind' => [
 				'container_name' => "{$this->project_name}-webgrind",
 				'image' => 'wodby/webgrind:1.9',
@@ -314,7 +333,7 @@ class Docker_Compose_Generator {
 					'WEBGRIND_DEFAULT_TIMEZONE' => 'UTC',
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -323,7 +342,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_cavalcade() : array {
-		return [
+		return $this->apply_service_defaults( [
 			'cavalcade' => array_merge(
 				[
 					'container_name' => "{$this->project_name}-cavalcade",
@@ -335,7 +354,7 @@ class Docker_Compose_Generator {
 				],
 				$this->get_php_reusable()
 			),
-		];
+		] );
 	}
 
 	/**
@@ -348,7 +367,7 @@ class Docker_Compose_Generator {
 		$domains = $config['domains'] ?? [];
 		$domains = $domains ? ',' . implode( ',', $domains ) : '';
 
-		return [
+		return $this->apply_service_defaults( [
 			'nginx' => [
 				'image' => 'humanmade/altis-local-server-nginx:3.6.0',
 				'container_name' => "{$this->project_name}-nginx",
@@ -383,7 +402,7 @@ class Docker_Compose_Generator {
 					'PHP_PUBLIC_POOL_ENABLE_RATE_LIMIT' => 'false',
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -392,7 +411,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_redis() : array {
-		return [
+		return $this->apply_service_defaults( [
 			'redis' => [
 				'image' => 'redis:7.0-alpine',
 				'container_name' => "{$this->project_name}-redis",
@@ -400,7 +419,7 @@ class Docker_Compose_Generator {
 					'6379',
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -429,7 +448,7 @@ class Docker_Compose_Generator {
 
 		$image = $version_map[ $version ];
 
-		return [
+		return $this->apply_service_defaults( [
 			'db' => [
 				'image' => $image,
 				// Suppress mysql_native_password deprecation warning
@@ -464,7 +483,7 @@ class Docker_Compose_Generator {
 					'retries' => 10,
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -473,7 +492,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_s3() : array {
-		return [
+		return $this->apply_service_defaults( [
 			's3' => [
 				'image' => 'minio/minio:RELEASE.2021-09-18T18-09-59Z',
 				'container_name' => "{$this->project_name}-s3",
@@ -556,7 +575,7 @@ class Docker_Compose_Generator {
 				],
 				'entrypoint' => "/bin/sh -c \"mc mirror --watch --overwrite -a local/{$this->bucket_name} /content\"",
 			],
-		];
+		] );
 	}
 
 	/**
@@ -565,7 +584,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_tachyon() : array {
-		return [
+		return $this->apply_service_defaults( [
 			'tachyon' => [
 				'image' => 'humanmade/tachyon:v3.0.7',
 				'container_name' => "{$this->project_name}-tachyon",
@@ -594,7 +613,7 @@ class Docker_Compose_Generator {
 					"proxy:s3-{$this->hostname}",
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -603,7 +622,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_mailhog() : array {
-		return [
+		return $this->apply_service_defaults( [
 			'mailhog' => [
 				'image' => 'cd2team/mailhog:latest',
 				'container_name' => "{$this->project_name}-mailhog",
@@ -625,7 +644,7 @@ class Docker_Compose_Generator {
 					'MH_UI_WEB_PATH' => 'mailhog',
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -634,7 +653,7 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_xray() : array {
-		return [
+		return $this->apply_service_defaults( [
 			'xray' => [
 				'image' => 'amazon/aws-xray-daemon:3.3.14',
 				'container_name' => "{$this->project_name}-xray",
@@ -647,7 +666,7 @@ class Docker_Compose_Generator {
 					'AWS_REGION' => 'us-east-1',
 				],
 			],
-		];
+		] );
 	}
 
 	/**
@@ -694,7 +713,6 @@ class Docker_Compose_Generator {
 
 		// Default compose configuration.
 		$config = [
-			// 'version' => '2.5',
 			'services' => $services,
 			'networks' => [
 				'default' => null,
