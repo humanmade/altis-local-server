@@ -19,20 +19,18 @@ Navigate your shell to your project's directory. You should already have install
 or `composer create-project` but if not, do so now.
 See [Creating A New Altis Project](https://www.altis-dxp.com/resources/docs/getting-started/#creating-a-new-altis-project).
 
-### Experimental Features
-
 #### Mutagen
 
 You may find that file sharing performance or server response times are slower than you would like on Windows or MacOS. Local Server
-provides an experimental integration with [Mutagen](https://mutagen.io/) to resolve this.
+provides an integration with [Mutagen](https://mutagen.io/) to resolve this.
 
 See the [Mutagen set up guide for detailed instructions on how to install and run it](./mutagen-file-sharing.md).
 
 #### Subdomain and Custom domains in multisites
 
-Altis v12 introduces support for Subdomain multisites and Custom domains, where projects can choose custom domains for their local
-environments, instead of being locked to the `altis.dev` domain. This is in part facilitated by the new SSL certificate generation
-features introduced in Altis v12.
+Altis supports Subdomain multisites and Custom domains, where projects can choose custom domains for their local environments,
+instead of being locked to the `altis.dev` domain. This is in part facilitated by the new SSL certificate generation features
+introduced in Altis v12.
 
 The subdomain / domain *optional* config options can be configured as follows:
 
@@ -87,11 +85,10 @@ started!
 
 ### Multisite Subdomains / Custom domains support
 
-Altis v12 introduced experimental support for multisite subdomains and custom domains. In order to support custom (sub)domains,
-Altis uses [`mkcert`](https://github.com/FiloSottile/mkcert) to generate SSL certificates based on a generated Root
-Certificate Authority (CA) that is uniquely-generated and trusted on the host machine upon installation. This allows Altis
-local-server to generate local SSL certificates that is automatically trusted, which provides a convenient and seamless local
-development experience.
+Altis supports multisite subdomains and custom domains. In order to support custom (sub) domains, Altis uses 
+[`mkcert`](https://github.com/FiloSottile/mkcert) to generate SSL certificates based on a generated Root Certificate Authority (CA)
+that is uniquely-generated and trusted on the host machine upon installation. This allows Altis local-server to generate local
+SSL certificates that are automatically trusted, which provides a convenient and seamless local development experience.
 
 Note: Altis local-server automatically collects domains names to issue the SSL certificate for, based on Altis configuration
 in `composer.json`, namely the `altis.modules.local-server` tree, specifically the `name`, `tld`, and `domains` config parameters.
