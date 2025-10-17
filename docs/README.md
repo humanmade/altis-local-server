@@ -29,8 +29,7 @@ See the [Mutagen set up guide for detailed instructions on how to install and ru
 #### Subdomain and Custom domains in multisites
 
 Altis supports Subdomain multisites and Custom domains, where projects can choose custom domains for their local environments,
-instead of being locked to the `altis.dev` domain. This is in part facilitated by the new SSL certificate generation features
-introduced in Altis v12.
+instead of being locked to the `altis.dev` domain.
 
 The subdomain / domain *optional* config options can be configured as follows:
 
@@ -85,7 +84,7 @@ started!
 
 ### Multisite Subdomains / Custom domains support
 
-Altis supports multisite subdomains and custom domains. In order to support custom (sub) domains, Altis uses 
+Altis supports multisite subdomains and custom domains. In order to support custom (sub) domains, Altis uses
 [`mkcert`](https://github.com/FiloSottile/mkcert) to generate SSL certificates based on a generated Root Certificate Authority (CA)
 that is uniquely-generated and trusted on the host machine upon installation. This allows Altis local-server to generate local
 SSL certificates that are automatically trusted, which provides a convenient and seamless local development experience.
