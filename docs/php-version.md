@@ -11,7 +11,7 @@ To change the PHP version use the Local Server module configuration to set the `
         "altis": {
             "modules": {
                 "local-server": {
-                    "php": "8.2"
+                    "php": "8.3"
                 }
             }
         }
