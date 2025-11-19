@@ -536,23 +536,20 @@ class Docker_Compose_Generator {
 				'labels' => [
 					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					// S3 API router
-					"traefik.http.routers.s3-api.rule=Host(`s3-{$this->hostname}`)",
+					'traefik.http.routers.s3-api.rule=Host(`s3-{$this->hostname}`)',
 					'traefik.http.routers.s3-api.entrypoints=web,websecure',
 					'traefik.http.routers.s3-api.service=s3-api',
 					'traefik.http.services.s3-api.loadbalancer.server.port=9000',
-					// S3 Console router
-					"traefik.http.routers.s3-console.rule=Host(`s3-console-{$this->hostname}`)",
+					'traefik.http.routers.s3-console.rule=Host(`s3-console-{$this->hostname}`)',
 					'traefik.http.routers.s3-console.entrypoints=web,websecure',
 					'traefik.http.routers.s3-console.service=s3-console',
 					'traefik.http.services.s3-console.loadbalancer.server.port=9001',
-					// S3 Client router (for uploads path)
 					'traefik.http.routers.s3-client.rule=' . $this->get_s3_client_host_rule() . ' && PathPrefix(`/uploads`)',
 					'traefik.http.routers.s3-client.entrypoints=web,websecure',
 					'traefik.http.routers.s3-client.service=s3-client',
 					'traefik.http.routers.s3-client.middlewares=s3-client-prefix,s3-client-host-header',
 					'traefik.http.middlewares.s3-client-prefix.replacepathregex.regex=^/uploads/(.*)',
-					"traefik.http.middlewares.s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/$$1",
+					'traefik.http.middlewares.s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/$$1',
 					'traefik.http.middlewares.s3-client-host-header.headers.customrequestheaders.Host=s3:9000',
 					'traefik.http.services.s3-client.loadbalancer.server.port=9000',
 				],
