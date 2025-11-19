@@ -193,7 +193,7 @@ class Docker_Compose_Generator {
 				'HM_ENV_ARCHITECTURE' => 'local-server',
 				'HM_DEPLOYMENT_REVISION' => 'dev',
 				'AWS_XRAY_DAEMON_HOST' => 'xray',
-				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/{$this->bucket_name}/" ),
+				'S3_UPLOADS_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}" ),
 				'S3_UPLOADS_BUCKET' => "{$this->bucket_name}",
 				'S3_UPLOADS_BUCKET_URL' => Command::set_url_scheme( "https://s3-{$this->hostname}" ),
 				'S3_UPLOADS_KEY' => 'admin',
@@ -286,12 +286,13 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'labels' => [
-					'traefik.frontend.priority=1',
-					'traefik.port=3000',
-					'traefik.protocol=http',
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:nodejs-{$this->hostname}",
-					"traefik.domain=nodejs-{$this->hostname}",
+					'traefik.http.routers.nodejs.rule=HostRegexp(`nodejs-{$this->hostname}`)',
+					'traefik.http.routers.nodejs.priority=1',
+					'traefik.http.routers.nodejs.entrypoints=web,websecure',
+					'traefik.http.routers.nodejs.service=nodejs',
+					'traefik.http.services.nodejs.loadbalancer.server.port=3000',
 				],
 				'environment' => [
 					'ALTIS_ENVIRONMENT_NAME' => $this->project_name,
@@ -325,10 +326,14 @@ class Docker_Compose_Generator {
 					'tmp:/tmp',
 				],
 				'labels' => [
-					'traefik.port=8080',
-					'traefik.protocol=http',
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=Host:{$this->hostname};PathPrefix:/webgrind;PathPrefixStrip:/webgrind",
+					'traefik.http.routers.webgrind.rule=Host(`{$this->hostname}`) && PathPrefix(`/webgrind`)',
+					'traefik.http.routers.webgrind.entrypoints=web,websecure',
+					'traefik.http.routers.webgrind.service=webgrind',
+					'traefik.http.routers.webgrind.middlewares=webgrind-stripprefix',
+					'traefik.http.middlewares.webgrind-stripprefix.stripprefix.prefixes=/webgrind',
+					'traefik.http.services.webgrind.loadbalancer.server.port=8080',
 				],
 				'environment' => [
 					'WEBGRIND_DEFAULT_TIMEZONE' => 'UTC',
@@ -365,8 +370,7 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_nginx() : array {
 		$config = $this->get_config();
-		$domains = $config['domains'] ?? [];
-		$domains = $domains ? ',' . implode( ',', $domains ) : '';
+		$host_rule = $this->get_primary_host_rule( $config['domains'] ?? [] );
 
 		return $this->apply_service_defaults( [
 			'nginx' => [
@@ -387,12 +391,15 @@ class Docker_Compose_Generator {
 					'8080',
 				],
 				'labels' => [
-					'traefik.frontend.priority=1',
-					'traefik.port=8080',
-					'traefik.protocol=https',
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname}{$domains}",
-					"traefik.domain={$this->hostname},*.{$this->hostname}{$domains}",
+					'traefik.http.routers.nginx.rule=' . $host_rule,
+					'traefik.http.routers.nginx.priority=1',
+					'traefik.http.routers.nginx.entrypoints=web,websecure',
+					'traefik.http.routers.nginx.tls=true',
+					'traefik.http.routers.nginx.service=nginx',
+					'traefik.http.services.nginx.loadbalancer.server.port=8080',
+					'traefik.http.services.nginx.loadbalancer.server.scheme=https',
 				],
 				'environment' => [
 					// Gzip compression now defaults to off to support Brotli compression via CloudFront.
@@ -527,18 +534,27 @@ class Docker_Compose_Generator {
 					'retries' => 3,
 				],
 				'labels' => [
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					'traefik.api.port=9000',
-					'traefik.api.protocol=http',
-					"traefik.api.frontend.rule=HostRegexp:s3-{$this->hostname}",
-					'traefik.console.port=9001',
-					'traefik.console.protocol=http',
-					"traefik.console.frontend.rule=HostRegexp:s3-console-{$this->hostname}",
-					'traefik.client.port=9000',
-					'traefik.client.protocol=http',
-					'traefik.client.frontend.passHostHeader=false',
-					"traefik.client.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname},s3-{$this->hostname},localhost,s3-{$this->project_name}.localhost;PathPrefix:/uploads;AddPrefix:/{$this->bucket_name}",
-					"traefik.domain=s3-{$this->hostname},s3-console-{$this->hostname}",
+					// S3 API router
+					"traefik.http.routers.s3-api.rule=Host(`s3-{$this->hostname}`)",
+					'traefik.http.routers.s3-api.entrypoints=web,websecure',
+					'traefik.http.routers.s3-api.service=s3-api',
+					'traefik.http.services.s3-api.loadbalancer.server.port=9000',
+					// S3 Console router
+					"traefik.http.routers.s3-console.rule=Host(`s3-console-{$this->hostname}`)",
+					'traefik.http.routers.s3-console.entrypoints=web,websecure',
+					'traefik.http.routers.s3-console.service=s3-console',
+					'traefik.http.services.s3-console.loadbalancer.server.port=9001',
+					// S3 Client router (for uploads path)
+					'traefik.http.routers.s3-client.rule=' . $this->get_s3_client_host_rule() . ' && PathPrefix(`/uploads`)',
+					'traefik.http.routers.s3-client.entrypoints=web,websecure',
+					'traefik.http.routers.s3-client.service=s3-client',
+					'traefik.http.routers.s3-client.middlewares=s3-client-prefix,s3-client-host-header',
+					'traefik.http.middlewares.s3-client-prefix.replacepathregex.regex=^/uploads/(.*)',
+					"traefik.http.middlewares.s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/$$1",
+					'traefik.http.middlewares.s3-client-host-header.headers.customrequestheaders.Host=s3:9000',
+					'traefik.http.services.s3-client.loadbalancer.server.port=9000',
 				],
 			],
 			's3-create-bucket' => [
@@ -585,6 +601,9 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_tachyon() : array {
+		$config = $this->get_config();
+		$host_rule = $this->get_primary_host_rule( $config['domains'] ?? [] );
+
 		return $this->apply_service_defaults( [
 			'tachyon' => [
 				'image' => 'humanmade/tachyon:v3.0.7',
@@ -596,10 +615,15 @@ class Docker_Compose_Generator {
 					'proxy',
 				],
 				'labels' => [
-					'traefik.port=8080',
-					'traefik.protocol=http',
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=HostRegexp:{$this->hostname},{subdomain:[A-Za-z0-9.-]+}.{$this->hostname};PathPrefix:/tachyon;ReplacePathRegex:^/tachyon/(.*) /uploads/$$1",
+					'traefik.http.routers.tachyon.rule=' . $host_rule . ' && PathPrefix(`/tachyon`)',
+					'traefik.http.routers.tachyon.entrypoints=web,websecure',
+					'traefik.http.routers.tachyon.service=tachyon',
+					'traefik.http.routers.tachyon.middlewares=tachyon-replacepath',
+					'traefik.http.middlewares.tachyon-replacepath.replacepathregex.regex=^/tachyon/(.*)',
+					'traefik.http.middlewares.tachyon-replacepath.replacepathregex.replacement=/uploads/$$1',
+					'traefik.http.services.tachyon.loadbalancer.server.port=8080',
 				],
 				'environment' => [
 					'S3_REGION' => 'us-east-1',
@@ -636,10 +660,12 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'labels' => [
-					'traefik.port=8025',
-					'traefik.protocol=http',
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					"traefik.frontend.rule=Host:{$this->hostname};PathPrefix:/mailhog",
+					"traefik.http.routers.mailhog.rule=Host(`{$this->hostname}`) && PathPrefix(`/mailhog`)",
+					'traefik.http.routers.mailhog.entrypoints=web,websecure',
+					'traefik.http.routers.mailhog.service=mailhog',
+					'traefik.http.services.mailhog.loadbalancer.server.port=8025',
 				],
 				'environment' => [
 					'MH_UI_WEB_PATH' => 'mailhog',
@@ -826,6 +852,44 @@ class Docker_Compose_Generator {
 		];
 
 		return array_merge( $defaults, $modules['local-server'] ?? [] );
+	}
+
+	/**
+	 * Build the primary host rule used by routers.
+	 *
+	 * @param array $extra_domains Additional domains to include.
+	 * @return string
+	 */
+	protected function get_primary_host_rule( array $extra_domains = [] ) : string {
+		$host_rules = [
+			"Host(`{$this->hostname}`)",
+			"HostRegexp(`{subdomain:[A-Za-z0-9-]+}.{$this->hostname}`)",
+		];
+
+		$extra_domains = array_filter( array_map( 'trim', $extra_domains ) );
+		foreach ( $extra_domains as $domain ) {
+			$host_rules[] = "Host(`{$domain}`)";
+			$host_rules[] = "HostRegexp(`{subdomain:[A-Za-z0-9-]+}.{$domain}`)";
+		}
+
+		return '(' . implode( ' || ', array_unique( $host_rules ) ) . ')';
+	}
+
+	/**
+	 * Build the host rule for S3 client uploads routing.
+	 *
+	 * @return string
+	 */
+	protected function get_s3_client_host_rule() : string {
+		$client_hosts = [
+			"Host(`{$this->hostname}`)",
+			"HostRegexp(`{subdomain:[A-Za-z0-9-]+}.{$this->hostname}`)",
+			"Host(`s3-{$this->hostname}`)",
+			'Host(`localhost`)',
+			"Host(`s3-{$this->project_name}.localhost`)",
+		];
+
+		return '(' . implode( ' || ', array_unique( $client_hosts ) ) . ')';
 	}
 
 	/**
