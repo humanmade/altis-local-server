@@ -430,7 +430,7 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_db() : array {
 		$version_map = [
-			'8.0' => 'mysql:8.0.42',
+			'8.0' => 'mysql:8.0.44',
 		];
 
 		$versions = array_keys( $version_map );
