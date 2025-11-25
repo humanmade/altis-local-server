@@ -151,7 +151,6 @@
 # Optional
 # Default: true
 #
-exposedByDefault = false
 watch = true
 
 [providers.file]
