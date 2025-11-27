@@ -34,7 +34,7 @@ class Command extends BaseCommand {
 	 *
 	 * @var array
 	 */
-	protected $package_config = [];
+	protected array $package_config;
 
 	/**
 	 * Command configuration.
