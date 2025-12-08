@@ -286,6 +286,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'labels' => [
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
 					"traefik.http.routers.nodejs.rule=HostRegexp(`nodejs-{$this->hostname}`)",
 					'traefik.http.routers.nodejs.priority=1',
@@ -325,6 +326,7 @@ class Docker_Compose_Generator {
 					'tmp:/tmp',
 				],
 				'labels' => [
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
 					'traefik.http.routers.webgrind.rule=Host(`{$this->hostname}`) && PathPrefix(`/webgrind`)',
 					'traefik.http.routers.webgrind.entrypoints=web,websecure',
@@ -389,6 +391,7 @@ class Docker_Compose_Generator {
 					'8080',
 				],
 				'labels' => [
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
 					'traefik.http.routers.nginx.rule=' . $host_rule,
 					'traefik.http.routers.nginx.priority=1',
@@ -531,6 +534,7 @@ class Docker_Compose_Generator {
 					'retries' => 3,
 				],
 				'labels' => [
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
 					"traefik.http.routers.s3-api.rule=Host(`s3-{$this->hostname}`)",
 					'traefik.http.routers.s3-api.entrypoints=web,websecure',
@@ -608,6 +612,7 @@ class Docker_Compose_Generator {
 					'proxy',
 				],
 				'labels' => [
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
 					'traefik.http.routers.tachyon.rule=' . $host_rule . ' && PathPrefix(`/tachyon`)',
 					'traefik.http.routers.tachyon.entrypoints=web,websecure',
@@ -652,6 +657,7 @@ class Docker_Compose_Generator {
 					'default',
 				],
 				'labels' => [
+					'traefik.enable=true',
 					'traefik.docker.network=proxy',
 					"traefik.http.routers.mailhog.rule=Host(`{$this->hostname}`) && PathPrefix(`/mailhog`)",
 					'traefik.http.routers.mailhog.entrypoints=web,websecure',
