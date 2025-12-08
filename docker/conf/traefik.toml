@@ -109,7 +109,8 @@
   # Optional
   # Default: true
   #
-  # dashboard = false
+  dashboard = true
+  insecure = true
 
 ################################################################
 # Ping configuration
