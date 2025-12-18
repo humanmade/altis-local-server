@@ -1,0 +1,11 @@
+################################################################
+# Dynamic configuration for Traefik TLS certificates
+################################################################
+
+[tls]
+  [tls.stores]
+    [tls.stores.default]
+      [tls.stores.default.defaultCertificate]
+        certFile = "/etc/traefik/ssl-cert.pem"
+        keyFile  = "/etc/traefik/ssl-key.pem"
+
