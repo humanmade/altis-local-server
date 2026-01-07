@@ -141,7 +141,9 @@ class Docker_Compose_Generator {
 		}
 
 		if ( $this->get_config()['afterburner'] && $version !== '7.4' ) {
-			$volumes[] = "{$this->config_dir}/afterburner.ini:/usr/local/etc/php/conf.d/afterburner.ini";
+
+			$version = $this->get_config()['afterburner'] === true ? '0.5' : $this->get_config()['afterburner'];
+			$volumes[] = "{$this->config_dir}/afterburner-{$version}.ini:/usr/local/etc/php/conf.d/afterburner.ini";
 		}
 
 		$services = [
