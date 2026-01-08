@@ -17,4 +17,6 @@ the `altis.modules.local-server.afterburner` value to `true`:
 }
 ```
 
+Optionally you can specify the version of Afterburner by setting `altis.modules.local-server.afterburner` to either `0.5` or `1.0`.
+
 Afterburner is only enabled on PHP versions later than 7.4.
