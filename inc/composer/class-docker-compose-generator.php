@@ -141,9 +141,21 @@ class Docker_Compose_Generator {
 		}
 
 		if ( $this->get_config()['afterburner'] && $version !== '7.4' ) {
+			$afterburner_versions = [ '0.5', '1.0' ];
+			$afterburner_version = $this->get_config()['afterburner'] === true ? '0.5' : number_format( (float) $this->get_config()['afterburner'], 1 );
 
-			$version = $this->get_config()['afterburner'] === true ? '0.5' : $this->get_config()['afterburner'];
-			$volumes[] = "{$this->config_dir}/afterburner-{$version}.ini:/usr/local/etc/php/conf.d/afterburner.ini";
+			if ( ! in_array( $afterburner_version, $afterburner_versions, true ) ) {
+				echo sprintf(
+					"The configured Afterburner version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+					// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+					$afterburner_version,
+					// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+					implode( "\n  - ", $afterburner_versions )
+				);
+				exit( 1 );
+			}
+
+			$volumes[] = "{$this->config_dir}/afterburner-{$afterburner_version}.ini:/usr/local/etc/php/conf.d/afterburner.ini";
 		}
 
 		$services = [
