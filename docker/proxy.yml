@@ -2,7 +2,7 @@ services:
   proxy:
     networks:
       - proxy
-    image: traefik:3.6.1
+    image: traefik:3.6.6
     container_name: altis-proxy
     mem_limit: 128m
     volumes:
