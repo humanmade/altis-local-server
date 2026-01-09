@@ -536,17 +536,17 @@ class Docker_Compose_Generator {
 				'labels' => [
 					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					// S3 API router
+					// S3 API router.
 					"traefik.http.routers.{$this->project_name}-s3-api.rule=Host(`s3-{$this->hostname}`)",
 					"traefik.http.routers.{$this->project_name}-s3-api.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-api.service={$this->project_name}-s3-api",
 					"traefik.http.services.{$this->project_name}-s3-api.loadbalancer.server.port=9000",
-					// S3 Console router
+					// S3 Console router.
 					"traefik.http.routers.{$this->project_name}-s3-console.rule=Host(`s3-console-{$this->hostname}`)",
 					"traefik.http.routers.{$this->project_name}-s3-console.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-console.service={$this->project_name}-s3-console",
 					"traefik.http.services.{$this->project_name}-s3-console.loadbalancer.server.port=9001",
-					// S3 Client router (for uploads path)
+					// S3 Client router (for uploads path).
 					"traefik.http.routers.{$this->project_name}-s3-client.rule=" . $this->get_s3_client_host_rule() . ' && PathPrefix(`/uploads`)',
 					"traefik.http.routers.{$this->project_name}-s3-client.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-client.service={$this->project_name}-s3-client",
