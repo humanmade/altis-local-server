@@ -28,7 +28,7 @@ function bootstrap() {
 		add_filter( 's3_uploads_s3_client_params', function ( $params ) {
 			if ( defined( 'S3_UPLOADS_ENDPOINT' ) && S3_UPLOADS_ENDPOINT ) {
 				$params['endpoint'] = S3_UPLOADS_ENDPOINT;
-				$params['bucket_endpoint'] = true;
+				$params['use_path_style_endpoint'] = true;
 				$params['http'] = [
 					'verify' => false,
 				];
