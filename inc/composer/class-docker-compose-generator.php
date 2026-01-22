@@ -580,7 +580,7 @@ class Docker_Compose_Generator {
 				],
 			],
 			's3-create-bucket' => [
-				'image' => 'amazon/aws-cli:latest',
+				'image' => 'amazon/aws-cli:2.31.0',
 				'depends_on' => [
 					's3' => [
 						'condition' => 'service_healthy',
