@@ -932,7 +932,6 @@ EOT;
 					$domains[] = $hostname;
 					$domains[] = "*.$hostname";
 					$domains[] = "s3-$hostname";
-					$domains[] = "s3-console-$hostname";
 					$domains[] = "cognito-$hostname";
 					$domains[] = "pinpoint-$hostname";
 					$domains[] = "elasticsearch-$hostname";
@@ -1034,7 +1033,6 @@ EOT;
 		$domains = array_merge( [
 			$hostname,
 			"s3-$hostname",
-			"s3-console-$hostname",
 			"cognito-$hostname",
 			"pinpoint-$hostname",
 			"elasticsearch-$hostname",
@@ -1143,39 +1141,38 @@ EOT;
 	/**
 	 * Import uploads from the host machine to the S3 container.
 	 *
+	 * Since VersityGW uses the local filesystem directly (content/uploads is mounted as the bucket),
+	 * this command syncs files from content/uploads to the VersityGW bucket using AWS CLI.
+	 *
 	 * @return int
 	 */
 	protected function import_uploads() {
-		return $this->minio_client( sprintf(
-			'mirror --overwrite --exclude ".*" /content local/s3-%s',
-			$this->get_project_subdomain()
-		) );
-	}
-
-	/**
-	 * Pass a command through to the minio client.
-	 *
-	 * @param string $command The command for minio client.
-	 * @return int
-	 */
-	protected function minio_client( string $command ) {
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
+		$bucket_name = "s3-{$this->get_project_subdomain()}";
+		$project_name = $this->get_project_subdomain();
 
+		// Use AWS CLI to sync files to VersityGW S3 endpoint
 		$base_command = sprintf(
 			'docker run ' .
-				'-e COLUMNS=%1%d -e LINES=%2$d ' .
-				'-e MC_HOST_local=http://admin:password@s3:9000 ' .
+				'-e COLUMNS=%1$d -e LINES=%2$d ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
 				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
 				'--network=%4$s_default ' .
 				'--name=%4$s-import-uploads ' .
 				'--rm ' . // Clean up container after it exits.
-				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
+				'amazon/aws-cli:latest ' .
+				's3 sync /content/uploads s3://%5$s/ ' .
+				'--endpoint-url=http://s3:7070 ' .
+				'--exclude ".*" ' .
+				'--delete',
 			$columns,
 			$lines,
 			getcwd(),
-			$this->get_project_subdomain(),
-			escapeshellcmd( $command )
+			$project_name,
+			$bucket_name
 		);
 
 		passthru( $base_command, $return_var );
