@@ -46,7 +46,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, import-uploads' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -92,8 +92,6 @@ SSL commands:
 	ssl exec -- "command"         Executes an arbitrary mkcert command
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
-Sync files from content/uploads to the S3 container:
-	import-uploads                Syncs files from `content/uploads` to the S3 container.
 EOT
 			)
 			->addOption( 'root', 'r', InputOption::VALUE_OPTIONAL, 'Run as root', 'debug' )
@@ -225,8 +223,6 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( in_array( $subcommand, [ 'shell', 'ssh' ], true ) ) {
 			return $this->shell( $input, $output );
-		} elseif ( $subcommand === 'import-uploads' ) {
-			return $this->import_uploads( $input, $output );
 		} elseif ( $subcommand === 'create-alias' ) {
 			return $this->create_alias( $input, $output );
 		} elseif ( $subcommand === null ) {
@@ -1136,48 +1132,6 @@ EOT;
 				'PORT' => $ports_matches[2],
 			]
 		);
-	}
-
-	/**
-	 * Import uploads from the host machine to the S3 container.
-	 *
-	 * Since VersityGW uses the local filesystem directly (content/uploads is mounted as the bucket),
-	 * this command syncs files from content/uploads to the VersityGW bucket using AWS CLI.
-	 *
-	 * @return int
-	 */
-	protected function import_uploads() {
-		$columns = exec( 'tput cols' );
-		$lines = exec( 'tput lines' );
-		$bucket_name = "s3-{$this->get_project_subdomain()}";
-		$project_name = $this->get_project_subdomain();
-
-		// Use AWS CLI to sync files to VersityGW S3 endpoint
-		$base_command = sprintf(
-			'docker run ' .
-				'-e COLUMNS=%1$d -e LINES=%2$d ' .
-				'-e AWS_ACCESS_KEY_ID=admin ' .
-				'-e AWS_SECRET_ACCESS_KEY=password ' .
-				'-e AWS_DEFAULT_REGION=us-east-1 ' .
-				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
-				'--network=%4$s_default ' .
-				'--name=%4$s-import-uploads ' .
-				'--rm ' . // Clean up container after it exits.
-				'amazon/aws-cli:latest ' .
-				's3 sync /content/uploads s3://%5$s/ ' .
-				'--endpoint-url=http://s3:7070 ' .
-				'--exclude ".*" ' .
-				'--delete',
-			$columns,
-			$lines,
-			getcwd(),
-			$project_name,
-			$bucket_name
-		);
-
-		passthru( $base_command, $return_var );
-
-		return $return_var;
 	}
 
 	/**
