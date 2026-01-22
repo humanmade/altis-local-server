@@ -22,8 +22,6 @@
 # Optional
 # Default: ["http"]
 #
-defaultEntryPoints = ["http", "https"]
-insecureSkipVerify = true
 ################################################################
 # Entrypoints configuration
 ################################################################
@@ -33,17 +31,11 @@ insecureSkipVerify = true
 # Optional
 # Default:
 [entryPoints]
-  [entryPoints.http]
+  [entryPoints.web]
     address = ":80"
-  [entryPoints.https]
+  [entryPoints.websecure]
     address = ":443"
-    [entryPoints.https.tls]
-      [entryPoints.https.tls.defaultCertificate]
-        certFile = "/etc/traefik/ssl-cert.pem"
-        keyFile  = "/etc/traefik/ssl-key.pem"
-
-[web]
-address = ":8080"
+    [entryPoints.websecure.http.tls]
 
 ################################################################
 # Traefik logs configuration
@@ -117,7 +109,8 @@ address = ":8080"
   # Optional
   # Default: true
   #
-  # dashboard = false
+  dashboard = true
+  insecure = true
 
 ################################################################
 # Ping configuration
@@ -138,7 +131,7 @@ address = ":8080"
 ################################################################
 
 # Enable Docker configuration backend
-[docker]
+[providers.docker]
 
 # Docker server endpoint. Can be a tcp or a unix socket endpoint.
 #
@@ -159,5 +152,16 @@ address = ":8080"
 # Optional
 # Default: true
 #
-# exposedbydefault = true
+exposedByDefault = false
 watch = true
+
+[providers.file]
+  filename = "/etc/traefik/dynamic.toml"
+
+################################################################
+# TLS configuration
+################################################################
+
+# Skip TLS verification for backend services (useful for self-signed certs)
+[serversTransport]
+  insecureSkipVerify = true
