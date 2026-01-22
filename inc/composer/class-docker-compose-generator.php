@@ -538,10 +538,8 @@ class Docker_Compose_Generator {
 				],
 				'healthcheck' => [
 					'test' => [
-						'CMD',
-						'curl',
-						'-f',
-						'http://localhost:7070/',
+						'CMD-SHELL',
+						'nc -z localhost 7070 || exit 1',
 					],
 					'interval' => '5s',
 					'timeout' => '5s',
