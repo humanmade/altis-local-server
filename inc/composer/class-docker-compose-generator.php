@@ -107,9 +107,9 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$version_map = [
-			'8.4' => 'humanmade/altis-local-server-php:8.4.2',
-			'8.3' => 'humanmade/altis-local-server-php:8.3.17',
-			'8.2' => 'humanmade/altis-local-server-php:8.2.31',
+			'8.4' => 'humanmade/altis-local-server-php:8.4.4',
+			'8.3' => 'humanmade/altis-local-server-php:8.3.19',
+			'8.2' => 'humanmade/altis-local-server-php:8.2.33',
 			'8.1' => 'humanmade/altis-local-server-php:6.0.27',
 		];
 
@@ -141,7 +141,21 @@ class Docker_Compose_Generator {
 		}
 
 		if ( $this->get_config()['afterburner'] && $version !== '7.4' ) {
-			$volumes[] = "{$this->config_dir}/afterburner.ini:/usr/local/etc/php/conf.d/afterburner.ini";
+			$afterburner_versions = [ '0.5', '1.0' ];
+			$afterburner_version = $this->get_config()['afterburner'] === true ? '0.5' : number_format( (float) $this->get_config()['afterburner'], 1 );
+
+			if ( ! in_array( $afterburner_version, $afterburner_versions, true ) ) {
+				echo sprintf(
+					"The configured Afterburner version \"%s\" is not supported.\nTry one of the following:\n  - %s\n",
+					// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+					$afterburner_version,
+					// phpcs:ignore HM.Security.EscapeOutput.OutputNotEscaped
+					implode( "\n  - ", $afterburner_versions )
+				);
+				exit( 1 );
+			}
+
+			$volumes[] = "{$this->config_dir}/afterburner-{$afterburner_version}.ini:/usr/local/etc/php/conf.d/afterburner.ini";
 		}
 
 		$services = [
@@ -436,7 +450,7 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_service_db() : array {
 		$version_map = [
-			'8.0' => 'mysql:8.0.42',
+			'8.0' => 'mysql:8.0.44',
 		];
 
 		$versions = array_keys( $version_map );
@@ -550,7 +564,7 @@ class Docker_Compose_Generator {
 				'labels' => [
 					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					// S3 API router
+					// S3 API router.
 					"traefik.http.routers.{$this->project_name}-s3-api.rule=Host(`s3-{$this->hostname}`)",
 					"traefik.http.routers.{$this->project_name}-s3-api.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-api.service={$this->project_name}-s3-api",
