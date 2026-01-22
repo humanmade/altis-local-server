@@ -561,7 +561,7 @@ class Docker_Compose_Generator {
 					"traefik.http.routers.{$this->project_name}-s3-client.service={$this->project_name}-s3-client",
 					"traefik.http.routers.{$this->project_name}-s3-client.middlewares={$this->project_name}-s3-client-prefix,{$this->project_name}-s3-client-host-header",
 					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.regex=^/uploads/(.*)",
-					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/$$1",
+					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/uploads/$$1",
 					"traefik.http.middlewares.{$this->project_name}-s3-client-host-header.headers.customrequestheaders.Host=s3:7070",
 					"traefik.http.services.{$this->project_name}-s3-client.loadbalancer.server.port=7070",
 				],
