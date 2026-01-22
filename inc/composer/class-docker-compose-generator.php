@@ -156,8 +156,8 @@ class Docker_Compose_Generator {
 				'mailhog' => [
 					'condition' => 'service_started',
 				],
-				's3' => [
-					'condition' => 'service_healthy',
+				's3-create-bucket' => [
+					'condition' => 'service_completed_successfully',
 				],
 			],
 			'image' => $image,
@@ -501,9 +501,11 @@ class Docker_Compose_Generator {
 	protected function get_service_s3() : array {
 		// VersityGW uses POSIX backend with local filesystem.
 		// The root directory /data contains buckets as subdirectories.
-		// We mount content/uploads directly to the bucket directory to avoid sync.
+		// WordPress S3 Uploads stores files with an 'uploads/' prefix in the bucket,
+		// so we mount content/uploads to the bucket's uploads subdirectory.
 		// Use sidecar metadata for cross-platform compatibility
 		$bucket_dir = "/data/{$this->bucket_name}";
+		$uploads_dir = "{$bucket_dir}/uploads";
 		$meta_dir = '/meta';
 		
 		return $this->apply_service_defaults( [
@@ -511,7 +513,7 @@ class Docker_Compose_Generator {
 				'image' => 'versity/versitygw:v1.1.0',
 				'container_name' => "{$this->project_name}-s3",
 				'volumes' => [
-					"{$this->root_dir}/content/uploads:{$bucket_dir}:rw",
+					"{$this->root_dir}/content/uploads:{$uploads_dir}:rw",
 					's3-meta:/meta:rw',
 				],
 				'ports' => [
@@ -562,6 +564,31 @@ class Docker_Compose_Generator {
 					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/$$1",
 					"traefik.http.middlewares.{$this->project_name}-s3-client-host-header.headers.customrequestheaders.Host=s3:7070",
 					"traefik.http.services.{$this->project_name}-s3-client.loadbalancer.server.port=7070",
+				],
+			],
+			's3-create-bucket' => [
+				'image' => 'amazon/aws-cli:latest',
+				'depends_on' => [
+					's3' => [
+						'condition' => 'service_healthy',
+					],
+				],
+				'links' => [
+					's3',
+				],
+				'environment' => [
+					'AWS_ACCESS_KEY_ID' => 'admin',
+					'AWS_SECRET_ACCESS_KEY' => 'password',
+					'AWS_DEFAULT_REGION' => 'us-east-1',
+				],
+				'entrypoint' => [
+					'/bin/sh',
+					'-c',
+					sprintf(
+						'aws s3api create-bucket --bucket %s --endpoint-url=http://s3:7070 || true && aws s3api put-bucket-acl --bucket %s --acl public-read --endpoint-url=http://s3:7070',
+						$this->bucket_name,
+						$this->bucket_name
+					),
 				],
 			],
 		] );
