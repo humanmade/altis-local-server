@@ -46,7 +46,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, import-uploads' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -92,8 +92,6 @@ SSL commands:
 	ssl exec -- "command"         Executes an arbitrary mkcert command
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
-Sync files from content/uploads to the S3 container:
-	import-uploads                Syncs files from `content/uploads` to the S3 container.
 EOT
 			)
 			->addOption( 'root', 'r', InputOption::VALUE_OPTIONAL, 'Run as root', 'debug' )
@@ -225,8 +223,6 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( in_array( $subcommand, [ 'shell', 'ssh' ], true ) ) {
 			return $this->shell( $input, $output );
-		} elseif ( $subcommand === 'import-uploads' ) {
-			return $this->import_uploads( $input, $output );
 		} elseif ( $subcommand === 'create-alias' ) {
 			return $this->create_alias( $input, $output );
 		} elseif ( $subcommand === null ) {
@@ -932,7 +928,6 @@ EOT;
 					$domains[] = $hostname;
 					$domains[] = "*.$hostname";
 					$domains[] = "s3-$hostname";
-					$domains[] = "s3-console-$hostname";
 					$domains[] = "cognito-$hostname";
 					$domains[] = "pinpoint-$hostname";
 					$domains[] = "elasticsearch-$hostname";
@@ -1034,7 +1029,6 @@ EOT;
 		$domains = array_merge( [
 			$hostname,
 			"s3-$hostname",
-			"s3-console-$hostname",
 			"cognito-$hostname",
 			"pinpoint-$hostname",
 			"elasticsearch-$hostname",
@@ -1138,49 +1132,6 @@ EOT;
 				'PORT' => $ports_matches[2],
 			]
 		);
-	}
-
-	/**
-	 * Import uploads from the host machine to the S3 container.
-	 *
-	 * @return int
-	 */
-	protected function import_uploads() {
-		return $this->minio_client( sprintf(
-			'mirror --overwrite --exclude ".*" /content local/s3-%s',
-			$this->get_project_subdomain()
-		) );
-	}
-
-	/**
-	 * Pass a command through to the minio client.
-	 *
-	 * @param string $command The command for minio client.
-	 * @return int
-	 */
-	protected function minio_client( string $command ) {
-		$columns = exec( 'tput cols' );
-		$lines = exec( 'tput lines' );
-
-		$base_command = sprintf(
-			'docker run ' .
-				'-e COLUMNS=%1%d -e LINES=%2$d ' .
-				'-e MC_HOST_local=http://admin:password@s3:9000 ' .
-				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
-				'--network=%4$s_default ' .
-				'--name=%4$s-import-uploads ' .
-				'--rm ' . // Clean up container after it exits.
-				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
-			$columns,
-			$lines,
-			getcwd(),
-			$this->get_project_subdomain(),
-			escapeshellcmd( $command )
-		);
-
-		passthru( $base_command, $return_var );
-
-		return $return_var;
 	}
 
 	/**

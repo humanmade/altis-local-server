@@ -125,4 +125,3 @@ in `composer.json`, namely the `altis.modules.local-server` tree, specifically t
   - `composer server db info` - Print MySQL connection details.
   - `composer server db (sequel|spf)` - Opens a connection to the database in [Sequel Ace](https://sequel-ace.com/).
   - `composer server db (tableplus|tbp)` - Opens a connection to the database in [Table Plus](https://tableplus.com/).
-- `composer server import-uploads` - Syncs files from `content/uploads` to the S3 container.
