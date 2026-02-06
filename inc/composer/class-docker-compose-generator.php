@@ -513,22 +513,12 @@ class Docker_Compose_Generator {
 	 * @return array
 	 */
 	protected function get_service_s3() : array {
-		// VersityGW uses POSIX backend with local filesystem.
-		// The root directory /data contains buckets as subdirectories.
-		// WordPress S3 Uploads stores files with an 'uploads/' prefix in the bucket,
-		// so we mount content/uploads to the bucket's uploads subdirectory.
-		// Use sidecar metadata for cross-platform compatibility
-		$bucket_dir = "/data/{$this->bucket_name}";
-		$uploads_dir = "{$bucket_dir}/uploads";
-		$meta_dir = '/meta';
-		
 		return $this->apply_service_defaults( [
 			's3' => [
 				'image' => 'versity/versitygw:v1.1.0',
 				'container_name' => "{$this->project_name}-s3",
 				'volumes' => [
-					"{$this->root_dir}/content/uploads:{$uploads_dir}:rw",
-					's3-meta:/meta:rw',
+					's3-data:/data:rw',
 				],
 				'ports' => [
 					'7070',
@@ -545,10 +535,6 @@ class Docker_Compose_Generator {
 				'command' => [
 					'posix',
 					'/data',
-					'--sidecar',
-					'/meta/metadata',
-					'--versioning-dir',
-					'/meta/versioning',
 					'--port',
 					'7070',
 				],
@@ -569,13 +555,14 @@ class Docker_Compose_Generator {
 					"traefik.http.routers.{$this->project_name}-s3-api.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-api.service={$this->project_name}-s3-api",
 					"traefik.http.services.{$this->project_name}-s3-api.loadbalancer.server.port=7070",
-					// S3 Client router (for uploads path)
+					// S3 Client router (for uploads path).
 					"traefik.http.routers.{$this->project_name}-s3-client.rule=" . $this->get_s3_client_host_rule() . ' && PathPrefix(`/uploads`)',
 					"traefik.http.routers.{$this->project_name}-s3-client.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-client.service={$this->project_name}-s3-client",
-					"traefik.http.routers.{$this->project_name}-s3-client.middlewares={$this->project_name}-s3-client-prefix",
+					"traefik.http.routers.{$this->project_name}-s3-client.middlewares={$this->project_name}-s3-client-prefix,{$this->project_name}-s3-client-host",
 					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.regex=^/uploads/(.*)",
 					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/uploads/$$1",
+					"traefik.http.middlewares.{$this->project_name}-s3-client-host.headers.customrequestheaders.Host=s3-{$this->hostname}",
 					"traefik.http.services.{$this->project_name}-s3-client.loadbalancer.server.port=7070",
 				],
 			],
@@ -598,8 +585,38 @@ class Docker_Compose_Generator {
 					'/bin/sh',
 					'-c',
 					sprintf(
-						'aws s3api create-bucket --bucket %s --endpoint-url=http://s3:7070 || true && aws s3api put-bucket-acl --bucket %s --acl public-read --endpoint-url=http://s3:7070',
+						"aws s3api create-bucket --bucket %s --endpoint-url=http://s3:7070 || true; aws s3api put-bucket-policy --bucket %s --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"PublicReadUploads\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::%s/uploads/*\"]}]}' --endpoint-url=http://s3:7070 || true",
 						$this->bucket_name,
+						$this->bucket_name,
+						$this->bucket_name
+					),
+				],
+			],
+			's3-sync-to-host' => [
+				'image' => 'amazon/aws-cli:2.31.0',
+				'container_name' => "{$this->project_name}-s3-sync",
+				'restart' => 'unless-stopped',
+				'depends_on' => [
+					's3-create-bucket' => [
+						'condition' => 'service_completed_successfully',
+					],
+				],
+				'links' => [
+					's3',
+				],
+				'environment' => [
+					'AWS_ACCESS_KEY_ID' => 'admin',
+					'AWS_SECRET_ACCESS_KEY' => 'password',
+					'AWS_DEFAULT_REGION' => 'us-east-1',
+				],
+				'volumes' => [
+					"{$this->root_dir}/content/uploads:/content/uploads:delegated",
+				],
+				'entrypoint' => [
+					'/bin/sh',
+					'-c',
+					sprintf(
+						'while true; do aws s3 sync s3://%s/uploads /content/uploads --endpoint-url=http://s3:7070 --delete --only-show-errors; sleep 10; done',
 						$this->bucket_name
 					),
 				],
@@ -770,7 +787,7 @@ class Docker_Compose_Generator {
 			'volumes' => [
 				'db-data' => null,
 				'tmp' => null,
-				's3-meta' => null,
+				's3-data' => null,
 				'socket' => null,
 			],
 		];
