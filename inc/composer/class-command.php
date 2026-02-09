@@ -1408,8 +1408,12 @@ EOT
 		$project_name = $this->get_project_subdomain();
 		$bucket_name = "s3-{$project_name}";
 
+		$columns = exec( 'tput cols 2>/dev/null' ) ?: 120;
+		$lines = exec( 'tput lines 2>/dev/null' ) ?: 40;
+
 		$command = sprintf(
-			'docker run --rm ' .
+			'docker run --rm -it ' .
+				'-e COLUMNS=%d -e LINES=%d ' .
 				'-e AWS_ACCESS_KEY_ID=admin ' .
 				'-e AWS_SECRET_ACCESS_KEY=password ' .
 				'-e AWS_DEFAULT_REGION=us-east-1 ' .
@@ -1417,6 +1421,8 @@ EOT
 				'--network=%s_default ' .
 				'amazon/aws-cli:2.31.0 ' .
 				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070 --delete',
+			$columns,
+			$lines,
 			escapeshellarg( getcwd() ),
 			escapeshellarg( $project_name ),
 			$bucket_name
