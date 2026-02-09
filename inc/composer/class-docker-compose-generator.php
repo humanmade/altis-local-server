@@ -616,7 +616,7 @@ class Docker_Compose_Generator {
 					'/bin/sh',
 					'-c',
 					sprintf(
-						'while true; do aws s3 sync s3://%s/uploads /content/uploads --endpoint-url=http://s3:7070 --delete --only-show-errors; sleep 10; done',
+						'while true; do aws s3 sync s3://%s/uploads /content/uploads --endpoint-url=http://s3:7070 --only-show-errors; sleep 10; done',
 						$this->bucket_name
 					),
 				],
