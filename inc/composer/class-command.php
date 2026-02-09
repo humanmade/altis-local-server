@@ -46,7 +46,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, import-uploads' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -90,6 +90,8 @@ SSL commands:
 	ssl install                   Installs and trusts Root Certificate Authority
 	ssl generate [domains]        Generate SSL certificates for configured domains
 	ssl exec -- "command"         Executes an arbitrary mkcert command
+S3 commands:
+	import-uploads                Syncs files from `content/uploads` to the S3 container.
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 EOT
@@ -225,6 +227,8 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'create-alias' ) {
 			return $this->create_alias( $input, $output );
+		} elseif ( $subcommand === 'import-uploads' ) {
+			return $this->import_uploads( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -1389,6 +1393,44 @@ EOT
 		);
 
 		return $return_val;
+	}
+
+	/**
+	 * Sync files from content/uploads to the S3 container.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
+	protected function import_uploads( InputInterface $input, OutputInterface $output ) {
+		$output->writeln( 'Syncing content/uploads to S3...' );
+
+		$project_name = $this->get_project_subdomain();
+		$bucket_name = "s3-{$project_name}";
+
+		$command = sprintf(
+			'docker run --rm ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
+				'--volume=%s/content/uploads:/content/uploads:ro ' .
+				'--network=%s_default ' .
+				'amazon/aws-cli:2.31.0 ' .
+				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070 --delete',
+			escapeshellarg( getcwd() ),
+			escapeshellarg( $project_name ),
+			$bucket_name
+		);
+
+		passthru( $command, $return_var );
+
+		if ( $return_var === 0 ) {
+			$output->writeln( '<info>Uploads synced to S3 successfully.</>' );
+		} else {
+			$output->writeln( '<error>Failed to sync uploads to S3.</>' );
+		}
+
+		return $return_var;
 	}
 
 }
