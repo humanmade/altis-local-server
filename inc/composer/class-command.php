@@ -46,7 +46,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, import-uploads' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, s3' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -91,7 +91,10 @@ SSL commands:
 	ssl generate [domains]        Generate SSL certificates for configured domains
 	ssl exec -- "command"         Executes an arbitrary mkcert command
 S3 commands:
-	import-uploads                Syncs files from `content/uploads` to the S3 container.
+	import-uploads                Sync `content/uploads` to S3. Alias for `s3 import-uploads`.
+	s3 import-uploads             Sync `content/uploads` to the S3 container.
+	s3 ls [<path>]                List objects in the S3 bucket.
+	s3 exec -- <command>          Run an AWS CLI S3 command.
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
 EOT
@@ -227,8 +230,11 @@ EOT
 			return $this->shell( $input, $output );
 		} elseif ( $subcommand === 'create-alias' ) {
 			return $this->create_alias( $input, $output );
+		} elseif ( $subcommand === 's3' ) {
+			return $this->s3( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
-			return $this->import_uploads( $input, $output );
+			$project_name = $this->get_project_subdomain();
+			return $this->s3_import_uploads( $output, $project_name, "s3-{$project_name}" );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -1396,17 +1402,51 @@ EOT
 	}
 
 	/**
-	 * Sync files from content/uploads to the S3 container.
+	 * S3 helper commands.
 	 *
 	 * @param InputInterface $input Command input object.
 	 * @param OutputInterface $output Command output object.
 	 * @return int
 	 */
-	protected function import_uploads( InputInterface $input, OutputInterface $output ) {
-		$output->writeln( 'Syncing content/uploads to S3...' );
+	protected function s3( InputInterface $input, OutputInterface $output ) {
+		$options = $input->getArgument( 'options' );
+		$subcommand = $options[0] ?? null;
 
 		$project_name = $this->get_project_subdomain();
 		$bucket_name = "s3-{$project_name}";
+
+		if ( $subcommand === 'import-uploads' ) {
+			return $this->s3_import_uploads( $output, $project_name, $bucket_name );
+		} elseif ( $subcommand === 'ls' ) {
+			$path = $options[1] ?? '';
+			return $this->s3_ls( $output, $project_name, $bucket_name, $path );
+		} elseif ( $subcommand === 'exec' ) {
+			// Remove 'exec' and optional '--' from the options.
+			array_shift( $options );
+			if ( ! empty( $options ) && $options[0] === '--' ) {
+				array_shift( $options );
+			}
+			return $this->s3_exec( $output, $project_name, $options );
+		}
+
+		$output->writeln( '<error>Usage: composer server s3 <import-uploads|ls|exec></>' );
+		$output->writeln( '' );
+		$output->writeln( '  <info>import-uploads</>             Sync content/uploads to S3' );
+		$output->writeln( '  <info>ls [path]</>                  List objects in S3 bucket' );
+		$output->writeln( '  <info>exec -- <command></>          Run an AWS CLI S3 command' );
+		return 1;
+	}
+
+	/**
+	 * Sync files from content/uploads to the S3 container.
+	 *
+	 * @param OutputInterface $output Command output object.
+	 * @param string $project_name Project name.
+	 * @param string $bucket_name S3 bucket name.
+	 * @return int
+	 */
+	protected function s3_import_uploads( OutputInterface $output, string $project_name, string $bucket_name ) : int {
+		$output->writeln( 'Syncing content/uploads to S3...' );
 
 		$columns = exec( 'tput cols 2>/dev/null' ) ?: 120;
 		$lines = exec( 'tput lines 2>/dev/null' ) ?: 40;
@@ -1420,7 +1460,7 @@ EOT
 				'--volume=%s/content/uploads:/content/uploads:ro ' .
 				'--network=%s_default ' .
 				'amazon/aws-cli:2.31.0 ' .
-				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070 --delete',
+				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070',
 			$columns,
 			$lines,
 			escapeshellarg( getcwd() ),
@@ -1435,6 +1475,73 @@ EOT
 		} else {
 			$output->writeln( '<error>Failed to sync uploads to S3.</>' );
 		}
+
+		return $return_var;
+	}
+
+	/**
+	 * List objects in the S3 bucket.
+	 *
+	 * @param OutputInterface $output Command output object.
+	 * @param string $project_name Project name.
+	 * @param string $bucket_name S3 bucket name.
+	 * @param string $path Optional path prefix.
+	 * @return int
+	 */
+	protected function s3_ls( OutputInterface $output, string $project_name, string $bucket_name, string $path = '' ) : int {
+		$s3_path = "s3://{$bucket_name}/{$path}";
+
+		$command = sprintf(
+			'docker run --rm ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
+				'--network=%s_default ' .
+				'amazon/aws-cli:2.31.0 ' .
+				's3 ls %s --endpoint-url=http://s3:7070 --recursive --human-readable --summarize',
+			escapeshellarg( $project_name ),
+			escapeshellarg( $s3_path )
+		);
+
+		passthru( $command, $return_var );
+
+		return $return_var;
+	}
+
+	/**
+	 * Run an arbitrary AWS CLI S3 command against the local endpoint.
+	 *
+	 * @param OutputInterface $output Command output object.
+	 * @param string $project_name Project name.
+	 * @param array $args Command arguments.
+	 * @return int
+	 */
+	protected function s3_exec( OutputInterface $output, string $project_name, array $args ) : int {
+		if ( empty( $args ) ) {
+			$output->writeln( '<error>Please provide a command to execute.</>' );
+			$output->writeln( 'Example: <info>composer server s3 exec -- s3 ls s3://bucket-name/</>' );
+			return 1;
+		}
+
+		$columns = exec( 'tput cols 2>/dev/null' ) ?: 120;
+		$lines = exec( 'tput lines 2>/dev/null' ) ?: 40;
+
+		$command = sprintf(
+			'docker run --rm -it ' .
+				'-e COLUMNS=%d -e LINES=%d ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
+				'--network=%s_default ' .
+				'amazon/aws-cli:2.31.0 ' .
+				'--endpoint-url=http://s3:7070 %s',
+			$columns,
+			$lines,
+			escapeshellarg( $project_name ),
+			implode( ' ', array_map( 'escapeshellarg', $args ) )
+		);
+
+		passthru( $command, $return_var );
 
 		return $return_var;
 	}
