@@ -140,10 +140,6 @@ function tools_submenus() {
 			'label' => 'MailHog',
 			'url' => network_site_url( '/mailhog' ),
 		],
-		[
-			'label' => 'S3 Browser',
-			'url' => getenv( 'S3_CONSOLE_URL' ),
-		],
 	];
 
 	foreach ( $links as $link ) {
@@ -225,7 +221,6 @@ function get_config_domains( bool $include_aux_services = false ) : array {
 			'pinpoint',
 			'cognito',
 			's3',
-			's3-console',
 		];
 
 		foreach ( $aux_services as $aux_service ) {

@@ -213,7 +213,6 @@ class Docker_Compose_Generator {
 				'S3_UPLOADS_KEY' => 'admin',
 				'S3_UPLOADS_SECRET' => 'password',
 				'S3_UPLOADS_REGION' => 'us-east-1',
-				'S3_CONSOLE_URL' => Command::set_url_scheme( "https://s3-console-{$this->hostname}" ),
 				'TACHYON_URL' => Command::set_url_scheme( "{$this->url}tachyon" ),
 				'PHP_SENDMAIL_PATH' => '/bin/false',
 				// Enables XDebug for all processes and allows setting remote_host externally for Linux support.
@@ -516,32 +515,33 @@ class Docker_Compose_Generator {
 	protected function get_service_s3() : array {
 		return $this->apply_service_defaults( [
 			's3' => [
-				'image' => 'minio/minio:RELEASE.2021-09-18T18-09-59Z',
+				'image' => 'versity/versitygw:v1.1.0',
 				'container_name' => "{$this->project_name}-s3",
 				'volumes' => [
-					's3:/data:rw',
+					's3-data:/data:rw',
 				],
 				'ports' => [
-					'9000',
-					'9001',
+					'7070',
 				],
 				'networks' => [
 					'proxy',
 					'default',
 				],
 				'environment' => [
-					'MINIO_DOMAIN' => "s3.localhost,{$this->hostname},s3-{$this->hostname},s3,localhost",
-					'MINIO_REGION_NAME' => 'us-east-1',
-					'MINIO_ROOT_USER' => 'admin',
-					'MINIO_ROOT_PASSWORD' => 'password',
+					'ROOT_ACCESS_KEY' => 'admin',
+					'ROOT_SECRET_KEY' => 'password',
+					'AWS_REGION' => 'us-east-1',
 				],
-				'command' => 'server /data --console-address ":9001"',
+				'command' => [
+					'posix',
+					'/data',
+					'--port',
+					'7070',
+				],
 				'healthcheck' => [
 					'test' => [
-						'CMD',
-						'curl',
-						'-f',
-						'http://localhost:9000/minio/health/live',
+						'CMD-SHELL',
+						'nc -z localhost 7070 || exit 1',
 					],
 					'interval' => '5s',
 					'timeout' => '5s',
@@ -554,25 +554,20 @@ class Docker_Compose_Generator {
 					"traefik.http.routers.{$this->project_name}-s3-api.rule=Host(`s3-{$this->hostname}`)",
 					"traefik.http.routers.{$this->project_name}-s3-api.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-api.service={$this->project_name}-s3-api",
-					"traefik.http.services.{$this->project_name}-s3-api.loadbalancer.server.port=9000",
-					// S3 Console router.
-					"traefik.http.routers.{$this->project_name}-s3-console.rule=Host(`s3-console-{$this->hostname}`)",
-					"traefik.http.routers.{$this->project_name}-s3-console.entrypoints=web,websecure",
-					"traefik.http.routers.{$this->project_name}-s3-console.service={$this->project_name}-s3-console",
-					"traefik.http.services.{$this->project_name}-s3-console.loadbalancer.server.port=9001",
+					"traefik.http.services.{$this->project_name}-s3-api.loadbalancer.server.port=7070",
 					// S3 Client router (for uploads path).
 					"traefik.http.routers.{$this->project_name}-s3-client.rule=" . $this->get_s3_client_host_rule() . ' && PathPrefix(`/uploads`)',
 					"traefik.http.routers.{$this->project_name}-s3-client.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-s3-client.service={$this->project_name}-s3-client",
-					"traefik.http.routers.{$this->project_name}-s3-client.middlewares={$this->project_name}-s3-client-prefix,{$this->project_name}-s3-client-host-header",
+					"traefik.http.routers.{$this->project_name}-s3-client.middlewares={$this->project_name}-s3-client-prefix,{$this->project_name}-s3-client-host",
 					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.regex=^/uploads/(.*)",
-					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/$$1",
-					"traefik.http.middlewares.{$this->project_name}-s3-client-host-header.headers.customrequestheaders.Host=s3:9000",
-					"traefik.http.services.{$this->project_name}-s3-client.loadbalancer.server.port=9000",
+					"traefik.http.middlewares.{$this->project_name}-s3-client-prefix.replacepathregex.replacement=/{$this->bucket_name}/uploads/$$1",
+					"traefik.http.middlewares.{$this->project_name}-s3-client-host.headers.customrequestheaders.Host=s3-{$this->hostname}",
+					"traefik.http.services.{$this->project_name}-s3-client.loadbalancer.server.port=7070",
 				],
 			],
 			's3-create-bucket' => [
-				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'image' => 'amazon/aws-cli:2.31.0',
 				'depends_on' => [
 					's3' => [
 						'condition' => 'service_healthy',
@@ -582,12 +577,23 @@ class Docker_Compose_Generator {
 					's3',
 				],
 				'environment' => [
-					'MC_HOST_local' => 'http://admin:password@s3:9000',
+					'AWS_ACCESS_KEY_ID' => 'admin',
+					'AWS_SECRET_ACCESS_KEY' => 'password',
+					'AWS_DEFAULT_REGION' => 'us-east-1',
 				],
-				'entrypoint' => "/bin/sh -c \"mc mb -p local/{$this->bucket_name} && mc policy set public local/{$this->bucket_name}\"",
+				'entrypoint' => [
+					'/bin/sh',
+					'-c',
+					sprintf(
+						"aws s3api create-bucket --bucket %s --endpoint-url=http://s3:7070 || true; aws s3api put-bucket-policy --bucket %s --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"PublicReadUploads\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::%s/uploads/*\"]}]}' --endpoint-url=http://s3:7070 || true",
+						$this->bucket_name,
+						$this->bucket_name,
+						$this->bucket_name
+					),
+				],
 			],
 			's3-sync-to-host' => [
-				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'image' => 'amazon/aws-cli:2.31.0',
 				'container_name' => "{$this->project_name}-s3-sync",
 				'restart' => 'unless-stopped',
 				'depends_on' => [
@@ -595,16 +601,25 @@ class Docker_Compose_Generator {
 						'condition' => 'service_completed_successfully',
 					],
 				],
+				'links' => [
+					's3',
+				],
 				'environment' => [
-					'MC_HOST_local' => 'http://admin:password@s3:9000',
+					'AWS_ACCESS_KEY_ID' => 'admin',
+					'AWS_SECRET_ACCESS_KEY' => 'password',
+					'AWS_DEFAULT_REGION' => 'us-east-1',
 				],
 				'volumes' => [
 					"{$this->root_dir}/content/uploads:/content/uploads:delegated",
 				],
-				'links' => [
-					's3',
+				'entrypoint' => [
+					'/bin/sh',
+					'-c',
+					sprintf(
+						'while true; do aws s3 sync s3://%s/uploads /content/uploads --endpoint-url=http://s3:7070 --only-show-errors; sleep 10; done',
+						$this->bucket_name
+					),
 				],
-				'entrypoint' => "/bin/sh -c \"mc mirror --watch --overwrite -a local/{$this->bucket_name} /content\"",
 			],
 		] );
 	}
@@ -627,6 +642,7 @@ class Docker_Compose_Generator {
 				],
 				'networks' => [
 					'proxy',
+					'default',
 				],
 				'labels' => [
 					'traefik.enable=true',
@@ -642,11 +658,17 @@ class Docker_Compose_Generator {
 				'environment' => [
 					'S3_REGION' => 'us-east-1',
 					'S3_BUCKET' => "{$this->bucket_name}",
+					// Use direct internal connection to S3 service for better performance
+					// VersityGW is S3-compatible and supports path-style requests
 					'S3_ENDPOINT' => Command::set_url_scheme( "https://s3-{$this->hostname}/" ),
 					'S3_FORCE_PATH_STYLE' => 'true',
 					'NODE_TLS_REJECT_UNAUTHORIZED' => 0,
-					'AWS_ACCESS_KEY_ID' => 'newuser',
-					'AWS_SECRET_ACCESS_KEY' => 'newpassword',
+					'AWS_ACCESS_KEY_ID' => 'admin',
+					'AWS_SECRET_ACCESS_KEY' => 'password',
+				],
+				'links' => [
+					's3',
+					's3:s3.localhost',
 				],
 				'external_links' => [
 					"proxy:s3-{$this->hostname}",
@@ -765,7 +787,7 @@ class Docker_Compose_Generator {
 			'volumes' => [
 				'db-data' => null,
 				'tmp' => null,
-				's3' => null,
+				's3-data' => null,
 				'socket' => null,
 			],
 		];
