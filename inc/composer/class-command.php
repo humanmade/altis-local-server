@@ -14,6 +14,7 @@ namespace Altis\Local_Server\Composer;
 
 use Composer\Command\BaseCommand;
 use Composer\Composer;
+use Exception;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -286,18 +287,29 @@ EOT
 
 		// Generate SSL certificate if not found, and the secure flag is turned on.
 		$is_secure = $this->is_using_codespaces() ? false : static::get_composer_config()['secure'] ?? true;
-		if ( $is_secure && ! file_exists( 'vendor/ssl-cert.pem' ) ) {
-			// Create the certificate programmatically.
-			$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
-				'subcommand' => 'ssl',
-				'options' => [
-					'generate',
-					'*.altis.dev', // default domain, configured names will be automatically added.
-				],
-			] ), $output );
+		if ( $is_secure ) {
+			// Do we need to regenerate the certificate?
+			$needs_new_cert = false;
+			if ( ! file_exists( 'vendor/ssl-cert.pem' ) ) {
+				$needs_new_cert = true;
+			} elseif ( $this->check_ssl_expiry( 'vendor/ssl-cert.pem' ) < 30 ) {
+				$output->writeln( '<info>Certificate is expiring in less than 30 days, regenerating.</>' );
+				$needs_new_cert = true;
+			}
 
-			if ( $not_generated ) {
-				return $not_generated;
+			// Create the certificate programmatically.
+			if ( $needs_new_cert ) {
+				$not_generated = $this->getApplication()->find( 'local-server' )->run( new ArrayInput( [
+					'subcommand' => 'ssl',
+					'options' => [
+						'generate',
+						'*.altis.dev', // default domain, configured names will be automatically added.
+					],
+				] ), $output );
+
+				if ( $not_generated ) {
+					return $not_generated;
+				}
 			}
 		}
 
@@ -984,15 +996,22 @@ EOT;
 				break;
 
 			case '':
-				$cert_exists = file_exists( 'vendor/ssl-cert.pem' ) && file_exists( 'vendor/ssl-key.pem' );
+				$cert_file = 'vendor/ssl-cert.pem';
+				$cert_exists = file_exists( $cert_file ) && file_exists( $cert_file );
 				if ( ! $cert_exists ) {
 					$output->writeln( "<error>Certificate file does not exist. Use 'composer server ssl generate' to generate one. </error>" );
 					return 1;
-				} else {
-					$output->writeln( '<info>Certificate file exists.</info>' );
 				}
 
-				break;
+				// Check certificate expiration.
+				$validity_remaining = $this->check_ssl_expiry( $cert_file );
+				if ( $validity_remaining < 0 ) {
+					$output->writeln( "<error>Certificate has expired. Use 'composer server ssl generate' to regenerate it.</error>" );
+					return 1;
+				}
+
+				$output->writeln( "<info>Certificate exists and is valid for $validity_remaining more days</info>" );
+				return 0;
 
 			default:
 				$output->writeln( "<error>The subcommand $subcommand is not recognized</error>" );
@@ -1022,6 +1041,27 @@ EOT;
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get the SSL certificate expiration date.
+	 *
+	 * @throws Exception If openssl is missing, the certificate is invalid, or it cannot be read.
+	 * @param string $path Path to the certificate file.
+	 * @return int Days until expiry. If negative, the certificate has already expired.
+	 */
+	protected function check_ssl_expiry( string $path ) : int {
+		$cert_info = shell_exec( "openssl x509 -in $path -noout -enddate 2>/dev/null" );
+		if ( ! $cert_info ) {
+			throw new Exception( 'Unable to retrieve certificate information.' );
+		}
+
+		// Parse the date and check if expired.
+		if ( ! preg_match( '/notAfter=(.+)/', $cert_info, $matches ) ) {
+			throw new Exception( 'Unable to parse certificate expiration date.' );
+		}
+		$expiry_date = strtotime( $matches[1] );
+		return ceil( ( $expiry_date - time() ) / 86400 );
 	}
 
 	/**
