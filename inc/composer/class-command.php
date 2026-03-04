@@ -304,7 +304,7 @@ EOT
 		// Save a reference to the host for later runs.
 		file_put_contents( 'vendor/host', "$name.$tld" );
 
-		$proxy = $this->process( $this->get_compose_command( '-f altis/local-server/docker/proxy.yml up -d' ), 'vendor' );
+		$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml up -d' ) );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
@@ -411,7 +411,7 @@ EOT
 
 		if ( $service === '' && $input->hasParameterOption( '--clean' ) ) {
 			$output->writeln( '<info>Stopping proxy container...</>' );
-			$proxy = $this->process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
+			$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml stop' ) );
 			$proxy->setTimeout( 0 );
 			$proxy->setTty( posix_isatty( STDOUT ) );
 			$proxy->run( function ( $type, $buffer ) {
@@ -461,7 +461,7 @@ EOT
 
 		if ( $remove_proxy ) {
 			$output->writeln( '<error>Destroying proxy container...</>' );
-			$proxy = $this->process( $this->get_compose_command( '-f proxy.yml down -v' ), 'vendor/altis/local-server/docker' );
+			$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml down -v' ) );
 			$proxy->setTty( posix_isatty( STDOUT ) );
 			$proxy->run( function ( $type, $buffer ) {
 				echo $buffer;
@@ -492,7 +492,7 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+		$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml restart' ) );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -961,7 +961,7 @@ EOT;
 				exec( 'docker ps | grep altis-proxy', $result );
 				if ( $result ) {
 					$output->writeln( '<info>Restarting proxy server to activate the new certificate...</info>' );
-					$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+					$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml restart' ) );
 					$proxy->setTty( posix_isatty( STDOUT ) );
 					$proxy->run( function ( $type, $buffer ) {
 						echo $buffer;

@@ -6,10 +6,10 @@ services:
     container_name: altis-proxy
     mem_limit: 128m
     volumes:
-      - "$PWD/altis/local-server/docker/conf/traefik.toml:/etc/traefik/traefik.toml"
-      - "$PWD/altis/local-server/docker/conf/dynamic.toml:/etc/traefik/dynamic.toml"
-      - "$PWD/ssl-cert.pem:/etc/traefik/ssl-cert.pem"
-      - "$PWD/ssl-key.pem:/etc/traefik/ssl-key.pem"
+      - "$PWD/vendor/altis/local-server/docker/conf/traefik.toml:/etc/traefik/traefik.toml"
+      - "$PWD/vendor/altis/local-server/docker/conf/dynamic.toml:/etc/traefik/dynamic.toml"
+      - "$PWD/vendor/ssl-cert.pem:/etc/traefik/ssl-cert.pem"
+      - "$PWD/vendor/ssl-key.pem:/etc/traefik/ssl-key.pem"
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - '8080:8080'
