@@ -428,7 +428,7 @@ class Docker_Compose_Generator {
 	protected function get_service_redis() : array {
 		return $this->apply_service_defaults( [
 			'redis' => [
-				'image' => 'redis:7.0-alpine',
+				'image' => 'valkey/valkey:7.2.6-alpine',
 				'container_name' => "{$this->project_name}-redis",
 				'ports' => [
 					'6379',
