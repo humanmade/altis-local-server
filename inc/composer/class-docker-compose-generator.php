@@ -586,9 +586,7 @@ class Docker_Compose_Generator {
 					'/bin/sh',
 					'-c',
 					sprintf(
-						"aws s3api create-bucket --bucket %s --endpoint-url=http://s3:7070 || true; aws s3api put-bucket-policy --bucket %s --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"PublicReadUploads\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::%s/uploads/*\"]}]}' --endpoint-url=http://s3:7070 || true",
-						$this->bucket_name,
-						$this->bucket_name,
+						"aws s3api create-bucket --bucket %s --endpoint-url=http://s3:7070 || true",
 						$this->bucket_name
 					),
 				],
