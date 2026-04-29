@@ -52,6 +52,21 @@ composer server cli -- language core install fr_FR
 
 CLI commands via Local Server also support piping for more complex shell commands.
 
+## Running without a terminal (CI, scripts, cron, agents)
+
+Most `composer server` subcommands run fine without an attached terminal:
+
+- `composer server cli|wp|exec -- <command>`
+- `composer server db exec -- "<sql>"`
+- `composer server db -- -e "<sql>"` (any args that include `-e`/`--execute`/`-B`)
+- `composer server s3 import-uploads`, `composer server s3 ls`, `composer server s3 exec -- <args>`
+- `composer server logs <service>`
+- `composer server start`, `stop`, `restart`, `status`, `ssl …`
+
+The interactive subcommands — `composer server shell`, the `composer server db` REPL, and the `composer server logs` service picker — require an attached terminal. When run without one (e.g. CI, cron, ssh without `-t`, an editor task, or an AI agent) they exit immediately with a clear error suggesting a non-interactive alternative, instead of hanging on a prompt or failing on Docker's TTY error.
+
+`composer server destroy` still prompts for confirmation. Without a TTY the prompt's default (no) is taken, so the command becomes a silent no-op — pass `--no-interaction` explicitly when scripting if you want the same behaviour without the spurious prompt attempt.
+
 ### Importing a database backup
 
 To import a database backup with local server, you will need to have a database backup file in a location that is accessible from
