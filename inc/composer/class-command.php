@@ -80,7 +80,7 @@ Open a shell:
 	shell                         Open a Bash shell as the www-data user.
 	shell --root|-r               Open a Bash shell as the root user.
 Database commands:
-	db                            Log into MySQL on the Database server
+	db [-- <args>]                Log into MySQL on the Database server, with optional mysql args
 	db (sequel|spf)               Opens Sequel Pro/Sequel Ace with the database connection
 	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
@@ -695,7 +695,8 @@ EOT
 	 * @return int
 	 */
 	protected function db( InputInterface $input, OutputInterface $output ) {
-		$db = $input->getArgument( 'options' )[0] ?? null;
+		$options = $input->getArgument( 'options' ) ?? [];
+		$db = $options[0] ?? null;
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 
@@ -776,7 +777,6 @@ EOT;
 				break;
 
 			case 'exec':
-				$options = $input->getArgument( 'options' ) ?? [];
 				// Remove the subcommand, we don't need it.
 				array_shift( $options );
 				// The query is always the last option.
@@ -796,13 +796,16 @@ EOT;
 				break;
 
 			case null:
-				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root", $return_val );
-				break;
-
 			default:
-				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
-				$return_val = 1;
+				if ( $db !== null && strpos( $db, '-' ) !== 0 ) {
+					$output->writeln( "<error>The subcommand $db is not recognized</error>" );
+					$return_val = 1;
+					break;
+				}
+
+				$args = count( $options ) > 0 ? ' ' . implode( ' ', array_map( 'escapeshellarg', $options ) ) : '';
+				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+				passthru( "$base_command mysql --database=wordpress --user=root$args", $return_val );
 		}
 
 		return $return_val;

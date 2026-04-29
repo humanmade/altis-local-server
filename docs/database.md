@@ -31,6 +31,12 @@ You can log into MySQL and run any query in the default database (`wordpress`) b
 composer server db
 ```
 
+Pass extra arguments through to the MySQL client by separating them with `--`:
+
+```sh
+composer server db -- -A
+```
+
 Use `composer server db info` to retrieve MySQL info and connection details:
 
 ```sh
