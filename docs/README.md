@@ -122,6 +122,7 @@ in `composer.json`, namely the `altis.modules.local-server` tree, specifically t
 - `composer server create-alias` - Create a WP CLI alias. Useful if you have WP CLI installed locally.
 - `composer server exec -- <command>` - Runs any command on the PHP container.
 - `composer server db` - Logs into MySQL on the DB container.
+  - `composer server db -- -A` - Pass arguments directly to the MySQL client.
   - `composer server db info` - Print MySQL connection details.
   - `composer server db (sequel|spf)` - Opens a connection to the database in [Sequel Ace](https://sequel-ace.com/).
   - `composer server db (tableplus|tbp)` - Opens a connection to the database in [Table Plus](https://tableplus.com/).
