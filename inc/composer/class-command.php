@@ -618,6 +618,9 @@ EOT
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		if ( ! isset( $input->getArgument( 'options' )[0] ) ) {
+			if ( ! $this->require_tty( $output, 'composer server logs', 'composer server logs <service>  (e.g. php, db, nginx, elasticsearch)' ) ) {
+				return 1;
+			}
 			$helper = $this->getHelper( 'question' );
 			$question = new ChoiceQuestion(
 				'Please select a service (defaults to php)',
@@ -660,6 +663,10 @@ EOT
 	 * @return int
 	 */
 	protected function shell( InputInterface $input, OutputInterface $output ) {
+		if ( ! $this->require_tty( $output, 'composer server shell', 'composer server exec -- <command>' ) ) {
+			return 1;
+		}
+
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		$command_prefix = $this->get_base_command_prefix();
@@ -700,13 +707,20 @@ EOT
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 
-		$base_command = sprintf(
-			// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-			'docker exec -it -u root -e COLUMNS=%d -e LINES=%d -e MYSQL_PWD=wordpress %s-db',
-			$columns,
-			$lines,
-			$this->get_project_subdomain()
-		);
+		// Build the docker exec base command. Pass `-it` only for the
+		// interactive REPL; non-interactive paths (`db exec`) use `-i` so they
+		// work in scripts, CI, cron, and other no-TTY contexts.
+		$build_base_command = function ( bool $interactive ) use ( $columns, $lines ) : string {
+			$flags = $interactive ? '-it' : '-i';
+			return sprintf(
+				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+				'docker exec %s -u root -e COLUMNS=%d -e LINES=%d -e MYSQL_PWD=wordpress %s-db',
+				$flags,
+				$columns,
+				$lines,
+				$this->get_project_subdomain()
+			);
+		};
 
 		$return_val = 0;
 
@@ -791,6 +805,7 @@ EOT;
 				if ( substr( $query, -1 ) !== ';' ) {
 					$query = "$query;";
 				}
+				$base_command = $build_base_command( false );
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root $args -e \"$query\"", $return_val );
 				break;
@@ -803,6 +818,27 @@ EOT;
 					break;
 				}
 
+				// mysql exits immediately for `-e <query>` / `--execute=<query>`
+				// and `-B` / `--batch`; everything else opens the interactive
+				// REPL. Treat the former as non-interactive so they work in
+				// scripts, CI, cron, and other no-TTY contexts.
+				$is_non_interactive = false;
+				foreach ( $options as $opt ) {
+					if (
+						$opt === '-e' || $opt === '--execute'
+						|| $opt === '-B' || $opt === '--batch'
+						|| strpos( $opt, '--execute=' ) === 0
+					) {
+						$is_non_interactive = true;
+						break;
+					}
+				}
+
+				if ( ! $is_non_interactive && ! $this->require_tty( $output, 'composer server db', 'composer server db exec -- "<query>", or pass -e "<query>" through with --' ) ) {
+					return 1;
+				}
+
+				$base_command = $build_base_command( ! $is_non_interactive );
 				$args = count( $options ) > 0 ? ' ' . implode( ' ', array_map( 'escapeshellarg', $options ) ) : '';
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
 				passthru( "$base_command mysql --database=wordpress --user=root$args", $return_val );
@@ -1249,6 +1285,41 @@ EOT;
 	}
 
 	/**
+	 * Check whether the current process is attached to an interactive terminal.
+	 *
+	 * @return boolean
+	 */
+	public static function is_tty() : bool {
+		return function_exists( 'posix_isatty' )
+			&& posix_isatty( STDIN )
+			&& posix_isatty( STDOUT );
+	}
+
+	/**
+	 * Gate a command on the presence of an interactive terminal.
+	 *
+	 * Prints a friendly error and returns false when no TTY is attached, so
+	 * scripted/CI/agent callers get a clear message instead of an opaque
+	 * failure from Docker (or a hung prompt).
+	 *
+	 * @param OutputInterface $output      Command output object.
+	 * @param string          $command     Full command label, e.g. 'composer server shell'.
+	 * @param string|null     $alternative Optional non-interactive alternative to suggest.
+	 * @return boolean True when a TTY is available; false otherwise.
+	 */
+	protected function require_tty( OutputInterface $output, string $command, ?string $alternative = null ) : bool {
+		if ( self::is_tty() ) {
+			return true;
+		}
+
+		$output->writeln( "<error>`$command` requires an interactive terminal.</>" );
+		if ( $alternative ) {
+			$output->writeln( "<info>For non-interactive use, try: $alternative</>" );
+		}
+		return false;
+	}
+
+	/**
 	 * Check if the current host operating system is Mac OS.
 	 *
 	 * @return boolean
@@ -1453,9 +1524,10 @@ EOT
 
 		$columns = exec( 'tput cols 2>/dev/null' ) ?: 120;
 		$lines = exec( 'tput lines 2>/dev/null' ) ?: 40;
+		$tty_flag = self::is_tty() ? '-it' : '-i';
 
 		$command = sprintf(
-			'docker run --rm -it ' .
+			'docker run --rm %s ' .
 				'-e COLUMNS=%d -e LINES=%d ' .
 				'-e AWS_ACCESS_KEY_ID=admin ' .
 				'-e AWS_SECRET_ACCESS_KEY=password ' .
@@ -1464,6 +1536,7 @@ EOT
 				'--network=%s_default ' .
 				'amazon/aws-cli:2.31.0 ' .
 				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070',
+			$tty_flag,
 			$columns,
 			$lines,
 			escapeshellarg( getcwd() ),
@@ -1528,9 +1601,10 @@ EOT
 
 		$columns = exec( 'tput cols 2>/dev/null' ) ?: 120;
 		$lines = exec( 'tput lines 2>/dev/null' ) ?: 40;
+		$tty_flag = self::is_tty() ? '-it' : '-i';
 
 		$command = sprintf(
-			'docker run --rm -it ' .
+			'docker run --rm %s ' .
 				'-e COLUMNS=%d -e LINES=%d ' .
 				'-e AWS_ACCESS_KEY_ID=admin ' .
 				'-e AWS_SECRET_ACCESS_KEY=password ' .
@@ -1538,6 +1612,7 @@ EOT
 				'--network=%s_default ' .
 				'amazon/aws-cli:2.31.0 ' .
 				'--endpoint-url=http://s3:7070 %s',
+			$tty_flag,
 			$columns,
 			$lines,
 			escapeshellarg( $project_name ),
