@@ -900,13 +900,13 @@ class Docker_Compose_Generator {
 	protected function get_primary_host_rule( array $extra_domains = [] ) : string {
 		$host_rules = [
 			"Host(`{$this->hostname}`)",
-			"HostRegexp(`{subdomain:[A-Za-z0-9-]+}.{$this->hostname}`)",
+			'HostRegexp(`^[A-Za-z0-9-]+\\.' . str_replace( '.', '\\.', $this->hostname ) . '$`)',
 		];
 
 		$extra_domains = array_filter( array_map( 'trim', $extra_domains ) );
 		foreach ( $extra_domains as $domain ) {
 			$host_rules[] = "Host(`{$domain}`)";
-			$host_rules[] = "HostRegexp(`{subdomain:[A-Za-z0-9-]+}.{$domain}`)";
+			$host_rules[] = 'HostRegexp(`^[A-Za-z0-9-]+\\.' . str_replace( '.', '\\.', $domain ) . '$`)';
 		}
 
 		return '(' . implode( ' || ', array_unique( $host_rules ) ) . ')';
@@ -920,7 +920,7 @@ class Docker_Compose_Generator {
 	protected function get_s3_client_host_rule() : string {
 		$client_hosts = [
 			"Host(`{$this->hostname}`)",
-			"HostRegexp(`{subdomain:[A-Za-z0-9-]+}.{$this->hostname}`)",
+			'HostRegexp(`^[A-Za-z0-9-]+\\.' . str_replace( '.', '\\.', $this->hostname ) . '$`)',
 			"Host(`s3-{$this->hostname}`)",
 			'Host(`localhost`)',
 			"Host(`s3-{$this->project_name}.localhost`)",
