@@ -67,6 +67,11 @@ function bootstrap() {
 	if ( $config['tachyon'] ?? true ) {
 		define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
 
+		// Local Tachyon image is v3.0.7+, which supports presigned URL passthrough.
+		if ( ! defined( 'TACHYON_SERVER_VERSION' ) ) {
+			define( 'TACHYON_SERVER_VERSION', '3.0.0' );
+		}
+
 		/**
 		 * In local-server, the tachyon hostname resolves to what is deemed a local url.
 		 * This makes requests to tachyon from WordPress disallowed. We want to
