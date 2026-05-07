@@ -14,7 +14,7 @@ on:
 
 jobs:
   ci:
-    uses: humanmade/altis-dev-tools/.github/workflows/module-ci.yml@master
+    uses: humanmade/altis-dev-tools/.github/workflows/module-ci.yml@fix-gha-ci
     with:
       altis-package: altis/local-server
     secrets:
