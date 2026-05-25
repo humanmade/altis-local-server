@@ -302,7 +302,7 @@ class Docker_Compose_Generator {
 				'labels' => [
 					'traefik.enable=true',
 					'traefik.docker.network=proxy',
-					"traefik.http.routers.{$this->project_name}-nodejs.rule=HostRegexp(`nodejs-{$this->hostname}`)",
+					"traefik.http.routers.{$this->project_name}-nodejs.rule=Host(`nodejs-{$this->hostname}`)",
 					"traefik.http.routers.{$this->project_name}-nodejs.priority=1",
 					"traefik.http.routers.{$this->project_name}-nodejs.entrypoints=web,websecure",
 					"traefik.http.routers.{$this->project_name}-nodejs.service={$this->project_name}-nodejs",
@@ -901,13 +901,13 @@ class Docker_Compose_Generator {
 	protected function get_primary_host_rule( array $extra_domains = [] ) : string {
 		$host_rules = [
 			"Host(`{$this->hostname}`)",
-			'HostRegexp(`^[A-Za-z0-9-]+\\.' . str_replace( '.', '\\.', $this->hostname ) . '$`)',
+			"Host(`*.{$this->hostname}`)",
 		];
 
 		$extra_domains = array_filter( array_map( 'trim', $extra_domains ) );
 		foreach ( $extra_domains as $domain ) {
 			$host_rules[] = "Host(`{$domain}`)";
-			$host_rules[] = 'HostRegexp(`^[A-Za-z0-9-]+\\.' . str_replace( '.', '\\.', $domain ) . '$`)';
+			$host_rules[] = "Host(`*.{$domain}`)";
 		}
 
 		return '(' . implode( ' || ', array_unique( $host_rules ) ) . ')';
@@ -921,7 +921,7 @@ class Docker_Compose_Generator {
 	protected function get_s3_client_host_rule() : string {
 		$client_hosts = [
 			"Host(`{$this->hostname}`)",
-			'HostRegexp(`^[A-Za-z0-9-]+\\.' . str_replace( '.', '\\.', $this->hostname ) . '$`)',
+			"Host(`*.{$this->hostname}`)",
 			"Host(`s3-{$this->hostname}`)",
 			'Host(`localhost`)',
 			"Host(`s3-{$this->project_name}.localhost`)",
