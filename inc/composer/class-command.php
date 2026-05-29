@@ -85,8 +85,7 @@ Database commands:
 	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
 	db exec -- <args> "<query>"   Run and output the result of a SQL query, with optional mysql args.
-	import-db <path>              Import a database dump. Supports .sql, .sql.gz, and mydumper directory format.
-	import-db --mydumper <path>   Force mydumper import for a directory not named with the -mydumper suffix.
+	import <path>                 Imports Altis Dashboard export file.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
@@ -105,8 +104,7 @@ EOT
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
 			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Start the server with Mutagen file sharing' )
 			->addOption( 'clean', null, InputOption::VALUE_NONE, 'Remove or stop the proxy container when destroying or stopping the server' )
-			->addOption( 'tmp', null, InputOption::VALUE_NONE, 'Mount the PHP container\'s /tmp directory to `.tmp` for debugging purposes' )
-			->addOption( 'mydumper', null, InputOption::VALUE_NONE, 'Treat the import-db path as a mydumper directory' );
+			->addOption( 'tmp', null, InputOption::VALUE_NONE, 'Mount the PHP container\'s /tmp directory to `.tmp` for debugging purposes' );
 	}
 
 	/**
@@ -238,8 +236,8 @@ EOT
 		} elseif ( $subcommand === 'import-uploads' ) {
 			$project_name = $this->get_project_subdomain();
 			return $this->s3_import_uploads( $output, $project_name, "s3-{$project_name}" );
-		} elseif ( $subcommand === 'import-db' ) {
-			return $this->import_db( $input, $output );
+		} elseif ( $subcommand === 'import' ) {
+			return $this->import( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -853,21 +851,24 @@ EOT;
 	}
 
 	/**
-	 * Import a database dump into the local MySQL container.
+	 * Import a dump into the local environment.
 	 *
-	 * Supports plain .sql files, gzipped .sql.gz files, and mydumper directory
-	 * format (imported via myloader running in a temporary Docker container).
+	 * For .tar archives, inspects the contents and imports whatever is present:
+	 * a database-mydumper directory (via myloader), a database.sql.gz file
+	 * (via mysql), and/or an uploads directory (to S3).
+	 *
+	 * Also accepts a bare mydumper directory, .sql.gz, or .sql file directly.
 	 *
 	 * @param InputInterface $input Command input object.
 	 * @param OutputInterface $output Command output object.
 	 * @return int
 	 */
-	protected function import_db( InputInterface $input, OutputInterface $output ) : int {
+	protected function import( InputInterface $input, OutputInterface $output ) : int {
 		$options = $input->getArgument( 'options' ) ?? [];
 		$path = $options[0] ?? null;
 
 		if ( empty( $path ) ) {
-			$output->writeln( '<error>No path specified. Usage: composer server import-db <path></error>' );
+			$output->writeln( '<error>No path specified. Usage: composer server import <path></error>' );
 			return 1;
 		}
 
@@ -878,34 +879,57 @@ EOT;
 		}
 
 		$project = $this->get_project_subdomain();
+		$tmp_dir = null;
 		$return_val = 0;
-		$force_mydumper = $input->getOption( 'mydumper' );
 
-		if ( is_dir( $real_path ) && ( $force_mydumper || str_ends_with( basename( $real_path ), '-mydumper' ) ) ) {
-			$output->writeln( '<info>Detected mydumper directory format. Running myloader...</info>' );
-			$cmd = sprintf(
-				'docker run --rm --network %s_default -v %s:/dump ghcr.io/mydumper/mydumper:latest myloader --host %s-db --port 3306 --user root --password wordpress --database wordpress --directory /dump --overwrite-tables',
-				$project,
-				escapeshellarg( $real_path ),
-				$project
-			);
-			passthru( $cmd, $return_val );
-		} elseif ( preg_match( '/\.sql\.gz$/i', $real_path ) ) {
-			$output->writeln( '<info>Detected gzipped SQL dump. Importing...</info>' );
-			$cmd = sprintf(
-				'gunzip -c %s | docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress',
-				escapeshellarg( $real_path ),
-				$project
-			);
-			passthru( $cmd, $return_val );
-		} else {
-			$output->writeln( '<info>Detected SQL dump. Importing...</info>' );
-			$cmd = sprintf(
-				'docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress < %s',
-				$project,
-				escapeshellarg( $real_path )
-			);
-			passthru( $cmd, $return_val );
+		try {
+			if ( preg_match( '/\.tar$/i', $real_path ) ) {
+				$tmp_dir = sys_get_temp_dir() . '/altis-import-' . uniqid();
+				mkdir( $tmp_dir );
+
+				$output->writeln( '<info>Extracting archive...</info>' );
+				exec( sprintf( 'tar -xf %s -C %s', escapeshellarg( $real_path ), escapeshellarg( $tmp_dir ) ), $tar_out, $tar_ret );
+
+				if ( $tar_ret !== 0 ) {
+					$output->writeln( '<error>Failed to extract archive.</error>' );
+					return 1;
+				}
+
+				$mydumper_dir = $tmp_dir . '/database-mydumper';
+				$sql_gz       = $tmp_dir . '/database.sql.gz';
+				$uploads_dir  = $tmp_dir . '/uploads';
+
+				if ( is_dir( $mydumper_dir ) ) {
+					$output->writeln( '<info>Found mydumper database dump. Running myloader...</info>' );
+					$return_val = $this->run_myloader( $project, $mydumper_dir );
+				} elseif ( is_file( $sql_gz ) ) {
+					$output->writeln( '<info>Found database.sql.gz. Importing...</info>' );
+					$return_val = $this->run_mysql_import_gz( $project, $sql_gz );
+				} else {
+					$output->writeln( '<comment>No database dump found in archive.</comment>' );
+				}
+
+				if ( $return_val === 0 && is_dir( $uploads_dir ) ) {
+					$output->writeln( '<info>Found uploads. Syncing to S3...</info>' );
+					$return_val = $this->import_uploads_from_path( $project, $uploads_dir );
+				}
+			} elseif ( is_dir( $real_path ) && str_ends_with( basename( $real_path ), '-mydumper' ) ) {
+				$return_val = $this->run_myloader( $project, $real_path );
+			} elseif ( preg_match( '/\.sql\.gz$/i', $real_path ) ) {
+				$return_val = $this->run_mysql_import_gz( $project, $real_path );
+			} else {
+				$output->writeln( '<info>Detected SQL dump. Importing...</info>' );
+				$cmd = sprintf(
+					'docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress < %s',
+					$project,
+					escapeshellarg( $real_path )
+				);
+				passthru( $cmd, $return_val );
+			}
+		} finally {
+			if ( $tmp_dir ) {
+				exec( 'rm -rf ' . escapeshellarg( $tmp_dir ) );
+			}
 		}
 
 		if ( $return_val !== 0 ) {
@@ -915,6 +939,46 @@ EOT;
 		}
 
 		return $return_val;
+	}
+
+	private function run_myloader( string $project, string $dump_dir ) : int {
+		$cmd = sprintf(
+			'docker run --rm --network %s_default -v %s:/dump mydumper/mydumper:v1.0.1-3 myloader --host %s-db --port 3306 --user root --password wordpress --database wordpress --directory /dump --drop-table',
+			$project,
+			escapeshellarg( $dump_dir ),
+			$project
+		);
+		passthru( $cmd, $return_val );
+		return $return_val;
+	}
+
+	private function run_mysql_import_gz( string $project, string $path ) : int {
+		$cmd = sprintf(
+			'bash -c "set -o pipefail; gunzip -c %s | docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress"',
+			escapeshellarg( $path ),
+			$project
+		);
+		passthru( $cmd, $return_val );
+		return $return_val;
+	}
+
+	private function import_uploads_from_path( string $project, string $uploads_dir ) : int {
+		$bucket_name = "s3-{$project}";
+		$command = sprintf(
+			'docker run --rm ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
+				'--volume=%s:/content/uploads:ro ' .
+				'--network=%s_default ' .
+				'amazon/aws-cli:2.31.0 ' .
+				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070',
+			escapeshellarg( $uploads_dir ),
+			escapeshellarg( $project ),
+			$bucket_name
+		);
+		passthru( $command, $return_var );
+		return $return_var;
 	}
 
 	/**
