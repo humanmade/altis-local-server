@@ -855,7 +855,8 @@ EOT;
 	 *
 	 * For .tar archives, inspects the contents and imports whatever is present:
 	 * a database-mydumper directory (via myloader), a database.sql.gz file
-	 * (via mysql), and/or an uploads directory (to S3).
+	 * (via mysql), and/or an uploads directory (copied to content/uploads then
+	 * synced to S3 via the existing import-uploads flow).
 	 *
 	 * Also accepts a bare mydumper directory, .sql.gz, or .sql file directly.
 	 *
@@ -910,8 +911,9 @@ EOT;
 				}
 
 				if ( $return_val === 0 && is_dir( $uploads_dir ) ) {
-					$output->writeln( '<info>Found uploads. Syncing to S3...</info>' );
-					$return_val = $this->import_uploads_from_path( $project, $uploads_dir );
+					$output->writeln( '<info>Found uploads. Copying to content/uploads and syncing to S3...</info>' );
+					exec( sprintf( 'cp -r %s/. %s', escapeshellarg( $uploads_dir ), escapeshellarg( getcwd() . '/content/uploads' ) ) );
+					$return_val = $this->s3_import_uploads( $output, $project, "s3-{$project}" );
 				}
 			} elseif ( is_dir( $real_path ) && str_ends_with( basename( $real_path ), '-mydumper' ) ) {
 				$return_val = $this->run_myloader( $project, $real_path );
@@ -960,25 +962,6 @@ EOT;
 		);
 		passthru( $cmd, $return_val );
 		return $return_val;
-	}
-
-	private function import_uploads_from_path( string $project, string $uploads_dir ) : int {
-		$bucket_name = "s3-{$project}";
-		$command = sprintf(
-			'docker run --rm ' .
-				'-e AWS_ACCESS_KEY_ID=admin ' .
-				'-e AWS_SECRET_ACCESS_KEY=password ' .
-				'-e AWS_DEFAULT_REGION=us-east-1 ' .
-				'--volume=%s:/content/uploads:ro ' .
-				'--network=%s_default ' .
-				'amazon/aws-cli:2.31.0 ' .
-				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070',
-			escapeshellarg( $uploads_dir ),
-			escapeshellarg( $project ),
-			$bucket_name
-		);
-		passthru( $command, $return_var );
-		return $return_var;
 	}
 
 	/**
