@@ -85,6 +85,7 @@ Database commands:
 	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
 	db exec -- <args> "<query>"   Run and output the result of a SQL query, with optional mysql args.
+	import <path>                 Imports Altis Dashboard export file.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
@@ -235,6 +236,8 @@ EOT
 		} elseif ( $subcommand === 'import-uploads' ) {
 			$project_name = $this->get_project_subdomain();
 			return $this->s3_import_uploads( $output, $project_name, "s3-{$project_name}" );
+		} elseif ( $subcommand === 'import' ) {
+			return $this->import( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -844,6 +847,120 @@ EOT;
 				passthru( "$base_command mysql --database=wordpress --user=root$args", $return_val );
 		}
 
+		return $return_val;
+	}
+
+	/**
+	 * Import a dump into the local environment.
+	 *
+	 * For .tar archives, inspects the contents and imports whatever is present:
+	 * a database-mydumper directory (via myloader), a database.sql.gz file
+	 * (via mysql), and/or an uploads directory (copied to content/uploads then
+	 * synced to S3 via the existing import-uploads flow).
+	 *
+	 * Also accepts a bare mydumper directory, .sql.gz, or .sql file directly.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
+	protected function import( InputInterface $input, OutputInterface $output ) : int {
+		$options = $input->getArgument( 'options' ) ?? [];
+		$path = $options[0] ?? null;
+
+		if ( empty( $path ) ) {
+			$output->writeln( '<error>No path specified. Usage: composer server import <path></error>' );
+			return 1;
+		}
+
+		$real_path = realpath( $path );
+		if ( $real_path === false ) {
+			$output->writeln( sprintf( '<error>Path not found: %s</error>', $path ) );
+			return 1;
+		}
+
+		$project = $this->get_project_subdomain();
+		$tmp_dir = null;
+		$return_val = 0;
+
+		try {
+			if ( preg_match( '/\.tar$/i', $real_path ) ) {
+				$tmp_dir = sys_get_temp_dir() . '/altis-import-' . uniqid();
+				mkdir( $tmp_dir );
+
+				$output->writeln( '<info>Extracting archive...</info>' );
+				exec( sprintf( 'tar -xf %s -C %s', escapeshellarg( $real_path ), escapeshellarg( $tmp_dir ) ), $tar_out, $tar_ret );
+
+				if ( $tar_ret !== 0 ) {
+					$output->writeln( '<error>Failed to extract archive.</error>' );
+					return 1;
+				}
+
+				$mydumper_dir = $tmp_dir . '/database-mydumper';
+				$sql_gz       = $tmp_dir . '/database.sql.gz';
+				$uploads_dir  = $tmp_dir . '/uploads';
+
+				if ( is_dir( $mydumper_dir ) ) {
+					$output->writeln( '<info>Found mydumper database dump. Running myloader...</info>' );
+					$return_val = $this->run_myloader( $project, $mydumper_dir );
+				} elseif ( is_file( $sql_gz ) ) {
+					$output->writeln( '<info>Found database.sql.gz. Importing...</info>' );
+					$return_val = $this->run_mysql_import_gz( $project, $sql_gz );
+				} else {
+					$output->writeln( '<comment>No database dump found in archive.</comment>' );
+				}
+
+				if ( $return_val === 0 && is_dir( $uploads_dir ) ) {
+					$output->writeln( '<info>Found uploads. Copying to content/uploads and syncing to S3...</info>' );
+					exec( sprintf( 'cp -r %s/. %s', escapeshellarg( $uploads_dir ), escapeshellarg( getcwd() . '/content/uploads' ) ) );
+					$return_val = $this->s3_import_uploads( $output, $project, "s3-{$project}" );
+				}
+			} elseif ( is_dir( $real_path ) && str_ends_with( basename( $real_path ), '-mydumper' ) ) {
+				$return_val = $this->run_myloader( $project, $real_path );
+			} elseif ( preg_match( '/\.sql\.gz$/i', $real_path ) ) {
+				$return_val = $this->run_mysql_import_gz( $project, $real_path );
+			} else {
+				$output->writeln( '<info>Detected SQL dump. Importing...</info>' );
+				$cmd = sprintf(
+					'docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress < %s',
+					$project,
+					escapeshellarg( $real_path )
+				);
+				passthru( $cmd, $return_val );
+			}
+		} finally {
+			if ( $tmp_dir ) {
+				exec( 'rm -rf ' . escapeshellarg( $tmp_dir ) );
+			}
+		}
+
+		if ( $return_val !== 0 ) {
+			$output->writeln( '<error>Import failed.</error>' );
+		} else {
+			$output->writeln( '<info>Import complete.</info>' );
+		}
+
+		return $return_val;
+	}
+
+	private function run_myloader( string $project, string $dump_dir ) : int {
+		$cmd = sprintf(
+			'docker run --rm --network %s_default -v %s:/dump mydumper/mydumper:v1.0.1-3 myloader --host %s-db --port 3306 --user root --password wordpress --database wordpress --directory /dump --drop-table',
+			$project,
+			escapeshellarg( $dump_dir ),
+			$project
+		);
+		passthru( $cmd, $return_val );
+		return $return_val;
+	}
+
+	private function run_mysql_import_gz( string $project, string $path ) : int {
+		$cmd = sprintf(
+			'bash -c "set -o pipefail; gunzip -c %s | docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress"',
+			escapeshellarg( $path ),
+			$project
+		);
+		passthru( $cmd, $return_val );
 		return $return_val;
 	}
 
