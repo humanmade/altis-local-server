@@ -107,7 +107,7 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$version_map = [
-			'8.4' => 'humanmade/altis-local-server-php:8.4.9',
+			'8.4' => 'humanmade/altis-local-server-php:8.4.10',
 			'8.3' => 'humanmade/altis-local-server-php:8.3.24',
 			'8.2' => 'humanmade/altis-local-server-php:8.2.37',
 			'8.1' => 'humanmade/altis-local-server-php:6.0.30',
@@ -387,7 +387,7 @@ class Docker_Compose_Generator {
 
 		return $this->apply_service_defaults( [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.6.0',
+				'image' => 'humanmade/altis-local-server-nginx:3.7.2',
 				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
