@@ -58,3 +58,8 @@ Use `composer server db exec -- "<command>"` to execute and output the results o
 ```sh
 composer server db exec -- 'select id,post_title from wordpress.wp_posts limit 2;'
 ```
+
+`db exec` is safe to run from scripts, CI, cron, and other non-interactive
+contexts — it does not require a controlling terminal. The interactive
+`composer server db` REPL does require a terminal and will exit with a clear
+message when one is not attached.
