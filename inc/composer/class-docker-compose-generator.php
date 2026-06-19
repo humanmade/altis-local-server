@@ -350,7 +350,7 @@ class Docker_Compose_Generator {
 
 		return [
 			'nginx' => [
-				'image' => 'humanmade/altis-local-server-nginx:3.7.2',
+				'image' => 'humanmade/altis-local-server-nginx:3.7.3',
 				'container_name' => "{$this->project_name}-nginx",
 				'networks' => [
 					'proxy',
