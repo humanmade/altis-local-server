@@ -14,7 +14,7 @@ on:
 
 jobs:
   ci:
-    uses: humanmade/altis-dev-tools/.github/workflows/module-ci.yml@64050cfac8dccff8b328b64726dccb90fec707d4
+    uses: humanmade/altis-dev-tools/.github/workflows/module-ci.yml@module-ci-v1
     with:
       altis-package: altis/local-server
     secrets:
