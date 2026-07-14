@@ -885,7 +885,7 @@ class Docker_Compose_Generator {
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
 			'php' => '8.4',
-			'mysql' => '8.0',
+			'mysql' => '8.4',
 			'nodejs' => $modules['nodejs'] ?? false,
 		];
 
