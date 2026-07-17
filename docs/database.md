@@ -2,26 +2,7 @@
 
 ## Available Versions
 
-Altis supports MySQL versions `8.4` and `8.0`.
-The default version is `8.0`.
-
-To change the MySQL version use the Local Server module configuration to set the `mysql` property:
-
-```json
-{
-    "extra": {
-        "altis": {
-            "modules": {
-                "local-server": {
-                    "mysql": "8.4"
-                }
-            }
-        }
-    }
-}
-```
-
-**Note**: Only the major and minor versions (x.y) should be specified.
+Altis supports MySQL version `8.4`.
 
 ## Interacting with the Database
 
