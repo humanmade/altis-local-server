@@ -473,7 +473,7 @@ class Docker_Compose_Generator {
 		return $this->apply_service_defaults( [
 			'db' => [
 				'image' => $image,
-			        'container_name' => "{$this->project_name}-db",
+			    'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
 				],
