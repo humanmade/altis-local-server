@@ -30,7 +30,7 @@ Password:       wordpress
 Host:           0.0.0.0
 Port:           32809
 
-Version:        8.0
+Version:        8.4
 MySQL link:     mysql://wordpress:wordpress@0.0.0.0:32809/wordpress
 ```
 
