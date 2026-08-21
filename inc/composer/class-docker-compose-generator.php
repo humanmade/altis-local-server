@@ -451,7 +451,6 @@ class Docker_Compose_Generator {
 	protected function get_service_db() : array {
 		$version_map = [
 			'8.4' => 'mysql:8.4.6',
-			'8.0' => 'mysql:8.0.44',
 		];
 
 		$versions = array_keys( $version_map );
@@ -473,9 +472,6 @@ class Docker_Compose_Generator {
 		return $this->apply_service_defaults( [
 			'db' => [
 				'image' => $image,
-				// Suppress mysql_native_password deprecation warning
-				// Only affects in-place upgrades from MySQL 5.7 to 8.0.
-				'command' => $version === '8.0' ? '--log-error-suppression-list=MY-013360' : '',
 				'container_name' => "{$this->project_name}-db",
 				'volumes' => [
 					'db-data:/var/lib/mysql',
@@ -884,7 +880,7 @@ class Docker_Compose_Generator {
 			'xray' => $modules['cloud']['xray'] ?? true,
 			'ignore-paths' => [],
 			'php' => '8.3',
-			'mysql' => '8.0',
+			'mysql' => '8.4',
 			'nodejs' => $modules['nodejs'] ?? false,
 		];
 
