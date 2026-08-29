@@ -123,7 +123,7 @@ EOT
 	 */
 	private function get_base_command_prefix() : string {
 		return sprintf(
-			'cd %s; VOLUME=%s COMPOSE_PROJECT_NAME=%s',
+			'cd %s; DOCKER_CLI_HINTS=false VOLUME=%s COMPOSE_PROJECT_NAME=%s',
 			'vendor',
 			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain()
@@ -171,6 +171,8 @@ EOT
 	 * @return int
 	 */
 	protected function execute( InputInterface $input, OutputInterface $output ) : int {
+		putenv( 'DOCKER_CLI_HINTS=false' );
+
 		$subcommand = $input->getArgument( 'subcommand' );
 
 		// Collect args to pass to the docker compose file generator.
@@ -257,6 +259,7 @@ EOT
 			'VOLUME' => getcwd(),
 			'COMPOSE_PROJECT_NAME' => $this->get_project_subdomain(),
 			'COMPOSE_PROJECT_TLD' => $this->get_project_tld(),
+			'DOCKER_CLI_HINTS' => 'false',
 			'DOCKER_CLIENT_TIMEOUT' => 120,
 			'COMPOSE_HTTP_TIMEOUT' => 120,
 			'PATH' => getenv( 'PATH' ),
