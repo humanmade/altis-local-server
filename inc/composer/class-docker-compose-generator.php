@@ -107,11 +107,11 @@ class Docker_Compose_Generator {
 	 */
 	protected function get_php_reusable() : array {
 		$version_map = [
-			'8.5' => 'humanmade/altis-local-server-php:8.5.4',
-			'8.4' => 'humanmade/altis-local-server-php:8.4.10',
-			'8.3' => 'humanmade/altis-local-server-php:8.3.24',
-			'8.2' => 'humanmade/altis-local-server-php:8.2.37',
-			'8.1' => 'humanmade/altis-local-server-php:6.0.30',
+			'8.5' => 'humanmade/altis-local-server-php:8.5.9',
+			'8.4' => 'humanmade/altis-local-server-php:8.4.15',
+			'8.3' => 'humanmade/altis-local-server-php:8.3.29',
+			'8.2' => 'humanmade/altis-local-server-php:8.2.42',
+			'8.1' => 'humanmade/altis-local-server-php:6.0.33',
 		];
 
 		$versions = array_keys( $version_map );
