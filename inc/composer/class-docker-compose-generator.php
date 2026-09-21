@@ -476,7 +476,7 @@ class Docker_Compose_Generator {
 	protected function get_service_s3() : array {
 		return [
 			's3' => [
-				'image' => 'minio/minio:RELEASE.2021-09-18T18-09-59Z',
+				'image' => 'quay.io/minio/minio:RELEASE.2021-09-18T18-09-59Z',
 				'container_name' => "{$this->project_name}-s3",
 				'volumes' => [
 					's3:/data:rw',
@@ -523,7 +523,7 @@ class Docker_Compose_Generator {
 				],
 			],
 			's3-create-bucket' => [
-				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'image' => 'quay.io/minio/mc:RELEASE.2021-09-02T09-21-27Z',
 				'depends_on' => [
 					's3' => [
 						'condition' => 'service_healthy',
@@ -538,7 +538,7 @@ class Docker_Compose_Generator {
 				'entrypoint' => "/bin/sh -c \"mc mb -p local/{$this->bucket_name} && mc policy set public local/{$this->bucket_name}\"",
 			],
 			's3-sync-to-host' => [
-				'image' => 'minio/mc:RELEASE.2021-09-02T09-21-27Z',
+				'image' => 'quay.io/minio/mc:RELEASE.2021-09-02T09-21-27Z',
 				'container_name' => "{$this->project_name}-s3-sync",
 				'restart' => 'unless-stopped',
 				'depends_on' => [
