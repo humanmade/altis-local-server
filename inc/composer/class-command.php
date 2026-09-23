@@ -1190,7 +1190,7 @@ EOT;
 				'--network=%4$s_default ' .
 				'--name=%4$s-import-uploads ' .
 				'--rm ' . // Clean up container after it exits.
-				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
+				'quay.io/minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
 			$columns,
 			$lines,
 			getcwd(),
