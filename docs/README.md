@@ -60,6 +60,9 @@ Note: Altis does not manage the host entries for subdomains or custom domains, y
 editing `/etc/hosts` in Linux / macOS, or `C:\Windows\System32\Drivers\etc\hosts` in Windows. Altis however tries to detect if those
 entries do not exist, and outputs the necessary configurations to add to your `hosts` file.
 
+Note: Setting the `ALTIS_LOCAL_SERVER_NAME` environment variable overrides `name` for that command, for example
+`ALTIS_LOCAL_SERVER_NAME=my-project-2 composer server start`.
+
 Note: Before *updating* the custom domain configuration parameters, ensure that you've destroyed existing containers first before
 applying your changes, otherwise you'll be leaving orphan containers from the previous configuration.
 
