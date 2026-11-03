@@ -10,9 +10,10 @@
 		}
 	],
 	"require": {
-		"php": ">=7.1",
+		"php": ">=8.2",
 		"composer-plugin-api": "^1.1 || ^2.0",
-		"symfony/yaml": "~5.4.23"
+		"symfony/yaml": "~6.4.40",
+		"symfony/console": "^5.4.24"
 	},
 	"extra": {
 		"class": "Altis\\Local_Server\\Composer\\Plugin",

@@ -28,7 +28,7 @@ function bootstrap() {
 		add_filter( 's3_uploads_s3_client_params', function ( $params ) {
 			if ( defined( 'S3_UPLOADS_ENDPOINT' ) && S3_UPLOADS_ENDPOINT ) {
 				$params['endpoint'] = S3_UPLOADS_ENDPOINT;
-				$params['bucket_endpoint'] = true;
+				$params['use_path_style_endpoint'] = true;
 				$params['http'] = [
 					'verify' => false,
 				];
@@ -39,6 +39,11 @@ function bootstrap() {
 
 	if ( empty( $_SERVER['HTTP_HOST'] ) ) {
 		$_SERVER['HTTP_HOST'] = getenv( 'ALTIS_DEFAULT_HOST' );
+
+		// Select the default site when it lives under a path such as /en/.
+		if ( empty( $_SERVER['REQUEST_URI'] ) && getenv( 'ALTIS_DEFAULT_PATH' ) ) {
+			$_SERVER['REQUEST_URI'] = getenv( 'ALTIS_DEFAULT_PATH' );
+		}
 	}
 
 	defined( 'DB_HOST' ) or define( 'DB_HOST', getenv( 'DB_HOST' ) );
@@ -66,6 +71,11 @@ function bootstrap() {
 
 	if ( $config['tachyon'] ?? true ) {
 		define( 'TACHYON_URL', getenv( 'TACHYON_URL' ) );
+
+		// Local Tachyon image is v3.0.7+, which supports presigned URL passthrough.
+		if ( ! defined( 'TACHYON_SERVER_VERSION' ) ) {
+			define( 'TACHYON_SERVER_VERSION', '3.0.0' );
+		}
 
 		/**
 		 * In local-server, the tachyon hostname resolves to what is deemed a local url.
@@ -139,10 +149,6 @@ function tools_submenus() {
 		[
 			'label' => 'MailHog',
 			'url' => network_site_url( '/mailhog' ),
-		],
-		[
-			'label' => 'S3 Browser',
-			'url' => getenv( 'S3_CONSOLE_URL' ),
 		],
 	];
 
@@ -225,7 +231,6 @@ function get_config_domains( bool $include_aux_services = false ) : array {
 			'pinpoint',
 			'cognito',
 			's3',
-			's3-console',
 		];
 
 		foreach ( $aux_services as $aux_service ) {

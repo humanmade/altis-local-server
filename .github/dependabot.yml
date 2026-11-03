@@ -8,6 +8,8 @@ updates:
   allow:
   - dependency-type: "direct"
   versioning-strategy: "increase"
+  commit-message:
+    prefix: "[master]"
 - package-ecosystem: composer
   directory: "/"
   schedule:
@@ -16,7 +18,14 @@ updates:
   allow:
   - dependency-type: "direct"
   versioning-strategy: "increase"
-  target-branch: v15-branch
+  target-branch: v28-branch
+  commit-message:
+    prefix: "[v28-branch]"
+  ignore:
+    - dependency-name: "*"
+      update-types:
+        - "version-update:semver-major"
+        - "version-update:semver-minor"
 - package-ecosystem: composer
   directory: "/"
   schedule:
@@ -25,7 +34,14 @@ updates:
   allow:
   - dependency-type: "direct"
   versioning-strategy: "increase"
-  target-branch: v14-branch
+  target-branch: v27-branch
+  commit-message:
+    prefix: "[v27-branch]"
+  ignore:
+    - dependency-name: "*"
+      update-types:
+        - "version-update:semver-major"
+        - "version-update:semver-minor"
 - package-ecosystem: composer
   directory: "/"
   schedule:
@@ -34,7 +50,14 @@ updates:
   allow:
   - dependency-type: "direct"
   versioning-strategy: "increase"
-  target-branch: v13-branch
+  target-branch: v26-branch
+  commit-message:
+    prefix: "[v26-branch]"
+  ignore:
+    - dependency-name: "*"
+      update-types:
+        - "version-update:semver-major"
+        - "version-update:semver-minor"
 - package-ecosystem: composer
   directory: "/"
   schedule:
@@ -43,4 +66,11 @@ updates:
   allow:
   - dependency-type: "direct"
   versioning-strategy: "increase"
-  target-branch: v12-branch
+  target-branch: v25-branch
+  commit-message:
+    prefix: "[v25-branch]"
+  ignore:
+    - dependency-name: "*"
+      update-types:
+        - "version-update:semver-major"
+        - "version-update:semver-minor"

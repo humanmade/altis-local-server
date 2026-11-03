@@ -29,6 +29,12 @@ use Symfony\Component\Process\Process;
  * @package altis/local-server
  */
 class Command extends BaseCommand {
+	/**
+	 * Package-specific configuration.
+	 *
+	 * @var array
+	 */
+	protected array $package_config;
 
 	/**
 	 * Command configuration.
@@ -40,7 +46,7 @@ class Command extends BaseCommand {
 			->setName( 'server' )
 			->setDescription( 'Altis Local Server' )
 			->setDefinition( [
-				new InputArgument( 'subcommand', null, 'start, stop, restart, cli, exec, shell, ssh, status, db, ssl, set, logs.' ),
+				new InputArgument( 'subcommand', null, 'start, stop, restart, destroy, cli, exec, shell, ssh, status, db, ssl, logs, s3' ),
 				new InputArgument( 'options', InputArgument::IS_ARRAY ),
 			] )
 			->setAliases( [ 'local-server' ] )
@@ -65,27 +71,36 @@ Destroy the local development server:
 View status of the local development server:
 	status
 Run WP CLI command:
-	cli -- <command>              eg: cli -- post list --debug
+	cli|wp -- <command>           eg: cli -- post list --debug
+Create a WP CLI alias. Useful if you have WP CLI installed locally:
+	create-alias
 Run any shell command from the PHP container:
 	exec -- <command>             eg: exec -- vendor/bin/phpcs
 Open a shell:
-	shell
+	shell                         Open a Bash shell as the www-data user.
+	shell --root|-r               Open a Bash shell as the root user.
 Database commands:
-	db                            Log into MySQL on the Database server
-	db sequel                     Generates an SPF file for Sequel Pro
+	db [-- <args>]                Log into MySQL on the Database server, with optional mysql args
+	db (sequel|spf)               Opens Sequel Pro/Sequel Ace with the database connection
+	db (tableplus|tbp)            Opens TablePlus with the database connection
 	db info                       Prints out Database connection details
-	db exec -- "<query>"          Run and output the result of a SQL query.
+	db exec -- <args> "<query>"   Run and output the result of a SQL query, with optional mysql args.
+	import <path>                 Imports Altis Dashboard export file.
 SSL commands:
 	ssl                           Show status on generated SSL certificates
 	ssl install                   Installs and trusts Root Certificate Authority
 	ssl generate [domains]        Generate SSL certificates for configured domains
 	ssl exec -- "command"         Executes an arbitrary mkcert command
+S3 commands:
+	import-uploads                Sync `content/uploads` to S3. Alias for `s3 import-uploads`.
+	s3 import-uploads             Sync `content/uploads` to the S3 container.
+	s3 ls [<path>]                List objects in the S3 bucket.
+	s3 exec -- <command>          Run an AWS CLI S3 command.
 View the logs
 	logs <service>                <service> can be php, nginx, db, s3, elasticsearch, xray
-Import files from content/uploads directly to s3:
-	import-uploads                Copies files from `content/uploads` to s3
 EOT
 			)
+			->addOption( 'root', 'r', InputOption::VALUE_OPTIONAL, 'Run as root', 'debug' )
 			->addOption( 'xdebug', null, InputOption::VALUE_OPTIONAL, 'Start the server with Xdebug', 'debug' )
 			->addOption( 'mutagen', null, InputOption::VALUE_NONE, 'Start the server with Mutagen file sharing' )
 			->addOption( 'clean', null, InputOption::VALUE_NONE, 'Remove or stop the proxy container when destroying or stopping the server' )
@@ -113,6 +128,39 @@ EOT
 			escapeshellarg( getcwd() ),
 			$this->get_project_subdomain()
 		);
+	}
+
+	/**
+	 * Get all extra configs added by all the packages.
+	 *
+	 * @return array Extra configurations added by packages (e.g. handlers).
+	 */
+	protected function get_package_configs() : array {
+		// Fetch all the packages.
+		$repo = $this->getApplication()->getComposer()->getLocker()->getLockedRepository( true );
+		$packages = [];
+		foreach ( $repo->getPackages() as $package ) {
+			$packages[ $package->getName() ] = $package;
+		}
+
+		// Check which are publishing containers.
+		$config = [];
+		foreach ( $packages as $name => $package ) {
+			$extra = $package->getExtra();
+			if ( empty( $extra['altis'] ) || empty( $extra['altis']['local-server'] ) ) {
+				continue;
+			}
+
+			$config[ $name ] = $extra['altis']['local-server'];
+		}
+
+		// If we have any packages, ensure we have all the autoloaders loaded.
+		// (By default, Composer only loads composer-plugin packages and their dependencies).
+		if ( ! empty( $config ) ) {
+			require $this->getApplication()->getComposer()->getConfig()->get( 'vendor-dir' ) . '/autoload.php';
+		}
+
+		return $config;
 	}
 
 	/**
@@ -167,7 +215,7 @@ EOT
 			return $this->restart( $input, $output );
 		} elseif ( $subcommand === 'destroy' ) {
 			return $this->destroy( $input, $output );
-		} elseif ( $subcommand === 'cli' ) {
+		} elseif ( ( $subcommand === 'cli' ) || ( $subcommand === 'wp' ) ) {
 			return $this->exec( $input, $output, 'wp' );
 		} elseif ( $subcommand === 'exec' ) {
 			return $this->exec( $input, $output );
@@ -181,8 +229,15 @@ EOT
 			return $this->logs( $input, $output );
 		} elseif ( in_array( $subcommand, [ 'shell', 'ssh' ], true ) ) {
 			return $this->shell( $input, $output );
+		} elseif ( $subcommand === 'create-alias' ) {
+			return $this->create_alias( $input, $output );
+		} elseif ( $subcommand === 's3' ) {
+			return $this->s3( $input, $output );
 		} elseif ( $subcommand === 'import-uploads' ) {
-			return $this->import_uploads( $input, $output );
+			$project_name = $this->get_project_subdomain();
+			return $this->s3_import_uploads( $output, $project_name, "s3-{$project_name}" );
+		} elseif ( $subcommand === 'import' ) {
+			return $this->import( $input, $output );
 		} elseif ( $subcommand === null ) {
 			// Default to start command.
 			return $this->start( $input, $output );
@@ -251,7 +306,7 @@ EOT
 		// Save a reference to the host for later runs.
 		file_put_contents( 'vendor/host', "$name.$tld" );
 
-		$proxy = $this->process( $this->get_compose_command( '-f altis/local-server/docker/proxy.yml up -d' ), 'vendor' );
+		$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml up -d' ) );
 		$proxy->setTimeout( 0 );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy_failed = $proxy->run( function ( $type, $buffer ) {
@@ -307,7 +362,7 @@ EOT
 
 			// Check install was successful.
 			if ( $install_failed ) {
-				$output->writeln( sprintf( '<error>WordPress install failed. Exited with error code %d</>', $install_failed ) );
+				$output->writeln( sprintf( '<error>WordPress install failed or database unavailable. Exited with error code %d</>', $install_failed ) );
 				return $install_failed;
 			}
 
@@ -319,6 +374,13 @@ EOT
 		$site_url = $this->get_project_url();
 		$output->writeln( '<info>Startup completed.</>' );
 		$output->writeln( '<info>To access your site visit:</> <comment>' . $site_url . '</>' );
+
+		if ( static::get_composer_config()['nodejs'] ?? false ) {
+			$tld = $this->get_project_tld();
+			$subdomain = $this->get_project_subdomain();
+			$hostname = $subdomain . '.' . $tld;
+			$output->writeln( '<info>To access your Node.js site visit:</> <comment>https://nodejs-' . $hostname . '</>' );
+		}
 
 		$this->check_host_entries( $input, $output );
 
@@ -351,7 +413,7 @@ EOT
 
 		if ( $service === '' && $input->hasParameterOption( '--clean' ) ) {
 			$output->writeln( '<info>Stopping proxy container...</>' );
-			$proxy = $this->process( $this->get_compose_command( '-f proxy.yml stop' ), 'vendor/altis/local-server/docker' );
+			$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml stop' ) );
 			$proxy->setTimeout( 0 );
 			$proxy->setTty( posix_isatty( STDOUT ) );
 			$proxy->run( function ( $type, $buffer ) {
@@ -401,7 +463,7 @@ EOT
 
 		if ( $remove_proxy ) {
 			$output->writeln( '<error>Destroying proxy container...</>' );
-			$proxy = $this->process( $this->get_compose_command( '-f proxy.yml down -v' ), 'vendor/altis/local-server/docker' );
+			$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml down -v' ) );
 			$proxy->setTty( posix_isatty( STDOUT ) );
 			$proxy->run( function ( $type, $buffer ) {
 				echo $buffer;
@@ -432,7 +494,7 @@ EOT
 	protected function restart( InputInterface $input, OutputInterface $output ) {
 		$output->writeln( '<info>Restarting...</>' );
 
-		$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+		$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml restart' ) );
 		$proxy->setTty( posix_isatty( STDOUT ) );
 		$proxy->run( function ( $type, $buffer ) {
 			echo $buffer;
@@ -472,6 +534,20 @@ EOT
 	protected function exec( InputInterface $input, OutputInterface $output, ?string $program = null ) {
 		$site_url = $this->get_project_url();
 		$options = $input->getArgument( 'options' );
+		$config = $this->get_composer_config();
+		$default_site_url = $config['default-site-url'] ?? null;
+
+		$passed_url = false;
+		foreach ( $options as $option ) {
+			if ( strpos( $option, '--url=' ) === 0 ) {
+				$passed_url = true;
+				break;
+			}
+		}
+
+		if ( ! $passed_url && ( $program === 'wp' || $options[0] === 'wp' ) ) {
+			$default_site_url ? $options[] = '--url=' . sprintf( static::set_url_scheme( 'https://%s/' ), $default_site_url ) : $options[] = '--url=' . $site_url;
+		}
 
 		// Escape all options. Because the shell is going to strip the
 		// initial escaping like "My string" => My String, then we need
@@ -544,6 +620,9 @@ EOT
 	 */
 	protected function logs( InputInterface $input, OutputInterface $output ) {
 		if ( ! isset( $input->getArgument( 'options' )[0] ) ) {
+			if ( ! $this->require_tty( $output, 'composer server logs', 'composer server logs <service>  (e.g. php, db, nginx, elasticsearch)' ) ) {
+				return 1;
+			}
 			$helper = $this->getHelper( 'question' );
 			$question = new ChoiceQuestion(
 				'Please select a service (defaults to php)',
@@ -556,6 +635,7 @@ EOT
 					'redis',
 					's3',
 					'xray',
+					'nodejs',
 				],
 				0
 			);
@@ -565,6 +645,9 @@ EOT
 			$log = $service;
 		} else {
 			$log = $input->getArgument( 'options' )[0];
+		}
+		if ( $log === 'mysql' || $log === 'sql' ) {
+			$log = 'db';
 		}
 		$compose = $this->process( $this->get_compose_command( 'logs --tail=100 -f ' . $log ), 'vendor', $this->get_env() );
 		$compose->setTty( posix_isatty( STDOUT ) );
@@ -582,6 +665,10 @@ EOT
 	 * @return int
 	 */
 	protected function shell( InputInterface $input, OutputInterface $output ) {
+		if ( ! $this->require_tty( $output, 'composer server shell', 'composer server exec -- <command>' ) ) {
+			return 1;
+		}
+
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 		$command_prefix = $this->get_base_command_prefix();
@@ -592,9 +679,15 @@ EOT
 			$this->get_compose_command( 'ps -q php' )
 		) );
 
+		$user = '';
+		if ( $input->hasParameterOption( '--root' ) || $input->hasParameterOption( '-r' ) ) {
+			$user = '-u root';
+		}
+
 		passthru( sprintf(
-			"$command_prefix %s exec -it -e COLUMNS=%d -e LINES=%d %s /bin/bash",
+			"$command_prefix %s exec -it %s -e COLUMNS=%d -e LINES=%d %s /bin/bash",
 			'docker',
+			$user,
 			$columns,
 			$lines,
 			trim( $php_container_id )
@@ -611,17 +704,25 @@ EOT
 	 * @return int
 	 */
 	protected function db( InputInterface $input, OutputInterface $output ) {
-		$db = $input->getArgument( 'options' )[0] ?? null;
+		$options = $input->getArgument( 'options' ) ?? [];
+		$db = $options[0] ?? null;
 		$columns = exec( 'tput cols' );
 		$lines = exec( 'tput lines' );
 
-		$base_command = sprintf(
-			// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-			'docker exec -it -u root -e COLUMNS=%d -e LINES=%d -e MYSQL_PWD=wordpress %s-db',
-			$columns,
-			$lines,
-			$this->get_project_subdomain()
-		);
+		// Build the docker exec base command. Pass `-it` only for the
+		// interactive REPL; non-interactive paths (`db exec`) use `-i` so they
+		// work in scripts, CI, cron, and other no-TTY contexts.
+		$build_base_command = function ( bool $interactive ) use ( $columns, $lines ) : string {
+			$flags = $interactive ? '-it' : '-i';
+			return sprintf(
+				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+				'docker exec %s -u root -e COLUMNS=%d -e LINES=%d -e MYSQL_PWD=wordpress %s-db',
+				$flags,
+				$columns,
+				$lines,
+				$this->get_project_subdomain()
+			);
+		};
 
 		$return_val = 0;
 
@@ -645,7 +746,9 @@ EOT
 EOT;
 				$output->write( $db_info );
 				break;
+
 			case 'sequel':
+			case 'spf':
 				if ( php_uname( 's' ) !== 'Darwin' ) {
 					$output->writeln( '<error>This command is only supported on MacOS, use composer server db info to see the database connection details.</error>' );
 					return 1;
@@ -663,12 +766,40 @@ EOT;
 
 				exec( "open $output_file_path", $null, $return_val );
 				if ( $return_val !== 0 ) {
-					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) installed to use this command</error>' );
+					$output->writeln( '<error>You must have Sequel Pro (https://www.sequelpro.com) or Sequel Ace (https://sequel-ace.com/) installed to use this command</error>' );
 				}
 
 				break;
+
+			case 'tableplus':
+			case 'tbp':
+				$connection_data = $this->get_db_connection_data();
+				$url = sprintf(
+					'mysql://%s:%s@%s:%s/%s',
+					$connection_data['MYSQL_USER'],
+					$connection_data['MYSQL_PASSWORD'],
+					$connection_data['HOST'],
+					$connection_data['PORT'],
+					$connection_data['MYSQL_DATABASE']
+				);
+				$url .= '?' . http_build_query( [
+					'name' => $this->get_project_subdomain(),
+					'env' => 'local',
+				] );
+				exec( sprintf( 'open "%s"', $url ), $null, $return_val );
+				if ( $return_val !== 0 ) {
+					$output->writeln( '<error>You must have TablePlus (https://tableplus.com/) installed to use this command</error>' );
+				}
+				break;
+
 			case 'exec':
-				$query = $input->getArgument( 'options' )[1] ?? null;
+				// Remove the subcommand, we don't need it.
+				array_shift( $options );
+				// The query is always the last option.
+				$query = array_pop( $options ) ?: null;
+				// Implode all optional options.
+				$args = count( $options ) > 0 ? implode( ' ', $options ) : '';
+
 				if ( empty( $query ) ) {
 					$output->writeln( '<error>No query specified: pass a query via `db exec -- "sql query..."`</error>' );
 					break;
@@ -676,18 +807,159 @@ EOT;
 				if ( substr( $query, -1 ) !== ';' ) {
 					$query = "$query;";
 				}
+				$base_command = $build_base_command( false );
 				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root -e \"$query\"", $return_val );
+				passthru( "$base_command mysql --database=wordpress --user=root $args -e \"$query\"", $return_val );
 				break;
+
 			case null:
-				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
-				passthru( "$base_command mysql --database=wordpress --user=root", $return_val );
-				break;
 			default:
-				$output->writeln( "<error>The subcommand $db is not recognized</error>" );
-				$return_val = 1;
+				if ( $db !== null && strpos( $db, '-' ) !== 0 ) {
+					$output->writeln( "<error>The subcommand $db is not recognized</error>" );
+					$return_val = 1;
+					break;
+				}
+
+				// mysql exits immediately for `-e <query>` / `--execute=<query>`
+				// and `-B` / `--batch`; everything else opens the interactive
+				// REPL. Treat the former as non-interactive so they work in
+				// scripts, CI, cron, and other no-TTY contexts.
+				$is_non_interactive = false;
+				foreach ( $options as $opt ) {
+					if (
+						$opt === '-e' || $opt === '--execute'
+						|| $opt === '-B' || $opt === '--batch'
+						|| strpos( $opt, '--execute=' ) === 0
+					) {
+						$is_non_interactive = true;
+						break;
+					}
+				}
+
+				if ( ! $is_non_interactive && ! $this->require_tty( $output, 'composer server db', 'composer server db exec -- "<query>", or pass -e "<query>" through with --' ) ) {
+					return 1;
+				}
+
+				$base_command = $build_base_command( ! $is_non_interactive );
+				$args = count( $options ) > 0 ? ' ' . implode( ' ', array_map( 'escapeshellarg', $options ) ) : '';
+				// phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+				passthru( "$base_command mysql --database=wordpress --user=root$args", $return_val );
 		}
 
+		return $return_val;
+	}
+
+	/**
+	 * Import a dump into the local environment.
+	 *
+	 * For .tar archives, inspects the contents and imports whatever is present:
+	 * a database-mydumper directory (via myloader), a database.sql.gz file
+	 * (via mysql), and/or an uploads directory (copied to content/uploads then
+	 * synced to S3 via the existing import-uploads flow).
+	 *
+	 * Also accepts a bare mydumper directory, .sql.gz, or .sql file directly.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
+	protected function import( InputInterface $input, OutputInterface $output ) : int {
+		$options = $input->getArgument( 'options' ) ?? [];
+		$path = $options[0] ?? null;
+
+		if ( empty( $path ) ) {
+			$output->writeln( '<error>No path specified. Usage: composer server import <path></error>' );
+			return 1;
+		}
+
+		$real_path = realpath( $path );
+		if ( $real_path === false ) {
+			$output->writeln( sprintf( '<error>Path not found: %s</error>', $path ) );
+			return 1;
+		}
+
+		$project = $this->get_project_subdomain();
+		$tmp_dir = null;
+		$return_val = 0;
+
+		try {
+			if ( preg_match( '/\.tar$/i', $real_path ) ) {
+				$tmp_dir = sys_get_temp_dir() . '/altis-import-' . uniqid();
+				mkdir( $tmp_dir );
+
+				$output->writeln( '<info>Extracting archive...</info>' );
+				exec( sprintf( 'tar -xf %s -C %s', escapeshellarg( $real_path ), escapeshellarg( $tmp_dir ) ), $tar_out, $tar_ret );
+
+				if ( $tar_ret !== 0 ) {
+					$output->writeln( '<error>Failed to extract archive.</error>' );
+					return 1;
+				}
+
+				$mydumper_dir = $tmp_dir . '/database-mydumper';
+				$sql_gz       = $tmp_dir . '/database.sql.gz';
+				$uploads_dir  = $tmp_dir . '/uploads';
+
+				if ( is_dir( $mydumper_dir ) ) {
+					$output->writeln( '<info>Found mydumper database dump. Running myloader...</info>' );
+					$return_val = $this->run_myloader( $project, $mydumper_dir );
+				} elseif ( is_file( $sql_gz ) ) {
+					$output->writeln( '<info>Found database.sql.gz. Importing...</info>' );
+					$return_val = $this->run_mysql_import_gz( $project, $sql_gz );
+				} else {
+					$output->writeln( '<comment>No database dump found in archive.</comment>' );
+				}
+
+				if ( $return_val === 0 && is_dir( $uploads_dir ) ) {
+					$output->writeln( '<info>Found uploads. Copying to content/uploads and syncing to S3...</info>' );
+					exec( sprintf( 'cp -r %s/. %s', escapeshellarg( $uploads_dir ), escapeshellarg( getcwd() . '/content/uploads' ) ) );
+					$return_val = $this->s3_import_uploads( $output, $project, "s3-{$project}" );
+				}
+			} elseif ( is_dir( $real_path ) && str_ends_with( basename( $real_path ), '-mydumper' ) ) {
+				$return_val = $this->run_myloader( $project, $real_path );
+			} elseif ( preg_match( '/\.sql\.gz$/i', $real_path ) ) {
+				$return_val = $this->run_mysql_import_gz( $project, $real_path );
+			} else {
+				$output->writeln( '<info>Detected SQL dump. Importing...</info>' );
+				$cmd = sprintf(
+					'docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress < %s',
+					$project,
+					escapeshellarg( $real_path )
+				);
+				passthru( $cmd, $return_val );
+			}
+		} finally {
+			if ( $tmp_dir ) {
+				exec( 'rm -rf ' . escapeshellarg( $tmp_dir ) );
+			}
+		}
+
+		if ( $return_val !== 0 ) {
+			$output->writeln( '<error>Import failed.</error>' );
+		} else {
+			$output->writeln( '<info>Import complete.</info>' );
+		}
+
+		return $return_val;
+	}
+
+	private function run_myloader( string $project, string $dump_dir ) : int {
+		$cmd = sprintf(
+			'docker run --rm --network %s_default -v %s:/dump mydumper/mydumper:v1.0.1-3 myloader --host %s-db --port 3306 --user root --password wordpress --database wordpress --directory /dump --drop-table',
+			$project,
+			escapeshellarg( $dump_dir ),
+			$project
+		);
+		passthru( $cmd, $return_val );
+		return $return_val;
+	}
+
+	private function run_mysql_import_gz( string $project, string $path ) : int {
+		$cmd = sprintf(
+			'bash -c "set -o pipefail; gunzip -c %s | docker exec -i -e MYSQL_PWD=wordpress %s-db mysql --user=root --database=wordpress"',
+			escapeshellarg( $path ),
+			$project
+		);
+		passthru( $cmd, $return_val );
 		return $return_val;
 	}
 
@@ -742,50 +1014,57 @@ EOT;
 						break;
 				}
 
-				// If couldn't detect a support architecture, ask the user to install mkcert manually.
+				// If we couldn't detect a support architecture, ask the user to install mkcert manually.
 				if ( ! $binary_arch ) {
 					$output->writeln( '<error>`composer server ssl install` is only supported on macOS, Linux, and Windows x64, install `mkcert` manually for other systems.</error>' );
 					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+
 					return 1;
 				}
 
 				$binary = "mkcert-$mkcert_version-$binary_arch";
-				$mkcert = 'vendor/mkcert';
+				$mkcert = 'mkcert';
 
-				// Check if mkcert is installed globally already, bail if so.
-				$version = trim( shell_exec( 'mkcert -version' ) ?: '' );
-				if ( $version ) {
-					$output->writeln( "<info>mkcert $version is already installed globally</>" );
-					return 0;
-				}
-
-				// Check if mkcert is installed locally already, bail if so.
+				// Check if mkcert is installed globally already.
 				$version = trim( shell_exec( "$mkcert -version" ) ?: '' );
 				if ( $version ) {
-					$output->writeln( "<info>mkcert $version is already installed to vendor/mkcert</>" );
-					return 0;
+					$output->writeln( "<info>mkcert $version is already installed globally</>" );
+
+				} else {
+
+					// Check if mkcert is installed locally already.
+					$mkcert = 'vendor/mkcert';
+					$version = trim( shell_exec( "$mkcert -version" ) ?: '' );
+					if ( $version ) {
+						$output->writeln( "<info>mkcert $version is already installed to vendor/mkcert</>" );
+
+					} else {
+
+						// We need to install it locally.
+						$output->writeln( "Detected system architecture to be $os $arch" );
+						$output->writeln( "Downloading https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary to $mkcert ..." );
+						exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
+						if ( $result ) {
+							$output->writeln( '<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>' );
+							$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+
+							return 1;
+						}
+
+						$output->writeln( "<info>mkcert $mkcert_version was downloaded.</info>" );
+
+						chmod( $mkcert, 0755 );
+
+						exec( "$mkcert -version", $dummy, $result );
+						if ( $result ) {
+							$output->writeln( '<error>Could not launch mkcert binary, try manually installing mkcert.</error>' );
+							$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
+
+							return 1;
+						}
+						$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
+					}
 				}
-
-				$output->writeln( "Detected system architecture to be $os $arch" );
-				$output->writeln( "Downloading https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary to $mkcert ..." );
-				exec( "curl -o $mkcert -L https://github.com/FiloSottile/mkcert/releases/download/$mkcert_version/$binary", $dummy, $result );
-				if ( $result ) {
-					$output->writeln( '<error>Could not download mkcert binary, try using sudo or manually installing mkcert.</error>' );
-					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
-					return 1;
-				}
-
-				$output->writeln( "<info>mkcert $mkcert_version was downloaded.</info>" );
-
-				chmod( $mkcert, 0755 );
-
-				exec( "$mkcert -version", $dummy, $result );
-				if ( $result ) {
-					$output->writeln( '<error>Could not launch mkcert binary, try manually installing mkcert.</error>' );
-					$output->writeln( '<error>Download and setup `mkcert` from https://github.com/FiloSottile/mkcert </error>' );
-					return 1;
-				}
-				$output->writeln( "<info>mkcert $mkcert_version was installed.</info>" );
 
 				// Setup and accept the root certificate.
 				exec( "$mkcert -install", $dummy, $result );
@@ -797,6 +1076,7 @@ EOT;
 
 				$output->writeln( '<info>mkcert root CA was installed and accepted successfully.</info>' );
 				break;
+
 			case 'generate':
 				$config = $this->get_composer_config();
 
@@ -813,7 +1093,6 @@ EOT;
 					$domains[] = $hostname;
 					$domains[] = "*.$hostname";
 					$domains[] = "s3-$hostname";
-					$domains[] = "s3-console-$hostname";
 					$domains[] = "cognito-$hostname";
 					$domains[] = "pinpoint-$hostname";
 					$domains[] = "elasticsearch-$hostname";
@@ -837,7 +1116,7 @@ EOT;
 				exec( 'docker ps | grep altis-proxy', $result );
 				if ( $result ) {
 					$output->writeln( '<info>Restarting proxy server to activate the new certificate...</info>' );
-					$proxy = $this->process( $this->get_compose_command( '-f proxy.yml restart' ), 'vendor/altis/local-server/docker' );
+					$proxy = $this->process( $this->get_compose_command( '-f vendor/altis/local-server/docker/proxy.yml restart' ) );
 					$proxy->setTty( posix_isatty( STDOUT ) );
 					$proxy->run( function ( $type, $buffer ) {
 						echo $buffer;
@@ -915,7 +1194,6 @@ EOT;
 		$domains = array_merge( [
 			$hostname,
 			"s3-$hostname",
-			"s3-console-$hostname",
 			"cognito-$hostname",
 			"pinpoint-$hostname",
 			"elasticsearch-$hostname",
@@ -945,7 +1223,14 @@ EOT;
 	 * @return void
 	 */
 	protected function generate_docker_compose( array $args = [] ) : void {
-		$docker_compose = new Docker_Compose_Generator( getcwd(), $this->get_project_subdomain(), $this->get_project_tld(), $this->get_project_url(), $args );
+		$docker_compose = new Docker_Compose_Generator(
+			getcwd(),
+			$this->get_project_subdomain(),
+			$this->get_project_tld(),
+			$this->get_project_url(),
+			$args,
+			$this->get_package_configs()
+		);
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 		file_put_contents(
 			getcwd() . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'docker-compose.yml',
@@ -1012,47 +1297,6 @@ EOT;
 				'PORT' => $ports_matches[2],
 			]
 		);
-	}
-
-	/**
-	 * Import uploads from the host machine to the S3 container.
-	 *
-	 * @return int
-	 */
-	protected function import_uploads() {
-		return $this->minio_client( sprintf(
-			'mirror --overwrite --exclude ".*" /content local/s3-%s',
-			$this->get_project_subdomain()
-		) );
-	}
-
-	/**
-	 * Pass a command through to the minio client.
-	 *
-	 * @param string $command The command for minio client.
-	 * @return int
-	 */
-	protected function minio_client( string $command ) {
-		$columns = exec( 'tput cols' );
-		$lines = exec( 'tput lines' );
-
-		$base_command = sprintf(
-			'docker run ' .
-				'-e COLUMNS=%1%d -e LINES=%2$d ' .
-				'-e MC_HOST_local=http://admin:password@s3:9000 ' .
-				'--volume=%3$s/content/uploads:/content/uploads:delegated ' .
-				'--network=%4$s_default ' .
-				'minio/mc:RELEASE.2021-09-02T09-21-27Z %5$s',
-			$columns,
-			$lines,
-			getcwd(),
-			$this->get_project_subdomain(),
-			escapeshellcmd( $command )
-		);
-
-		passthru( $base_command, $return_var );
-
-		return $return_var;
 	}
 
 	/**
@@ -1157,6 +1401,41 @@ EOT;
 	}
 
 	/**
+	 * Check whether the current process is attached to an interactive terminal.
+	 *
+	 * @return boolean
+	 */
+	public static function is_tty() : bool {
+		return function_exists( 'posix_isatty' )
+			&& posix_isatty( STDIN )
+			&& posix_isatty( STDOUT );
+	}
+
+	/**
+	 * Gate a command on the presence of an interactive terminal.
+	 *
+	 * Prints a friendly error and returns false when no TTY is attached, so
+	 * scripted/CI/agent callers get a clear message instead of an opaque
+	 * failure from Docker (or a hung prompt).
+	 *
+	 * @param OutputInterface $output      Command output object.
+	 * @param string          $command     Full command label, e.g. 'composer server shell'.
+	 * @param string|null     $alternative Optional non-interactive alternative to suggest.
+	 * @return boolean True when a TTY is available; false otherwise.
+	 */
+	protected function require_tty( OutputInterface $output, string $command, ?string $alternative = null ) : bool {
+		if ( self::is_tty() ) {
+			return true;
+		}
+
+		$output->writeln( "<error>`$command` requires an interactive terminal.</>" );
+		if ( $alternative ) {
+			$output->writeln( "<info>For non-interactive use, try: $alternative</>" );
+		}
+		return false;
+	}
+
+	/**
 	 * Check if the current host operating system is Mac OS.
 	 *
 	 * @return boolean
@@ -1243,6 +1522,222 @@ EOT;
 		$is_secure = static::get_composer_config()['secure'] ?? ! static::is_using_codespaces();
 
 		return preg_replace( '/^https?/', 'http' . ( $is_secure ? 's' : '' ), $url );
+	}
+
+	/**
+	 * Generate an alias for the php docker container in a wp-cli.local.yml file.
+	 * The format will look like this:
+	 *
+	 * @local:
+	 *   ssh: docker:www-data@altis-dev-php
+	 *   url: https://altis-dev.altis.dev
+	 *
+	 * We'll add the default url parameter like we do for running wp cli commands inside the container.
+	 * Otherwise, it will need to be specified every time by the user.
+	 *
+	 * @param InputInterface  $input Input from the console
+	 * @param OutputInterface $output Output to the console
+	 *
+	 * @return int
+	 */
+	protected function create_alias( InputInterface $input, OutputInterface $output ) : int {
+
+		$return_val = 0;
+
+		// If we are creating from scratch this is what the file will look like.
+		$local_alias = <<<EOT
+@local:
+  ssh: docker:www-data@{$this->get_project_subdomain()}-php
+  url: {$this->get_project_url()}
+EOT;
+
+		// first lets see if the file already exists and whether it already contains a local alias.
+		$local_alias_file = getcwd() . '/wp-cli.local.yml';
+		if ( file_exists( $local_alias_file ) ) {
+			$local_alias_contents = file_get_contents( $local_alias_file );
+			$return_val           = 1;
+			if ( str_contains( $local_alias_contents, '@local:' ) ) {
+				$output->writeln( 'It looks like you already have a wp-cli.local.yml file that contains an `@local` alias.' );
+			} else {
+				// file exists but doesn't contain @local. Suggest how they can add it.
+				$output->writeln( <<<"EOT"
+It looks like you already have a wp-cli.local.yml file but it does not contain an `@local` alias.
+You can add the following to your wp-cli.local.yml file to use the local alias:
+
+$local_alias
+
+You can then run WP CLI commands using the following syntax:
+`wp @local cli info`
+EOT
+				);
+			}
+
+			return $return_val;
+		}
+
+		// if the file doesn't exist, we'll add it.
+		$output->writeln( 'Generating wp-cli.local.yml...' );
+		file_put_contents( $local_alias_file, $local_alias );
+		$output->writeln( 'Done!' );
+
+		$output->writeln( <<<EOT
+
+A wp-cli.local.yml file has been created in the root of your project.
+You can now run WP CLI commands using the following syntax:
+`wp @local cli info`
+EOT
+		);
+
+		return $return_val;
+	}
+
+	/**
+	 * S3 helper commands.
+	 *
+	 * @param InputInterface $input Command input object.
+	 * @param OutputInterface $output Command output object.
+	 * @return int
+	 */
+	protected function s3( InputInterface $input, OutputInterface $output ) {
+		$options = $input->getArgument( 'options' );
+		$subcommand = $options[0] ?? null;
+
+		$project_name = $this->get_project_subdomain();
+		$bucket_name = "s3-{$project_name}";
+
+		if ( $subcommand === 'import-uploads' ) {
+			return $this->s3_import_uploads( $output, $project_name, $bucket_name );
+		} elseif ( $subcommand === 'ls' ) {
+			$path = $options[1] ?? '';
+			return $this->s3_ls( $output, $project_name, $bucket_name, $path );
+		} elseif ( $subcommand === 'exec' ) {
+			// Remove 'exec' and optional '--' from the options.
+			array_shift( $options );
+			if ( ! empty( $options ) && $options[0] === '--' ) {
+				array_shift( $options );
+			}
+			return $this->s3_exec( $output, $project_name, $options );
+		}
+
+		$output->writeln( '<error>Usage: composer server s3 <import-uploads|ls|exec></>' );
+		$output->writeln( '' );
+		$output->writeln( '  <info>import-uploads</>             Sync content/uploads to S3' );
+		$output->writeln( '  <info>ls [path]</>                  List objects in S3 bucket' );
+		$output->writeln( '  <info>exec -- <command></>          Run an AWS CLI S3 command' );
+		return 1;
+	}
+
+	/**
+	 * Sync files from content/uploads to the S3 container.
+	 *
+	 * @param OutputInterface $output Command output object.
+	 * @param string $project_name Project name.
+	 * @param string $bucket_name S3 bucket name.
+	 * @return int
+	 */
+	protected function s3_import_uploads( OutputInterface $output, string $project_name, string $bucket_name ) : int {
+		$output->writeln( 'Syncing content/uploads to S3...' );
+
+		$columns = exec( 'tput cols 2>/dev/null' ) ?: 120;
+		$lines = exec( 'tput lines 2>/dev/null' ) ?: 40;
+		$tty_flag = self::is_tty() ? '-it' : '-i';
+
+		$command = sprintf(
+			'docker run --rm %s ' .
+				'-e COLUMNS=%d -e LINES=%d ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
+				'--volume=%s/content/uploads:/content/uploads:ro ' .
+				'--network=%s_default ' .
+				'amazon/aws-cli:2.31.0 ' .
+				's3 sync /content/uploads s3://%s/uploads --endpoint-url=http://s3:7070',
+			$tty_flag,
+			$columns,
+			$lines,
+			escapeshellarg( getcwd() ),
+			escapeshellarg( $project_name ),
+			$bucket_name
+		);
+
+		passthru( $command, $return_var );
+
+		if ( $return_var === 0 ) {
+			$output->writeln( '<info>Uploads synced to S3 successfully.</>' );
+		} else {
+			$output->writeln( '<error>Failed to sync uploads to S3.</>' );
+		}
+
+		return $return_var;
+	}
+
+	/**
+	 * List objects in the S3 bucket.
+	 *
+	 * @param OutputInterface $output Command output object.
+	 * @param string $project_name Project name.
+	 * @param string $bucket_name S3 bucket name.
+	 * @param string $path Optional path prefix.
+	 * @return int
+	 */
+	protected function s3_ls( OutputInterface $output, string $project_name, string $bucket_name, string $path = '' ) : int {
+		$s3_path = "s3://{$bucket_name}/{$path}";
+
+		$command = sprintf(
+			'docker run --rm ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
+				'--network=%s_default ' .
+				'amazon/aws-cli:2.31.0 ' .
+				's3 ls %s --endpoint-url=http://s3:7070 --recursive --human-readable --summarize',
+			escapeshellarg( $project_name ),
+			escapeshellarg( $s3_path )
+		);
+
+		passthru( $command, $return_var );
+
+		return $return_var;
+	}
+
+	/**
+	 * Run an arbitrary AWS CLI S3 command against the local endpoint.
+	 *
+	 * @param OutputInterface $output Command output object.
+	 * @param string $project_name Project name.
+	 * @param array $args Command arguments.
+	 * @return int
+	 */
+	protected function s3_exec( OutputInterface $output, string $project_name, array $args ) : int {
+		if ( empty( $args ) ) {
+			$output->writeln( '<error>Please provide a command to execute.</>' );
+			$output->writeln( 'Example: <info>composer server s3 exec -- s3 ls s3://bucket-name/</>' );
+			return 1;
+		}
+
+		$columns = exec( 'tput cols 2>/dev/null' ) ?: 120;
+		$lines = exec( 'tput lines 2>/dev/null' ) ?: 40;
+		$tty_flag = self::is_tty() ? '-it' : '-i';
+
+		$command = sprintf(
+			'docker run --rm %s ' .
+				'-e COLUMNS=%d -e LINES=%d ' .
+				'-e AWS_ACCESS_KEY_ID=admin ' .
+				'-e AWS_SECRET_ACCESS_KEY=password ' .
+				'-e AWS_DEFAULT_REGION=us-east-1 ' .
+				'--network=%s_default ' .
+				'amazon/aws-cli:2.31.0 ' .
+				'--endpoint-url=http://s3:7070 %s',
+			$tty_flag,
+			$columns,
+			$lines,
+			escapeshellarg( $project_name ),
+			implode( ' ', array_map( 'escapeshellarg', $args ) )
+		);
+
+		passthru( $command, $return_var );
+
+		return $return_var;
 	}
 
 }
