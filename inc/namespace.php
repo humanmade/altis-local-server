@@ -38,7 +38,12 @@ function bootstrap() {
 	}
 
 	if ( empty( $_SERVER['HTTP_HOST'] ) ) {
-		$_SERVER['HTTP_HOST'] = getenv( 'COMPOSE_PROJECT_NAME' ) . '.' . getenv( 'COMPOSE_PROJECT_TLD' );
+		$_SERVER['HTTP_HOST'] = getenv( 'ALTIS_DEFAULT_HOST' );
+
+		// Select the default site when it lives under a path such as /en/.
+		if ( empty( $_SERVER['REQUEST_URI'] ) && getenv( 'ALTIS_DEFAULT_PATH' ) ) {
+			$_SERVER['REQUEST_URI'] = getenv( 'ALTIS_DEFAULT_PATH' );
+		}
 	}
 
 	defined( 'DB_HOST' ) or define( 'DB_HOST', getenv( 'DB_HOST' ) );
