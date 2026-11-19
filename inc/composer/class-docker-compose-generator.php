@@ -194,7 +194,9 @@ class Docker_Compose_Generator {
 			],
 			'environment' => [
 				'HOST_PATH' => $this->root_dir,
-				'COMPOSE_PROJECT_NAME' => $this->hostname,
+				'COMPOSE_PROJECT_NAME' => $this->project_name,
+				'ALTIS_DEFAULT_HOST' => $this->get_default_site()['host'],
+				'ALTIS_DEFAULT_PATH' => $this->get_default_site()['path'],
 				'DB_HOST' => 'db',
 				'DB_READ_REPLICA_HOST' => 'db-read-replica',
 				'DB_PASSWORD' => 'wordpress',
@@ -855,6 +857,29 @@ class Docker_Compose_Generator {
 	 */
 	public function get_yaml() : string {
 		return Yaml::dump( $this->get_array(), 10, 2 );
+	}
+
+	/**
+	 * Get the host and path of the default site, from default-site-url if set.
+	 *
+	 * @return array
+	 */
+	protected function get_default_site() : array {
+		$default = trim( $this->get_config()['default-site-url'] ?? '' );
+		if ( ! $default ) {
+			return [
+				'host' => $this->hostname,
+				'path' => '/',
+			];
+		}
+
+		// The option may or may not include a scheme, e.g. "example.altis.dev/en/".
+		$parts = explode( '/', trim( preg_replace( '#^https?://#', '', $default ), '/' ), 2 );
+
+		return [
+			'host' => $parts[0],
+			'path' => '/' . ( isset( $parts[1] ) && $parts[1] !== '' ? trim( $parts[1], '/' ) . '/' : '' ),
+		];
 	}
 
 	/**
