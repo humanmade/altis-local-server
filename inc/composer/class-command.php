@@ -1189,7 +1189,8 @@ EOT;
 	protected function check_host_entries( InputInterface $input, OutputInterface $output ) : void {
 		$config = $this->get_composer_config();
 
-		$hostname = ( $config['name'] ?? $this->get_project_subdomain() ) . '.' . ( $config['tld'] ?? $this->get_project_tld() );
+		$name = getenv( 'ALTIS_LOCAL_SERVER_NAME' ) ? $this->get_project_subdomain() : ( $config['name'] ?? $this->get_project_subdomain() );
+		$hostname = $name . '.' . ( $config['tld'] ?? $this->get_project_tld() );
 		$extra_domains = $config['domains'] ?? [];
 
 		$domains = array_merge( [
@@ -1365,7 +1366,11 @@ EOT;
 
 		$config = $this->get_composer_config();
 
-		if ( isset( $config['name'] ) ) {
+		$override = getenv( 'ALTIS_LOCAL_SERVER_NAME' );
+
+		if ( $override ) {
+			$project_name = $override;
+		} elseif ( isset( $config['name'] ) ) {
 			$project_name = $config['name'];
 		} else {
 			$project_name = basename( getcwd() );
