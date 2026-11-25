@@ -19,4 +19,6 @@ You can define the default site URL in your project’s `composer.json` file und
 }
 ```
 
-Note: By setting `default-site-url`, the default site URL will only be overridden for WP-CLI commands. It does not affect other components or tools in your environment.
+Note: `default-site-url` sets the default site for WP-CLI commands run through Composer, for `wp` inside `composer server shell`, and for any PHP run inside the container without a web request. It does not affect web requests or other components in your environment.
+
+The value is stored in the generated `docker-compose.yml`, so run `composer server start` again after changing it for the change to take effect.
